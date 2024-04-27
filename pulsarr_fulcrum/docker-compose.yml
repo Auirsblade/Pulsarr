@@ -1,0 +1,18 @@
+services:
+  rust:
+    build:
+      context: .
+    ports:
+      - 3003:3003
+    links:
+      - postgres
+    command: cargo watch -x run
+  postgres:
+      image: postgres
+      ports:
+        - 5432:5432
+      volumes:
+        - /db
+      environment:
+        PGDATA: /db
+        POSTGRES_PASSWORD: password
