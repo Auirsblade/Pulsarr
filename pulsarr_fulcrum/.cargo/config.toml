@@ -1,0 +1,6 @@
+[env]
+DATABASE_URL = "postgresql://postgres:password@localhost:5432/pulsarrdb"
+#PGHOST = "localhost"
+#PGPORT = "5432"
+#PGUSER = "postgres"
+#PGDATABASE = "pulsarrdb"
