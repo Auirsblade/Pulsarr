@@ -7,4 +7,6 @@
                  start-page="pulsarr.md">
 
     <toc-element topic="pulsarr.md"/>
+    <toc-element topic="erDiagram.md"/>
+    <toc-element topic="ApplicationFlow.md"/>
 </instance-profile>
