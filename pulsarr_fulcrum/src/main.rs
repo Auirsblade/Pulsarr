@@ -17,7 +17,7 @@ async fn main() -> Result<(), sqlx::Error> {
     let app = Router::new().route("/", get(|| async { "Welcome to Pulsarr" }));
 
     // run our app with hyper, listening globally on port 3003
-    let listener = tokio::net::TcpListener::bind("localhost:3003").await?;
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3003").await?;
     println!("serving on 3003");
     axum::serve(listener, app).await?;
 
