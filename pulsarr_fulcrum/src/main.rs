@@ -32,7 +32,7 @@ async fn main() -> Result<(), sqlx::Error> {
     let api_service =
         OpenApiService::new(Api, "Hello World", "1.0").server("http://0.0.0.0:3003");
     let ui = api_service.swagger_ui();
-    let app = Route::new().nest("/", api_service).nest("/docs", ui);
+    let app = Route::new().nest("/", api_service).nest("/swagger", ui);
 
     Server::new(TcpListener::bind("0.0.0.0:3003"))
         .run(app)
