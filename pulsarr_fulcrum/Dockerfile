@@ -20,14 +20,17 @@ RUN apk add --no-cache clang lld musl-dev git
 # Leverage a bind mount to the src directory to avoid having to copy the
 # source code into the container. Once built, copy the executable to an
 # output directory before the cache mounted /app/target is unmounted.
+ENV DATABASE_URL "postgresql://postgres@postgres:5432/pulsarrdb"
+
 RUN --mount=type=bind,source=src,target=src \
     --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
     --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
     --mount=type=cache,target=/app/target/ \
     --mount=type=cache,target=/usr/local/.cargo/git/db \
     --mount=type=cache,target=/usr/local/.cargo/registry/ \
-    --mount=type=bind,source=migrations,target=migrations \
-.cargo build --locked --release && \
+    --mount=type=bind,source=db/migrations,target=db/migrations \
+    --mount=type=bind,source=.cargo,target=.cargo \
+    cargo build --locked --release && \
 cp ./target/release/$APP_NAME /bin/server
 
 ################################################################################
