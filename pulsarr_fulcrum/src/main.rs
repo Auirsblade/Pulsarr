@@ -26,8 +26,6 @@ async fn main() -> Result<(), sqlx::Error> {
     sqlx::migrate!("db/migrations").run(&pool).await?;
     println!("migrations complete");
 
-
-
     // build our application with a single route
     let api_service =
         OpenApiService::new(Api, "Hello World", "1.0").server("http://0.0.0.0:3003");
