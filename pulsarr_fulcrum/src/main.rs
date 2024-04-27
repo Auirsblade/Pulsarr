@@ -1,6 +1,19 @@
-use axum::{routing::get, Router};
 use sqlx::postgres::PgPool;
 use std::env;
+
+use poem::{listener::TcpListener, Route, Server};
+use poem_openapi::{payload::PlainText, OpenApi, OpenApiService};
+
+struct Api;
+
+#[OpenApi]
+impl Api {
+    /// Hello world
+    #[oai(path = "/", method = "get")]
+    async fn index(&self) -> PlainText<&'static str> {
+        PlainText("Hello World Puslsarr")
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
@@ -13,13 +26,17 @@ async fn main() -> Result<(), sqlx::Error> {
     sqlx::migrate!("db/migrations").run(&pool).await?;
     println!("migrations complete");
 
-    // build our application with a single route
-    let app = Router::new().route("/", get(|| async { "Welcome to Pulsarr" }));
 
-    // run our app with hyper, listening globally on port 3003
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3003").await?;
-    println!("serving on 3003");
-    axum::serve(listener, app).await?;
+
+    // build our application with a single route
+    let api_service =
+        OpenApiService::new(Api, "Hello World", "1.0").server("http://0.0.0.0:3003");
+    let ui = api_service.swagger_ui();
+    let app = Route::new().nest("/", api_service).nest("/docs", ui);
+
+    Server::new(TcpListener::bind("0.0.0.0:3003"))
+        .run(app)
+        .await?;
 
     Ok(())
 }
