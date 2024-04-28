@@ -9,28 +9,39 @@ use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};
 use sqlx::postgres::PgPool;
-use std::env;
+use std::{env, result};
+use sqlx::{Error};
 use crate::models::rating_system;
 
-pub type Result<T> = std::result::Result<rocket::serde::json::Json<T>, error::Error>;
+pub type PulsarrResult<T> = Result<rocket::serde::json::Json<T>, error::Error>;
+
+struct PostgresState {
+    pool: PgPool
+}
 
 #[rocket::main]
 async fn main() {
     // setup db connection and run any necessary migrations
     println!("app starting");
-    let db_url = env!("DATABASE_URL");
-    println!("connecting to db: {db_url}");
-    let pool = PgPool::connect(&db_url).await.unwrap();
+    let postgres_pool = get_db_pool().await.unwrap();
+    
     println!("running migrations");
-    sqlx::migrate!("db/migrations").run(&pool).await.unwrap();
+    sqlx::migrate!("db/migrations").run(&postgres_pool).await.unwrap();
     println!("migrations complete");
     
-    let launch_result = create_server().launch().await;
+    let launch_result = create_server().manage(PostgresState { pool: postgres_pool }).launch().await;
 
     match launch_result {
         Ok(_) => println!("Rocket shut down gracefully."),
-        Err(err) => println!("Rocket had an error: {}", err),
+        Err(err) => println!("Rocket had an error: {}", err)
     }
+}
+
+async fn get_db_pool() -> result::Result<PgPool, Error> {
+    let db_url = env!("DATABASE_URL");
+    println!("connecting to db: {db_url}");
+    let pool = PgPool::connect(&db_url).await;
+    pool
 }
 
 fn create_server() -> Rocket<Build> {

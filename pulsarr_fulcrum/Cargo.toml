@@ -7,7 +7,8 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.36.0", default-features = false, features=["rt-multi-thread"] }
-sqlx = { version = "0.7.4", default-features = false, features = ["runtime-tokio", "macros", "postgres", "migrate"]}
+sqlx = { version = "0.7.4", default-features = false, features = ["runtime-tokio", "macros", "postgres", "migrate", "rust_decimal"]}
+schemars = { version = "0.8.16", features = ["rust_decimal"] } 
 rocket_okapi = { version = "0.8.0", features = ["swagger"] }
 rocket = { version = "0.5.0", default-features = false, features = ["json"] }
 serde = { version = "1.0.198", features = ["derive"] }
