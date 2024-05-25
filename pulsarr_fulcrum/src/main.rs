@@ -76,7 +76,6 @@ fn create_server() -> Rocket<Build> {
         "/rating-system_parameter" => rating_system_parameter::get_routes_and_docs(&openapi_settings),
         "/rating" => rating::get_routes_and_docs(&openapi_settings),
         "/rating-detail" => rating_detail::get_routes_and_docs(&openapi_settings),
-        
     }
     
     building_rocket
