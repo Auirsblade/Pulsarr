@@ -9,7 +9,7 @@ use rocket_okapi::{gen::OpenApiGenerator, response::OpenApiResponderInner, OpenA
 
 /// Error messages returned to user
 #[derive(Debug, serde::Serialize, schemars::JsonSchema)]
-pub struct Error {
+pub struct PulsarrError {
     /// The title of the error message
     pub err: String,
     /// The description of the error
@@ -19,7 +19,7 @@ pub struct Error {
     pub http_status_code: u16,
 }
 
-impl OpenApiResponderInner for Error {
+impl OpenApiResponderInner for PulsarrError {
     fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};
 
@@ -73,7 +73,7 @@ impl OpenApiResponderInner for Error {
     }
 }
 
-impl std::fmt::Display for Error {
+impl std::fmt::Display for PulsarrError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             formatter,
@@ -84,9 +84,9 @@ impl std::fmt::Display for Error {
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for PulsarrError {}
 
-impl<'r> Responder<'r, 'static> for Error {
+impl<'r> Responder<'r, 'static> for PulsarrError {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         // Convert object to json
         let body = serde_json::to_string(&self).unwrap();
@@ -98,16 +98,16 @@ impl<'r> Responder<'r, 'static> for Error {
     }
 }
 
-impl From<rocket::serde::json::Error<'_>> for Error {
+impl From<rocket::serde::json::Error<'_>> for PulsarrError {
     fn from(err: rocket::serde::json::Error) -> Self {
         use rocket::serde::json::Error::*;
         match err {
-            Io(io_error) => Error {
+            Io(io_error) => PulsarrError {
                 err: "IO Error".to_owned(),
                 msg: Some(io_error.to_string()),
                 http_status_code: 422,
             },
-            Parse(_raw_data, parse_error) => Error {
+            Parse(_raw_data, parse_error) => PulsarrError {
                 err: "Parse Error".to_owned(),
                 msg: Some(parse_error.to_string()),
                 http_status_code: 422,
