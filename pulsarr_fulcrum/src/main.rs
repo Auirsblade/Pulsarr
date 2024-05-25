@@ -1,19 +1,27 @@
 mod error;
 mod models {
+    pub mod pulsarr_user;
+    pub mod pulsarr_group;
     pub mod rating_system;
+    pub mod rating_system_parameter;
+    pub mod rating;
+    pub mod rating_detail;
 }
 
-use rocket::form::FromForm;
 use rocket::{Build, Rocket};
-use rocket_okapi::okapi::schemars;
-use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};
 use sqlx::postgres::PgPool;
-use std::{env, result};
+use std::{env};
+use rocket::serde::json::Json;
 use sqlx::{Error};
+use crate::models::pulsarr_user;
+use crate::models::pulsarr_group;
 use crate::models::rating_system;
+use crate::models::rating_system_parameter;
+use crate::models::rating;
+use crate::models::rating_detail;
 
-pub type PulsarrResult<T> = Result<rocket::serde::json::Json<T>, error::Error>;
+pub type PulsarrResult<T> = Result<Json<T>, error::Error>;
 
 struct PostgresState {
     pool: PgPool
@@ -37,7 +45,7 @@ async fn main() {
     }
 }
 
-async fn get_db_pool() -> result::Result<PgPool, Error> {
+async fn get_db_pool() -> Result<PgPool, Error> {
     let db_url = env!("DATABASE_URL");
     println!("connecting to db: {db_url}");
     let pool = PgPool::connect(&db_url).await;
@@ -62,7 +70,12 @@ fn create_server() -> Rocket<Build> {
     let openapi_settings = rocket_okapi::settings::OpenApiSettings::default();
     mount_endpoints_and_merged_docs! {
         building_rocket, "/".to_owned(), openapi_settings,
-        "/rating-system" => rating_system::get_routes_and_docs(&openapi_settings)
+        "/user" => pulsarr_user::get_routes_and_docs(&openapi_settings),
+        "/group" => pulsarr_group::get_routes_and_docs(&openapi_settings),
+        "/rating-system" => rating_system::get_routes_and_docs(&openapi_settings),
+        "/rating-system_parameter" => rating_system_parameter::get_routes_and_docs(&openapi_settings),
+        "/rating" => rating::get_routes_and_docs(&openapi_settings),
+        "/rating-detail" => rating_detail::get_routes_and_docs(&openapi_settings),
     }
     
     building_rocket
