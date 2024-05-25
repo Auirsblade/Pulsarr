@@ -1,13 +1,11 @@
 -- Add migration script here
-create type MasterRatingType as enum ('Absolute', 'Cumulative', 'Average');
-
 create table rating_system
 (
     rating_system_id serial
         constraint RatingSystem_pk
             primary key,
     name text,
-    master_rating_type MasterRatingType,
+    master_rating_type text,
     rating_max numeric(8,3)
 );
 
@@ -58,7 +56,7 @@ create table rating
         constraint rating_group_groupId_fk
             references pulsarr_group (pulsarr_group_id),
     comments text,
-    value numeric(8,3)
+    rating_value numeric(8,3)
 );
 
 create table rating_detail
@@ -72,5 +70,5 @@ create table rating_detail
     rating_system_parameter_id integer not null
         constraint ratingDetail_ratingSystemParameter_ratingSystemParameterId_fk
             references rating_system_parameter (rating_system_parameter_id),
-    value numeric(8,3)
+    rating_value numeric(8,3)
 )
