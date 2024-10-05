@@ -1,6 +1,5 @@
 use rocket::serde::json::Json;
 use sqlx::PgPool;
-use sqlx::postgres::PgRow;
 use crate::data::models::Model;
 use crate::data::models::pulsarr_group::PulsarrGroup;
 use crate::error::PulsarrError;
