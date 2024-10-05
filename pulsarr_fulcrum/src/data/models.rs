@@ -14,6 +14,6 @@ pub trait Model: for<'a> sqlx::FromRow<'a, PgRow> + std::marker::Send + Unpin {
     fn add<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments>;
     // fn update<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments>;
     // fn delete<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments>;
-    // fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments>;
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments>;
     // fn get_all<T: Model>() -> QueryAs<'static, Postgres, T, PgArguments>;
 }
