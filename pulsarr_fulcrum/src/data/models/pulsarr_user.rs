@@ -24,9 +24,14 @@ impl Model for PulsarrUser {
     fn add<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
         sqlx::query_as(
             "INSERT INTO pulsarr_user (name)\
-            VALUES ($1)",
+            VALUES ($1)\
+            RETURNING *",
         )
-            .bind(self.name)
+        .bind(self.name)
+    }
+
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        todo!()
     }
 
     // async fn update<PulsarrUser>(self) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {

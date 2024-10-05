@@ -50,10 +50,10 @@ impl Model for PulsarrGroup {
     //         .bind(id)
     // }
 
-    // fn get_by_id<PulsarrGroup>(id: i32) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
-    //     query_as("SELECT FROM pulsarr_group WHERE pulsarr_group_id = $1")
-    //         .bind(id)
-    // }
+    fn get_by_id<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        query_as("SELECT FROM pulsarr_group WHERE pulsarr_group_id = $1")
+            .bind(id)
+    }
     //
     // fn get_all<PulsarrGroup>() -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
     //     query_as("SELECT FROM pulsarr_group")

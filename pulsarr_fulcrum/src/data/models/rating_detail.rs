@@ -25,6 +25,10 @@ impl Model for RatingDetail {
             .bind(self.rating_value)
     }
 
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        todo!()
+    }
+
     // async fn update<RatingDetail>(self) -> QueryAs<'static, Postgres, RatingDetail, PgArguments> {
     //     query_as(
     //         "INSERT INTO rating_detail (rating_detail_id, rating_id, rating_system_parameter_id, rating_value)\

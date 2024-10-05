@@ -1,15 +1,10 @@
 use rocket::serde::json::Json;
-use sqlx::{FromRow, PgPool};
-use sqlx::postgres::PgRow;
+use sqlx::PgPool;
 use crate::data::models::Model;
-use crate::data::models::pulsarr_group::PulsarrGroup;
 use crate::error::PulsarrError;
 
 pub async fn add<T: Model>(object: T, pool: &PgPool) -> crate::PulsarrResult<T> {
-    match object.add::<T>()
-        .fetch_one(pool)
-        // .execute(pool)
-            .await
+    match object.add::<T>().fetch_one(pool).await
     {
         Ok(result) => Ok(Json(result)),
         Err(error) => Err(PulsarrError {
@@ -50,11 +45,11 @@ pub async fn add<T: Model>(object: T, pool: &PgPool) -> crate::PulsarrResult<T> 
 // }
 
 pub async fn get_by_id<T: Model>(id: i32, pool: &PgPool) -> crate::PulsarrResult<T> {
-    match T::get_by_id(&id).fetch_one(pool).await {
-        (true, object) => Ok(Json(object)),
-        (false, error_message) => Err(PulsarrError {
+    match T::get_by_id(id).fetch_one(pool).await {
+        Ok(result) => Ok(Json(result)),
+        Err(error) => Err(PulsarrError {
             err: "validation error".to_owned(),
-            msg: error_message,
+            msg: Some(error.to_string()),
             http_status_code: 400,
         })
     }

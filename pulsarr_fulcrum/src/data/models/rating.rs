@@ -19,13 +19,18 @@ impl Model for Rating {
     fn add<Rating: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, Rating, PgArguments> {
         query_as(
             "INSERT INTO rating (pulsarr_user_id, pulsarr_group_id, rating_system_id, comments, rating_value)\
-            VALUES ($1, $2, $3, $4, $5)",
+            VALUES ($1, $2, $3, $4, $5)\
+            RETURNING *",
         )
             .bind(self.pulsarr_user_id)
             .bind(self.pulsarr_group_id)
             .bind(self.rating_system_id)
             .bind(self.comments)
             .bind(self.rating_value)
+    }
+
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        todo!()
     }
 
     // async fn update<Rating>(self) -> QueryAs<'static, Postgres, Rating, PgArguments> {

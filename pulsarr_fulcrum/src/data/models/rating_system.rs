@@ -32,6 +32,10 @@ impl Model for RatingSystem {
             .bind(self.name)
     }
 
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        todo!()
+    }
+
     // async fn update<RatingSystem>(self) -> QueryAs<'static, Postgres, RatingSystem, PgArguments> {
     //     query_as(
     //         "INSERT INTO rating_system (rating_system_id, master_rating_type, rating_max, name)\

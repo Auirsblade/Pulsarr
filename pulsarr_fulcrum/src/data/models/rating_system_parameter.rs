@@ -28,6 +28,10 @@ impl Model for RatingSystemParameter {
             .bind(self.name)
     }
 
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        todo!()
+    }
+
     // async fn update<RatingSystemParameter>(self) ->  QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
     //     query_as(
     //         "INSERT INTO rating_system_parameter (rating_system_parameter_id, rating_system_id, parameter_rating_max, parameter_rating_max, name)\
@@ -44,11 +48,7 @@ impl Model for RatingSystemParameter {
     //     query_as("DELETE FROM rating_system_parameter WHERE rating_id = $1")
     //         .bind(id)
     // }
-
-    // async fn get_by_id(id: i32, pool: &PgPool) ->  QueryAs<'static, Postgres, RatingSystem, PgArguments> {
-    //     todo!()
-    // }
-    //
+    
     // async fn get_all(pool: &PgPool) -> (bool, Option<String>) {
     //     todo!()
     // }
