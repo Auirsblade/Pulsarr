@@ -21,7 +21,7 @@ use crate::models::rating_system_parameter;
 use crate::models::rating;
 use crate::models::rating_detail;
 
-pub type PulsarrResult<T> = Result<Json<T>, error::Error>;
+pub type PulsarrResult<T> = Result<Json<T>, error::PulsarrError>;
 
 struct PostgresState {
     pool: PgPool
