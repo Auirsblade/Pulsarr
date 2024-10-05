@@ -51,6 +51,6 @@ async fn get_privacy_types() -> crate::PulsarrResult<Vec<String>> {
 async fn add_group(
     state: &State<PostgresState>,
     group: Json<PulsarrGroup>,
-) -> crate::PulsarrResult<bool> {
-    data_wrangler::add(group.into_inner(), &state.pool).await;
+) -> crate::PulsarrResult<PulsarrGroup> {
+    data_wrangler::add(group.into_inner(), &state.pool).await
 }

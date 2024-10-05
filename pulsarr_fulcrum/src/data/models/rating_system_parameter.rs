@@ -1,6 +1,8 @@
 use rocket::serde::{Deserialize, Serialize};
 use rocket_okapi::JsonSchema;
-use sqlx::{FromRow, PgPool};
+use sqlx::{FromRow, PgPool, Postgres, query_as};
+use sqlx::postgres::{PgArguments, PgRow};
+use sqlx::query::QueryAs;
 use sqlx::types::Decimal;
 use crate::data::models::Model;
 
@@ -15,8 +17,8 @@ pub(crate) struct RatingSystemParameter {
 }
 
 impl Model for RatingSystemParameter {
-    async fn add(self, pool: &PgPool) -> (bool, Option<String>) {
-        let result = sqlx::query(
+    fn add<RatingSystemParameter: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
+        query_as(
             "INSERT INTO rating_system_parameter (rating_system_id, parameter_rating_max, parameter_rating_max, name)\
             VALUES ($1, $2, $3, $4)",
         )
@@ -24,51 +26,30 @@ impl Model for RatingSystemParameter {
             .bind(self.parameter_rating_max)
             .bind(self.parameter_rating_max)
             .bind(self.name)
-            .execute(pool)
-            .await;
-
-        match result {
-            Ok(_) => (true, None),
-            Err(err) => (false, Some(err.to_string()))
-        }
     }
 
-    async fn update(self, pool: &PgPool) -> (bool, Option<String>) {
-        let result = sqlx::query(
-            "INSERT INTO rating_system_parameter (rating_system_parameter_id, rating_system_id, parameter_rating_max, parameter_rating_max, name)\
-            VALUES ($1, $2, $3, $4, $5)",
-        )
-            .bind(self.rating_system_parameter_id)
-            .bind(self.rating_system_id)
-            .bind(self.parameter_rating_max)
-            .bind(self.parameter_rating_max)
-            .bind(self.name)
-            .execute(pool)
-            .await;
+    // async fn update<RatingSystemParameter>(self) ->  QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
+    //     query_as(
+    //         "INSERT INTO rating_system_parameter (rating_system_parameter_id, rating_system_id, parameter_rating_max, parameter_rating_max, name)\
+    //         VALUES ($1, $2, $3, $4, $5)",
+    //     )
+    //         .bind(self.rating_system_parameter_id)
+    //         .bind(self.rating_system_id)
+    //         .bind(self.parameter_rating_max)
+    //         .bind(self.parameter_rating_max)
+    //         .bind(self.name)
+    // }
+    //
+    // async fn delete<RatingSystemParameter>(id: i32) ->  QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
+    //     query_as("DELETE FROM rating_system_parameter WHERE rating_id = $1")
+    //         .bind(id)
+    // }
 
-        match result {
-            Ok(_) => (true, None),
-            Err(err) => (false, Some(err.to_string()))
-        }
-    }
-
-    async fn delete(id: i32, pool: &PgPool) -> (bool, Option<String>) {
-        let result = sqlx::query("DELETE FROM rating_system_parameter WHERE rating_id = $1")
-            .bind(id)
-            .execute(pool)
-            .await;
-
-        match result {
-            Ok(_) => (true, None),
-            Err(err) => (false, Some(err.to_string()))
-        }
-    }
-
-    async fn get_by_id(id: i32, pool: &PgPool) -> (bool, Option<String>) {
-        todo!()
-    }
-
-    async fn get_all(pool: &PgPool) -> (bool, Option<String>) {
-        todo!()
-    }
+    // async fn get_by_id(id: i32, pool: &PgPool) ->  QueryAs<'static, Postgres, RatingSystem, PgArguments> {
+    //     todo!()
+    // }
+    //
+    // async fn get_all(pool: &PgPool) -> (bool, Option<String>) {
+    //     todo!()
+    // }
 }
