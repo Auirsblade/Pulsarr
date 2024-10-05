@@ -2,7 +2,7 @@ mod error;
 mod api;
 mod data;
 
-use crate::api::{ group, rating, rating_system, user };
+use crate::api::{group, rating, rating_system, user };
 use rocket::serde::json::Json;
 use rocket::{Build, Rocket};
 use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};

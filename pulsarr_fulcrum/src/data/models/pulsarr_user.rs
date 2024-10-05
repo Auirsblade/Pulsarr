@@ -1,19 +1,13 @@
-use crate::data::data_wrangler;
-use crate::error::PulsarrError;
-use rocket::serde::json::Json;
 use rocket::serde::{Deserialize, Serialize};
-use rocket::{get, post, State};
-use rocket_okapi::{
-    okapi::openapi3::OpenApi, openapi, openapi_get_routes_spec, settings::OpenApiSettings,
-    JsonSchema,
-};
+use rocket_okapi::JsonSchema;
 use sqlx;
-use sqlx::{FromRow, PgPool};
+use sqlx::{FromRow, PgPool, Postgres};
+use sqlx::postgres::PgArguments;
+use sqlx::query::QueryAs;
 use crate::data::models::Model;
-use crate::PostgresState;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
-pub(crate) struct PulsarrUser {
+pub struct PulsarrUser {
     pulsarr_user_id: i32,
     name: String,
 }
@@ -60,5 +54,16 @@ impl Model for PulsarrUser {
             Ok(_) => (true, None),
             Err(err) => (false, Some(err.to_string()))
         }
+    }
+
+    fn get_by_id(id: &i32) -> QueryAs<Postgres, Self, PgArguments>
+    where
+        Self: Sized
+    {
+        todo!()
+    }
+
+    async fn get_all(pool: &PgPool) -> (bool, Option<String>) {
+        todo!()
     }
 }
