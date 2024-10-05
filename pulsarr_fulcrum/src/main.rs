@@ -1,18 +1,14 @@
 mod error;
+mod api;
 mod data;
 
+use crate::api::{ group, rating, rating_system, user };
+use rocket::serde::json::Json;
 use rocket::{Build, Rocket};
 use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};
 use sqlx::postgres::PgPool;
-use std::env;
-use rocket::serde::json::Json;
 use sqlx::Error;
-use crate::data::models::pulsarr_user;
-use crate::data::models::pulsarr_group;
-use crate::data::models::rating_system;
-use crate::data::models::rating_system_parameter;
-use crate::data::models::rating;
-use crate::data::models::rating_detail;
+use std::env;
 
 pub type PulsarrResult<T> = Result<Json<T>, error::PulsarrError>;
 
@@ -63,12 +59,10 @@ fn create_server() -> Rocket<Build> {
     let openapi_settings = rocket_okapi::settings::OpenApiSettings::default();
     mount_endpoints_and_merged_docs! {
         building_rocket, "/".to_owned(), openapi_settings,
-        "/user" => pulsarr_user::get_routes_and_docs(&openapi_settings),
-        "/group" => pulsarr_group::get_routes_and_docs(&openapi_settings),
+        "/user" => user::get_routes_and_docs(&openapi_settings),
+        "/group" => group::get_routes_and_docs(&openapi_settings),
         "/rating-system" => rating_system::get_routes_and_docs(&openapi_settings),
-        "/rating-system_parameter" => rating_system_parameter::get_routes_and_docs(&openapi_settings),
         "/rating" => rating::get_routes_and_docs(&openapi_settings),
-        "/rating-detail" => rating_detail::get_routes_and_docs(&openapi_settings),
     }
     
     building_rocket

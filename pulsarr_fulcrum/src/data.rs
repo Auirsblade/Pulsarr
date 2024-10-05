@@ -1,2 +1,2 @@
-pub mod models;
-mod data_wrangler;
+pub(crate) mod models;
+pub(crate) mod data_wrangler;
