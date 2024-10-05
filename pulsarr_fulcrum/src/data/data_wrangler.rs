@@ -7,21 +7,13 @@ use crate::error::PulsarrError;
 pub async fn add<T: Model>(object: T, pool: &PgPool) -> crate::PulsarrResult<T> {
     match object.add::<T>()
         .fetch_one(pool)
-        // .execute(pool)
-            .await
+        .await
     {
         Ok(result) => Ok(Json(result)),
         Err(error) => Err(PulsarrError {
-                err: "validation error".to_owned(),
-                msg: Some(error.to_string()),
-                http_status_code: 400,
-            }),
-
-        // (true, _) => Ok(Json(true)),
-        // (false, error_message) => Err(PulsarrError {
-        //     err: "validation error".to_owned(),
-        //     msg: error_message,
-        //     http_status_code: 400,
-        // }),
+            err: "validation error".to_owned(),
+            msg: Some(error.to_string()),
+            http_status_code: 400,
+        })
     }
 }
