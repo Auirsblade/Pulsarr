@@ -5,6 +5,7 @@ use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec, JsonSchema};
 use sqlx::{FromRow, PgPool};
+use crate::data::models::Model;
 
 use crate::error::PulsarrError;
 use crate::PostgresState;
@@ -18,6 +19,55 @@ struct PulsarrGroup {
 }
 
 const PRIVACY_TYPE: [&str; 2] = ["Public", "Private"];
+
+impl Model for PulsarrGroup {
+    async fn add(self, pool: &PgPool) -> (bool, Option<String>) {
+        let result = sqlx::query(
+            "INSERT INTO pulsarr_group (rating_system_id, name, privacy_type)\
+        VALUES ($1, $2, $3)",
+        )
+            .bind(self.rating_system_id)
+            .bind(self.name)
+            .bind(self.privacy_type)
+            .execute(pool)
+            .await;
+
+        match result {
+            Ok(_) => (true, None),
+            Err(err) => (false, Some(err.to_string()))
+        }
+    }
+
+    async fn update(self, pool: &PgPool) -> (bool, Option<String>) {
+        let result = sqlx::query(
+            "INSERT INTO pulsarr_group (pulsarr_group_id, rating_system_id, name, privacy_type)\
+        VALUES ($1, $2, $3, $4)",
+        )
+            .bind(self.pulsarr_group_id)
+            .bind(self.rating_system_id)
+            .bind(self.name)
+            .bind(self.privacy_type)
+            .execute(pool)
+            .await;
+
+        match result {
+            Ok(_) => (true, None),
+            Err(err) => (false, Some(err.to_string()))
+        }
+    }
+
+    async fn delete(self, pool: &PgPool) -> (bool, Option<String>) {
+        let result = sqlx::query("DELETE FROM pulsarr_group WHERE pulsarr_group_id = $1")
+            .bind(self.pulsarr_group_id)
+            .execute(pool)
+            .await;
+
+        match result {
+            Ok(_) => (true, None),
+            Err(err) => (false, Some(err.to_string()))
+        }
+    }
+}
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
@@ -69,22 +119,5 @@ async fn add_group(
             msg: error_message,
             http_status_code: 400
         })
-    }
-}
-
-async fn new_save(group: PulsarrGroup, pool: &PgPool) -> (bool, Option<String>) {
-    let result = sqlx::query(
-        "INSERT INTO pulsarr_group (rating_system_id, name, privacy_type)\
-        VALUES ($1, $2, $3)",
-    )
-        .bind(group.rating_system_id)
-        .bind(group.name)
-        .bind(group.privacy_type)
-        .execute(pool)
-        .await;
-
-    match result {
-        Ok(_) => (true, None),
-        Err(err) => (false, Some(err.to_string()))
     }
 }

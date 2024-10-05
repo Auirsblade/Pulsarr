@@ -18,6 +18,51 @@ struct PulsarrUser {
     name: String,
 }
 
+impl Model for PulsarrUser {
+    async fn add(self, pool: &PgPool) -> (bool, Option<String>) {
+        let result = sqlx::query(
+            "INSERT INTO pulsarr_user (name)\
+            VALUES ($1)",
+        )
+            .bind(self.name)
+            .execute(pool)
+            .await;
+
+        match result {
+            Ok(_) => (true, None),
+            Err(err) => (false, Some(err.to_string()))
+        }
+    }
+
+    async fn update(self, pool: &PgPool) -> (bool, Option<String>) {
+        let result = sqlx::query(
+            "INSERT INTO pulsarr_user (pulsarr_user_id, name)\
+            VALUES ($1, $2)",
+        )
+            .bind(self.pulsarr_user_id)
+            .bind(self.name)
+            .execute(pool)
+            .await;
+
+        match result {
+            Ok(_) => (true, None),
+            Err(err) => (false, Some(err.to_string()))
+        }
+    }
+
+    async fn delete(self, pool: &PgPool) -> (bool, Option<String>) {
+        let result = sqlx::query("DELETE FROM pulsarr_user WHERE pulsarr_user_id = $1")
+            .bind(self.pulsarr_user_id)
+            .execute(pool)
+            .await;
+
+        match result {
+            Ok(_) => (true, None),
+            Err(err) => (false, Some(err.to_string()))
+        }
+    }
+}
+
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![settings: get_pulsarr_user, add_user]
@@ -48,21 +93,4 @@ async fn add_user(
     user: Json<PulsarrUser>,
 ) -> crate::PulsarrResult<bool> {
     data_wrangler::add(user.into_inner(), &state.pool).await
-}
-
-impl Model for PulsarrUser {
-    async fn add(self: PulsarrUser, pool: &PgPool) -> (bool, Option<String>) {
-        let result = sqlx::query(
-            "INSERT INTO pulsarr_user (name)\
-            VALUES ($1)",
-        )
-            .bind(self.name)
-            .execute(pool)
-            .await;
-    
-        match result {
-            Ok(_) => (true, None),
-            Err(err) => (false, Some(err.to_string()))
-        }
-    }
 }
