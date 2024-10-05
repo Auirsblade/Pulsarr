@@ -55,9 +55,9 @@ impl Model for RatingSystem {
         }
     }
 
-    async fn delete(self, pool: &PgPool) -> (bool, Option<String>) {
+    async fn delete(id: i32, pool: &PgPool) -> (bool, Option<String>) {
         let result = sqlx::query("DELETE FROM rating_system WHERE rating_id = $1")
-            .bind(self.rating_system_id)
+            .bind(id)
             .execute(pool)
             .await;
 

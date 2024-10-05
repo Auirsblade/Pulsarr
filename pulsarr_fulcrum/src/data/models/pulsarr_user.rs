@@ -50,9 +50,9 @@ impl Model for PulsarrUser {
         }
     }
 
-    async fn delete(self, pool: &PgPool) -> (bool, Option<String>) {
+    async fn delete(id: i32, pool: &PgPool) -> (bool, Option<String>) {
         let result = sqlx::query("DELETE FROM pulsarr_user WHERE pulsarr_user_id = $1")
-            .bind(self.pulsarr_user_id)
+            .bind(id)
             .execute(pool)
             .await;
 

@@ -52,9 +52,9 @@ impl Model for RatingSystemParameter {
         }
     }
 
-    async fn delete(self, pool: &PgPool) -> (bool, Option<String>) {
+    async fn delete(id: i32, pool: &PgPool) -> (bool, Option<String>) {
         let result = sqlx::query("DELETE FROM rating_system_parameter WHERE rating_id = $1")
-            .bind(self.rating_system_parameter_id)
+            .bind(id)
             .execute(pool)
             .await;
 
@@ -62,5 +62,13 @@ impl Model for RatingSystemParameter {
             Ok(_) => (true, None),
             Err(err) => (false, Some(err.to_string()))
         }
+    }
+
+    async fn get_by_id(id: i32, pool: &PgPool) -> (bool, Option<String>) {
+        todo!()
+    }
+
+    async fn get_all(pool: &PgPool) -> (bool, Option<String>) {
+        todo!()
     }
 }

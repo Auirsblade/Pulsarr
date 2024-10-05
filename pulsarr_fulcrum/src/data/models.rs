@@ -11,6 +11,7 @@ pub mod rating_detail;
 pub trait Model {
     async fn add(self, pool: &PgPool) -> (bool, Option<String>);
     async fn update(self, pool: &PgPool) -> (bool, Option<String>);
-    async fn delete(self, pool: &PgPool) -> (bool, Option<String>);
-    // async fn getById(self, pool: &PgPool) -> (bool, Option<String>);
+    async fn delete(id: i32, pool: &PgPool) -> (bool, Option<String>);
+    async fn get_by_id(id: i32, pool: &PgPool) -> (bool, Option<String>);
+    async fn get_all(pool: &PgPool) -> (bool, Option<String>);
 }

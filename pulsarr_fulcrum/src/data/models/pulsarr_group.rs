@@ -56,9 +56,32 @@ impl Model for PulsarrGroup {
         }
     }
 
-    async fn delete(self, pool: &PgPool) -> (bool, Option<String>) {
+    async fn delete(id: String, pool: &PgPool) -> (bool, Option<String>) {
         let result = sqlx::query("DELETE FROM pulsarr_group WHERE pulsarr_group_id = $1")
-            .bind(self.pulsarr_group_id)
+            .bind(id)
+            .execute(pool)
+            .await;
+
+        match result {
+            Ok(_) => (true, None),
+            Err(err) => (false, Some(err.to_string()))
+        }
+    }
+
+    async fn get_by_id(id: i32, pool: &PgPool) -> (bool, Option<String>) {
+        let result = sqlx::query("SELECT FROM pulsarr_group WHERE pulsarr_group_id = $1")
+            .bind(id)
+            .execute(pool)
+            .await;
+
+        match result {
+            Ok(_) => (true, None),
+            Err(err) => (false, Some(err.to_string()))
+        }
+    }
+
+    async fn get_all(pool: &PgPool) -> (bool, Option<String>) {
+        let result = sqlx::query("SELECT FROM pulsarr_group")
             .execute(pool)
             .await;
 
