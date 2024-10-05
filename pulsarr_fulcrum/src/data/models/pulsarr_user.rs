@@ -1,4 +1,4 @@
-use std::result;
+use crate::data::data_wrangler;
 use crate::error::PulsarrError;
 use rocket::serde::json::Json;
 use rocket::serde::{Deserialize, Serialize};
@@ -9,7 +9,7 @@ use rocket_okapi::{
 };
 use sqlx;
 use sqlx::{FromRow, PgPool};
-
+use crate::data::models::Model;
 use crate::PostgresState;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
@@ -47,27 +47,22 @@ async fn add_user(
     state: &State<PostgresState>,
     user: Json<PulsarrUser>,
 ) -> crate::PulsarrResult<bool> {
-    match new_save(user.into_inner(), &state.pool).await {
-        (true, _) => Ok(Json(true)),
-        (false, error_message) => Err(PulsarrError {
-            err: "validation error".to_owned(),
-            msg: error_message,
-            http_status_code: 400,
-        }),
-    }
+    data_wrangler::add(user.into_inner(), &state.pool).await
 }
 
-async fn new_save(user: PulsarrUser, pool: &PgPool) -> (bool, Option<String>) {
-    let result = sqlx::query(
-        "INSERT INTO pulsarr_user (name)\
-        VALUES ($1)",
-    )
-    .bind(user.name)
-    .execute(pool)
-    .await;
-
-    match result { 
-        Ok(_) => (true, None),
-        Err(err) => (false, Some(err.to_string()))
+impl Model for PulsarrUser {
+    async fn add(self: PulsarrUser, pool: &PgPool) -> (bool, Option<String>) {
+        let result = sqlx::query(
+            "INSERT INTO pulsarr_user (name)\
+            VALUES ($1)",
+        )
+            .bind(self.name)
+            .execute(pool)
+            .await;
+    
+        match result {
+            Ok(_) => (true, None),
+            Err(err) => (false, Some(err.to_string()))
+        }
     }
 }

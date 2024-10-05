@@ -1,25 +1,18 @@
 mod error;
-mod models {
-    pub mod pulsarr_user;
-    pub mod pulsarr_group;
-    pub mod rating_system;
-    pub mod rating_system_parameter;
-    pub mod rating;
-    pub mod rating_detail;
-}
+mod data;
 
 use rocket::{Build, Rocket};
 use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};
 use sqlx::postgres::PgPool;
-use std::{env};
+use std::env;
 use rocket::serde::json::Json;
-use sqlx::{Error};
-use crate::models::pulsarr_user;
-use crate::models::pulsarr_group;
-use crate::models::rating_system;
-use crate::models::rating_system_parameter;
-use crate::models::rating;
-use crate::models::rating_detail;
+use sqlx::Error;
+use crate::data::models::pulsarr_user;
+use crate::data::models::pulsarr_group;
+use crate::data::models::rating_system;
+use crate::data::models::rating_system_parameter;
+use crate::data::models::rating;
+use crate::data::models::rating_detail;
 
 pub type PulsarrResult<T> = Result<Json<T>, error::PulsarrError>;
 
