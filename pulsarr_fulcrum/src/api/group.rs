@@ -47,6 +47,19 @@ async fn get_pulsarr_group(
     Ok(Json(group))
 }
 
+/// # Get the group privacy types
+#[openapi(tag = "Group")]
+#[get("/privacyTypes")]
+async fn get_privacy_types() -> crate::PulsarrResult<Vec<String>> {
+    let mut privacy_types = vec![];
+
+    for typ in PRIVACY_TYPE {
+        privacy_types.push(typ.to_owned());
+    }
+
+    Ok(Json(privacy_types))
+}
+
 /// # Add a group
 #[openapi(tag = "Group")]
 #[post("/add", format = "application/json", data = "<group>")]

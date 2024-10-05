@@ -1,7 +1,9 @@
 use rocket::serde::{Deserialize, Serialize};
 use rocket_okapi::JsonSchema;
 use sqlx::types::Decimal;
-use sqlx::{FromRow, PgPool};
+use sqlx::{FromRow, PgPool, Postgres, query_as};
+use sqlx::postgres::{PgArguments, PgRow};
+use sqlx::query::QueryAs;
 use crate::data::models::Model;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
@@ -13,50 +15,29 @@ pub(crate) struct RatingDetail {
 }
 
 impl Model for RatingDetail {
-    async fn add(self, pool: &PgPool) -> (bool, Option<String>) {
-        let result = sqlx::query(
+    fn add<RatingDetail: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, RatingDetail, PgArguments> {
+        query_as(
             "INSERT INTO rating_detail (rating_id, rating_system_parameter_id, rating_value)\
             VALUES ($1, $2, $3)",
         )
             .bind(self.rating_id)
             .bind(self.rating_system_parameter_id)
             .bind(self.rating_value)
-            .execute(pool)
-            .await;
-
-        match result {
-            Ok(_) => (true, None),
-            Err(err) => (false, Some(err.to_string()))
-        }
     }
 
-    async fn update(self, pool: &PgPool) -> (bool, Option<String>) {
-        let result = sqlx::query(
-            "INSERT INTO rating_detail (rating_detail_id, rating_id, rating_system_parameter_id, rating_value)\
-            VALUES ($1, $2, $3, $4)",
-        )
-            .bind(self.rating_detail_id)
-            .bind(self.rating_id)
-            .bind(self.rating_system_parameter_id)
-            .bind(self.rating_value)
-            .execute(pool)
-            .await;
-
-        match result {
-            Ok(_) => (true, None),
-            Err(err) => (false, Some(err.to_string()))
-        }
-    }
-
-    async fn delete(id: i32, pool: &PgPool) -> (bool, Option<String>) {
-        let result = sqlx::query("DELETE FROM rating_detail WHERE rating_id = $1")
-            .bind(id)
-            .execute(pool)
-            .await;
-
-        match result {
-            Ok(_) => (true, None),
-            Err(err) => (false, Some(err.to_string()))
-        }
-    }
+    // async fn update<RatingDetail>(self) -> QueryAs<'static, Postgres, RatingDetail, PgArguments> {
+    //     query_as(
+    //         "INSERT INTO rating_detail (rating_detail_id, rating_id, rating_system_parameter_id, rating_value)\
+    //         VALUES ($1, $2, $3, $4)",
+    //     )
+    //         .bind(self.rating_detail_id)
+    //         .bind(self.rating_id)
+    //         .bind(self.rating_system_parameter_id)
+    //         .bind(self.rating_value)
+    // }
+    //
+    // async fn delete<RatingDetail>(id: i32) -> QueryAs<'static, Postgres, RatingDetail, PgArguments> {
+    //     query_as("DELETE FROM rating_detail WHERE rating_id = $1")
+    //         .bind(id)
+    // }
 }

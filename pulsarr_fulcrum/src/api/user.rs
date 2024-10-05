@@ -34,6 +34,6 @@ async fn get_pulsarr_user(
 async fn add_user(
     state: &State<PostgresState>,
     user: Json<PulsarrUser>,
-) -> crate::PulsarrResult<bool> {
+) -> crate::PulsarrResult<PulsarrUser> {
     data_wrangler::add(user.into_inner(), &state.pool).await
 }
