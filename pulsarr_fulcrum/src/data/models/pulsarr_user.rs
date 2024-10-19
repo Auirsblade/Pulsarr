@@ -3,6 +3,7 @@ use crate::error::PulsarrError;
 use rocket::serde::json::Json;
 use rocket::serde::{Deserialize, Serialize};
 use rocket::{get, post, State};
+use rocket::futures::stream::Select;
 use rocket_okapi::{
     okapi::openapi3::OpenApi, openapi, openapi_get_routes_spec, settings::OpenApiSettings,
     JsonSchema,
@@ -30,21 +31,28 @@ impl Model for PulsarrUser {
         .bind(self.name)
     }
 
-    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
-        todo!()
+    fn update<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+        sqlx::query_as(
+            "UPDATE pulsarr_user\
+             SET name = $2\
+            WHERE pulsarr_user_id = $1\
+            RETURNING *",
+        )
+        .bind(self.pulsarr_user_id)
+        .bind(self.name)
     }
 
-    // async fn update<PulsarrUser>(self) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
-    //     query_as(
-    //         "INSERT INTO pulsarr_user (pulsarr_user_id, name)\
-    //         VALUES ($1, $2)",
-    //     )
-    //         .bind(self.pulsarr_user_id)
-    //         .bind(self.name)
-    // }
-    //
-    // async fn delete<PulsarrUser>(id: i32) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
-    //     query_as("DELETE FROM pulsarr_user WHERE pulsarr_user_id = $1")
-    //         .bind(id)
-    // }
+    fn delete<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+        query_as("DELETE FROM pulsarr_user WHERE pulsarr_user_id = $1")
+            .bind(id)
+    }
+
+    fn get_by_id<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+        query_as("SELECT * FROM pulsarr_user WHERE pulsarr_user_id = $1")
+            .bind(id)
+    }
+
+    fn get_all<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>() -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+        query_as("SELECT * FROM pulsarr_user")
+    }
 }
