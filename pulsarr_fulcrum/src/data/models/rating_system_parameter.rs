@@ -1,6 +1,6 @@
 use rocket::serde::{Deserialize, Serialize};
 use rocket_okapi::JsonSchema;
-use sqlx::{FromRow, PgPool, Postgres, query_as};
+use sqlx::{FromRow, PgPool, Postgres, query_as, query};
 use sqlx::postgres::{PgArguments, PgRow};
 use sqlx::query::QueryAs;
 use sqlx::types::Decimal;
@@ -19,37 +19,37 @@ pub(crate) struct RatingSystemParameter {
 impl Model for RatingSystemParameter {
     fn add<RatingSystemParameter: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
         query_as(
-            "INSERT INTO rating_system_parameter (rating_system_id, parameter_rating_max, parameter_rating_max, name)\
-            VALUES ($1, $2, $3, $4)",
+            "INSERT INTO rating_system_parameter (rating_system_id, parameter_rating_max, name)\
+            VALUES ($1, $2, $3)\
+            RETURNING *",
         )
             .bind(self.rating_system_id)
-            .bind(self.parameter_rating_max)
             .bind(self.parameter_rating_max)
             .bind(self.name)
     }
 
-    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
-        todo!()
+    fn update<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as(
+            "UPDATE rating_system_parameter\
+            SET rating_system_id = $2, parameter_rating_max = $3, name = $4\
+            WHERE rating_system_parameter_id = $1\
+            RETURNING *"
+        )
+            .bind(self.rating_system_parameter_id)
+            .bind(self.rating_system_id)
+            .bind(self.parameter_rating_max)
+            .bind(self.name)
     }
 
-    // async fn update<RatingSystemParameter>(self) ->  QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
-    //     query_as(
-    //         "INSERT INTO rating_system_parameter (rating_system_parameter_id, rating_system_id, parameter_rating_max, parameter_rating_max, name)\
-    //         VALUES ($1, $2, $3, $4, $5)",
-    //     )
-    //         .bind(self.rating_system_parameter_id)
-    //         .bind(self.rating_system_id)
-    //         .bind(self.parameter_rating_max)
-    //         .bind(self.parameter_rating_max)
-    //         .bind(self.name)
-    // }
-    //
-    // async fn delete<RatingSystemParameter>(id: i32) ->  QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
-    //     query_as("DELETE FROM rating_system_parameter WHERE rating_id = $1")
-    //         .bind(id)
-    // }
-    
-    // async fn get_all(pool: &PgPool) -> (bool, Option<String>) {
-    //     todo!()
-    // }
+    fn delete<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("DELETE FROM rating_system_parameter WHERE rating_system_parameter_id = $1").bind(id)
+    }
+
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("SELECT * FROM rating_system_parameter WHERE rating_system_parameter_id = $1").bind(id)
+    }
+
+    fn get_all<T: Model>() -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("SELECT * FROM rating_system_parameter")
+    }
 }

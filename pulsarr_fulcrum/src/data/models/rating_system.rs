@@ -25,30 +25,36 @@ impl Model for RatingSystem {
     fn add<RatingSystem: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, RatingSystem, PgArguments> {
         query_as(
             "INSERT INTO rating_system (master_rating_type, rating_max, name)\
-            VALUES ($1,$2,$3)",
+            VALUES ($1,$2,$3)\
+            RETURNING *",
         )
             .bind(self.master_rating_type)
             .bind(self.rating_max)
             .bind(self.name)
     }
 
-    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
-        todo!()
+    fn update<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as(
+            "UPDATE rating_system\
+            SET master_rating_type = $2, rating_max = $3, name = $4\
+            WHERE rating_system_id = $1\
+            RETURNING *"
+        )
+            .bind(self.rating_system_id)
+            .bind(self.master_rating_type)
+            .bind(self.rating_max)
+            .bind(self.name)
     }
 
-    // async fn update<RatingSystem>(self) -> QueryAs<'static, Postgres, RatingSystem, PgArguments> {
-    //     query_as(
-    //         "INSERT INTO rating_system (rating_system_id, master_rating_type, rating_max, name)\
-    //         VALUES ($1,$2,$3, $4)",
-    //     )
-    //         .bind(self.rating_system_id)
-    //         .bind(self.master_rating_type)
-    //         .bind(self.rating_max)
-    //         .bind(self.name)
-    // }
-    //
-    // async fn delete<RatingSystem>(id: i32) -> QueryAs<'static, Postgres, RatingSystem, PgArguments> {
-    //     query_as("DELETE FROM rating_system WHERE rating_id = $1")
-    //         .bind(id)
-    // }
+    fn delete<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("DELETE FROM rating_system WHERE rating_system_id = $1").bind(id)
+    }
+
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("SELECT * FROM rating_system WHERE rating_system_id = $1").bind(id)
+    }
+
+    fn get_all<T: Model>() -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("SELECT * FROM rating_system")
+    }
 }
