@@ -1,9 +1,9 @@
 use crate::data::data_wrangler;
 use crate::data::models::pulsarr_group::{PulsarrGroup, PRIVACY_TYPE};
 use crate::error::PulsarrError;
-use crate::PostgresState;
+use crate::{PostgresState, PulsarrResult};
 use rocket::serde::json::Json;
-use rocket::{get, post, State};
+use rocket::{delete, get, post, State};
 use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec};
@@ -11,13 +11,13 @@ use sqlx::PgPool;
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
-    openapi_get_routes_spec![settings: get_pulsarr_group, get_privacy_types, add_group]
+    openapi_get_routes_spec![settings: add_group, update_group, delete_group, get_pulsarr_group, get_all_groups, get_privacy_types, ]
 }
 
 /// # Get the group privacy types
 #[openapi(tag = "Group")]
 #[get("/privacyTypes")]
-async fn get_privacy_types() -> crate::PulsarrResult<Vec<String>> {
+async fn get_privacy_types() -> PulsarrResult<Vec<String>> {
     let mut privacy_types = vec![];
 
     for typ in PRIVACY_TYPE {
@@ -27,39 +27,37 @@ async fn get_privacy_types() -> crate::PulsarrResult<Vec<String>> {
     Ok(Json(privacy_types))
 }
 
-/// # Get a group by id
-#[openapi(tag = "Group")]
-#[get("/<id>")]
-async fn get_pulsarr_group(
-    state: &State<PostgresState>,
-    id: i32,
-) -> crate::PulsarrResult<PulsarrGroup> {
-    // let group = sqlx::query_as::<_, PulsarrGroup>(
-    //     "select * from pulsarr_group where pulsarr_group_id = $1",
-    // )
-    //     .bind(&id)
-    //     .fetch_one(&state.pool)
-    //     .await
-    //     .unwrap();
-    
-    data_wrangler::get_by_id::<PulsarrGroup>(id, &state.pool).await
-}
-
 /// # Add a group
 #[openapi(tag = "Group")]
 #[post("/add", format = "application/json", data = "<group>")]
-async fn add_group(
-    state: &State<PostgresState>,
-    group: Json<PulsarrGroup>,
-) -> crate::PulsarrResult<bool> {
-    todo!()
-    // data_wrangler::add(group.into_inner(), &state.pool).await
+async fn add_group(state: &State<PostgresState>, group: Json<PulsarrGroup>) -> PulsarrResult<PulsarrGroup> {
+    data_wrangler::add(group.into_inner(), &state.pool).await
 }
 
-/// # Delete a group
+/// # Update group
 #[openapi(tag = "Group")]
-#[post("/delete/<id>")]
-async fn delete_group(state: &State<PostgresState>, id: i32) -> crate::PulsarrResult<bool> {
-    todo!()
-    // data_wrangler::delete::<PulsarrGroup>(id, &state.pool).await
+#[post("/update", format = "application/json", data = "<group>")]
+async fn update_group(state: &State<PostgresState>, group: Json<PulsarrGroup>) -> PulsarrResult<PulsarrGroup> {
+    data_wrangler::update(group.into_inner(), &state.pool).await
+}
+
+/// # Delete group
+#[openapi(tag = "Group")]
+#[delete("/delete/<id>")]
+async fn delete_group(state: &State<PostgresState>, id: i32) -> PulsarrResult<bool> {
+    data_wrangler::delete::<PulsarrGroup>(id, &state.pool).await
+}
+
+/// # Get a group by id
+#[openapi(tag = "Group")]
+#[get("/<id>")]
+async fn get_pulsarr_group(state: &State<PostgresState>, id: i32) -> PulsarrResult<PulsarrGroup> {
+    data_wrangler::get_by_id::<PulsarrGroup>(id, &state.pool).await
+}
+
+/// # Get all groups
+#[openapi(tag = "Group")]
+#[get("/")]
+async fn get_all_groups(state: &State<PostgresState>) -> PulsarrResult<Vec<PulsarrGroup>> {
+    data_wrangler::get_all::<PulsarrGroup>(&state.pool).await
 }
