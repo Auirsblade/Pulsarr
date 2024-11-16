@@ -25,7 +25,7 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: "{{defaultContext}}:puslarr_fulcrum"
+          context: "{{defaultContext}}:pulsarr_fulcrum"
 #          file: ./pulsarr_fulcrum/Dockerfile
 #          target: build
           push: true
