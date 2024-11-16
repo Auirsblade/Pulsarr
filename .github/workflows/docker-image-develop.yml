@@ -2,7 +2,7 @@ name: Docker Image Push
 
 on:
   workflow_dispatch:
-  push: 
+  push:
     branches: [ "develop" ]
 
 jobs:
@@ -25,7 +25,9 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v6
         with:
-          file: ./pulsarr_fulcrum/Dockerfile
+          build-contexts:
+            ./pulsarr_fulcrum
+#          file: ./pulsarr_fulcrum/Dockerfile
 #          target: build
           push: true
           tags: aiursblade/pulsarr-fulcrum:develop
