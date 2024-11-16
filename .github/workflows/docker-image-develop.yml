@@ -26,6 +26,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           file: ./pulsarr_fulcrum/Dockerfile
-          target: build
+#          target: build
           push: true
           tags: aiursblade/pulsarr-fulcrum:develop
