@@ -26,7 +26,7 @@
 **/npm-debug.log
 **/secrets.dev.yaml
 **/values.dev.yaml
-/bin
+#/bin
 #/target
 LICENSE
 README.md
