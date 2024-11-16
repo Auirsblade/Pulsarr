@@ -7,7 +7,7 @@ ARG APP_NAME=pulsarr_fulcrum
 
 FROM rust:${RUST_VERSION}-alpine AS build
 ARG APP_NAME
-WORKDIR /app
+#WORKDIR /app
 
 # Install host build dependencies.
 RUN apk add --no-cache clang lld musl-dev git
@@ -29,7 +29,7 @@ RUN --mount=type=bind,source=src,target=src \
     --mount=type=cache,target=/usr/local/.cargo/git/db \
     --mount=type=cache,target=/usr/local/.cargo/registry/ \
     --mount=type=bind,source=db/migrations,target=db/migrations \
-#    --mount=type=bind,source=.cargo,target=.cargo \
+    --mount=type=bind,source=.cargo,target=.cargo \
     cargo build --locked --release && \
 cp ./target/release/$APP_NAME /bin/server
 
