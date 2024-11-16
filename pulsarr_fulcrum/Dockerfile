@@ -7,7 +7,7 @@ ARG APP_NAME=pulsarr_fulcrum
 
 FROM rust:${RUST_VERSION}-alpine AS build
 ARG APP_NAME
-WORKDIR /app
+#WORKDIR /app
 
 # Install host build dependencies.
 RUN apk add --no-cache clang lld musl-dev git
