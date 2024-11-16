@@ -1,7 +1,8 @@
 name: Docker Image Push
 
 on:
-  push:
+  workflow_dispatch:
+  push: 
     branches: [ "develop" ]
 
 jobs:
