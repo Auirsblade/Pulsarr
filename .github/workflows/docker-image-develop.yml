@@ -25,7 +25,6 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: .
           file: ./pulsarr_fulcrum/Dockerfile
           push: true
           tags: aiursblade/pulsarr-fulcrum:develop
