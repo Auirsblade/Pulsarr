@@ -13,10 +13,12 @@ services:
       context: .
       target: final
     ports:
-      - ${RUST_PORT}
+      - ${RUST_PORT:-3003:3003}
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      - RUST_BACKTRACE=${RUST_BACKTRACE:-0}
   postgres:
     image: postgres
     restart: always
