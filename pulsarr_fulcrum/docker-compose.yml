@@ -33,7 +33,7 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=trust
 #      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
     ports:
-      - ${POSTGRES_PORTS:-5432:5432}
+      - ${POSTGRES_PORT}
     healthcheck:
       test: [ "CMD", "pg_isready" ]
       interval: 10s
