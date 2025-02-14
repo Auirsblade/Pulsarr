@@ -21,7 +21,7 @@ services:
         condition: service_healthy
     environment:
       - RUST_BACKTRACE=${RUST_BACKTRACE:-0}
-      - POSTGRES_URL=${POSTGRES_URL:-"postgresql://postgres@postgres:5432/pulsarrdb"}
+      - POSTGRES_URL=${POSTGRES_URL}
   postgres:
     env_file:
       - path: .env
