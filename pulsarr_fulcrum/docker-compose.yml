@@ -19,7 +19,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
   postgres:
     env_file:
       - path: .env
