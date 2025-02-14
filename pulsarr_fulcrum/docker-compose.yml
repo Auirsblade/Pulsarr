@@ -20,6 +20,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks: ['dokploy-network']
   postgres:
     env_file:
       - path: .env
@@ -41,8 +42,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      -dokploy-network
+    networks: ['dokploy-network']
 volumes:
   db-data:
 #secrets:
