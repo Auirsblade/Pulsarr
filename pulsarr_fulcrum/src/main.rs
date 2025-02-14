@@ -8,7 +8,10 @@ use rocket::{Build, Rocket};
 use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};
 use sqlx::postgres::PgPool;
 use sqlx::Error;
-use std::env;
+use dotenv::dotenv;
+
+#[macro_use]
+extern crate dotenv_codegen;
 
 pub type PulsarrResult<T> = Result<Json<T>, error::PulsarrError>;
 
@@ -20,6 +23,7 @@ struct PostgresState {
 async fn main() {
     // setup db connection and run any necessary migrations
     println!("app starting");
+    dotenv().ok();
     let postgres_pool = get_db_pool().await.unwrap();
     
     println!("running migrations");
@@ -35,7 +39,7 @@ async fn main() {
 }
 
 async fn get_db_pool() -> Result<PgPool, Error> {
-    let db_url = env!("POSTGRES_URL");
+    let db_url = dotenv!("POSTGRES_URL");
     println!("connecting to db: {db_url}");
     let pool = PgPool::connect(&db_url).await;
     pool

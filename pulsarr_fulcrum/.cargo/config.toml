@@ -1,6 +1,0 @@
-[env]
-POSTGRES_URL={value="postgresql://postgres@localhost:5432/pulsarrdb", force=false}
-#PGHOST = "localhost"
-#PGPORT = "5432"
-#PGUSER = "postgres"
-#PGDATABASE = "pulsarrdb"
