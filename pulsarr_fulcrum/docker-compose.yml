@@ -19,7 +19,7 @@ services:
         condition: service_healthy
     environment:
       - RUST_BACKTRACE=${RUST_BACKTRACE:-0}
-      - DATABASE_URL=${DATABASE_URL:-"postgresql://postgres@postgres:5432/pulsarrdb"}
+      - POSTGRES_URL=${POSTGRES_URL:-"postgresql://postgres@postgres:5432/pulsarrdb"}
   postgres:
     image: postgres
     restart: always
