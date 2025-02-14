@@ -35,7 +35,7 @@ async fn main() {
 }
 
 async fn get_db_pool() -> Result<PgPool, Error> {
-    let db_url = env!("DATABASE_URL");
+    let db_url = env!("POSTGRES_URL");
     println!("connecting to db: {db_url}");
     let pool = PgPool::connect(&db_url).await;
     pool
