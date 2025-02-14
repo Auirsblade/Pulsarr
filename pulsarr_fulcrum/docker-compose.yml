@@ -13,10 +13,13 @@ services:
       context: .
       target: final
     ports:
-      - 3003:3003
+      - ${RUST_PORT:-3003:3003}
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      - RUST_BACKTRACE=${RUST_BACKTRACE:-0}
+      - DATABASE_URL=${DATABASE_URL:-"postgresql://postgres@postgres:5432/pulsarrdb"}
   postgres:
     image: postgres
     restart: always
@@ -30,7 +33,7 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=trust
 #      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
     ports:
-      - 5432:5432
+      - ${POSTGRES_PORTS:-5432:5432}
     healthcheck:
       test: [ "CMD", "pg_isready" ]
       interval: 10s

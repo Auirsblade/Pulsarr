@@ -1,6 +1,7 @@
 use rocket::serde::json::Json;
 use rocket::serde::{Deserialize, Serialize};
 use rocket::{get, post, State};
+use rocket::error::ErrorKind::Bind;
 use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec, JsonSchema};
@@ -27,35 +28,38 @@ impl Model for PulsarrGroup {
     fn add<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
         query_as(
             "INSERT INTO pulsarr_group (rating_system_id, name, privacy_type)\
-                VALUES ($1, $2, $3)"
+                VALUES ($1, $2, $3)\
+                RETURNING *"
         )
-        .bind(self.rating_system_id)
-        .bind(self.name)
-        .bind(self.privacy_type)
+            .bind(self.rating_system_id)
+            .bind(self.name)
+            .bind(self.privacy_type)
     }
 
-    // fn update<PulsarrGroup>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
-    //     query_as(
-    //         "INSERT INTO pulsarr_group (pulsarr_group_id, rating_system_id, name, privacy_type)\
-    //     VALUES ($1, $2, $3, $4)",
-    //     )
-    //         .bind(self.pulsarr_group_id)
-    //         .bind(self.rating_system_id)
-    //         .bind(self.name)
-    //         .bind(self.privacy_type)
-    // }
-    //
-    // fn delete<PulsarrGroup>(id: i32) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
-    //     query_as("DELETE FROM pulsarr_group WHERE pulsarr_group_id = $1")
-    //         .bind(id)
-    // }
+    fn update<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        query_as(
+            "UPDATE pulsarr_group \
+                SET rating_system_id = $2, name = $3, privacy_type = $4 \
+                WHERE pulsarr_group_id = $1\
+                RETURNING *",
+        )
+            .bind(self.pulsarr_group_id)
+            .bind(self.rating_system_id)
+            .bind(self.name)
+            .bind(self.privacy_type)
+    }
 
-    fn get_by_id<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
-        query_as("SELECT FROM pulsarr_group WHERE pulsarr_group_id = $1")
+    fn delete<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        query_as("DELETE FROM pulsarr_group WHERE pulsarr_group_id = $1")
             .bind(id)
     }
-    //
-    // fn get_all<PulsarrGroup>() -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
-    //     query_as("SELECT FROM pulsarr_group")
-    // }
+
+    fn get_by_id<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        query_as("SELECT * FROM pulsarr_group WHERE pulsarr_group_id = $1")
+            .bind(id)
+    }
+    
+    fn get_all<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>() -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        query_as("SELECT * FROM pulsarr_group")
+    }
 }
