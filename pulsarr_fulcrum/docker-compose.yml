@@ -33,6 +33,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
+      - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_DB=pulsarrdb
       - POSTGRES_HOST_AUTH_METHOD=trust
 #      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
