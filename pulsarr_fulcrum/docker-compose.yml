@@ -13,7 +13,7 @@ services:
       context: .
       target: final
     ports:
-      - 3003:3003
+      - ${RUST_PORT}
     depends_on:
       postgres:
         condition: service_healthy
