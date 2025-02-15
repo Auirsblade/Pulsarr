@@ -12,9 +12,6 @@ WORKDIR /app
 # Install host build dependencies.
 RUN apk add --no-cache clang lld musl-dev git
 
-RUN cargo install sqlx-cli --no-default-features --features postgres
-RUN cargo sqlx prepare
-
 # Build the application.
 # Leverage a cache mount to /usr/local/.cargo/registry/
 # for downloaded dependencies, a cache mount to /usr/local/.cargo/git/db
