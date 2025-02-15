@@ -16,7 +16,7 @@ services:
       context: .
       target: final
     ports:
-      - ${RUST_PORT:-3003}:3003
+      - ${RUST_PORT:-4004}:3003
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,8 +34,11 @@ services:
       - POSTGRES_DB=pulsarrdb
       - POSTGRES_HOST_AUTH_METHOD=trust
 #      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+    expose: 
+      - ${POSTGRES_PORT:-5432}
     ports:
-      - ${POSTGRES_PORT:-5432}:5432
+      - ${POSTGRES_PORT:-5432}:${POSTGRES_PORT:-5432}
+    command: -p ${POSTGRES_PORT:-5432}
     healthcheck:
       test: [ "CMD", "pg_isready" ]
       interval: 10s
