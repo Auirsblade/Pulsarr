@@ -12,6 +12,7 @@ WORKDIR /app
 # Install host build dependencies.
 RUN apk add --no-cache clang lld musl-dev git
 
+RUN cargo install sqlx-cli --no-default-features --features postgres
 RUN cargo sqlx prepare
 
 # Build the application.
@@ -30,7 +31,7 @@ RUN --mount=type=bind,source=src,target=src \
     --mount=type=cache,target=/usr/local/.cargo/git/db \
     --mount=type=cache,target=/usr/local/.cargo/registry/ \
     --mount=type=bind,source=db/migrations,target=db/migrations \
-    cargo sqlx prepare && \
+    --mount=type=bind,source=.sqlx,target=.sqlx \
     cargo build --locked --release && \
 cp ./target/release/$APP_NAME /bin/server
 
