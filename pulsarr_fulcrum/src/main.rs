@@ -48,7 +48,7 @@ async fn get_db_pool() -> Result<PgPool, Error> {
 fn create_server() -> Rocket<Build> {
 
     let figment = rocket::Config::figment()
-        .merge(("port", 3003))
+        .merge(("port", dotenv!("RUST_PORT")))
         .merge(("address", "0.0.0.0"));
 
     let mut building_rocket = rocket::custom(figment)
