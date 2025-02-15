@@ -30,7 +30,8 @@ RUN --mount=type=bind,source=src,target=src \
     --mount=type=cache,target=/usr/local/.cargo/git/db \
     --mount=type=cache,target=/usr/local/.cargo/registry/ \
     --mount=type=bind,source=db/migrations,target=db/migrations \
-    --mount=type=bind,source=.sqlx,target=.sqlx
+    --mount=type=bind,source=.sqlx,target=.sqlx \
+    cargo sqlx prepare && \
     cargo build --locked --release && \
 cp ./target/release/$APP_NAME /bin/server
 
