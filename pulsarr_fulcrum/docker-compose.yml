@@ -33,6 +33,7 @@ services:
     environment:
       - POSTGRES_DB=pulsarrdb
       - POSTGRES_HOST_AUTH_METHOD=trust
+      - PGPORT=${POSTGRES_PORT}
 #      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
     expose: 
       - ${POSTGRES_PORT:-5432}
