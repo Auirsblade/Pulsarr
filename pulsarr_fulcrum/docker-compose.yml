@@ -45,7 +45,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks: ['dokploy-network']
+    networks: 
+      dokploy-network: 
+        aliases: 
+          - ${ENV_NAME}-postgres
 volumes:
   db-data:
 #secrets:
