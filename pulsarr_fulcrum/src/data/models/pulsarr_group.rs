@@ -1,18 +1,9 @@
-use rocket::serde::json::Json;
-use rocket::serde::{Deserialize, Serialize};
-use rocket::{get, post, State};
-use rocket::error::ErrorKind::Bind;
-use rocket_okapi::okapi::openapi3::OpenApi;
-use rocket_okapi::settings::OpenApiSettings;
-use rocket_okapi::{openapi, openapi_get_routes_spec, JsonSchema};
-use sqlx::{Arguments, FromRow, PgPool, Postgres, query_as};
-use sqlx::database::HasArguments;
-use sqlx::postgres::{PgArguments, PgRow};
-use sqlx::query::{Query, QueryAs};
 use crate::data::models::Model;
-
-use crate::error::PulsarrError;
-use crate::PostgresState;
+use rocket::serde::{Deserialize, Serialize};
+use rocket_okapi::JsonSchema;
+use sqlx::postgres::{PgArguments, PgRow};
+use sqlx::query::QueryAs;
+use sqlx::{query_as, FromRow, Postgres};
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
 pub(crate) struct PulsarrGroup {
@@ -40,7 +31,7 @@ impl Model for PulsarrGroup {
         query_as(
             "UPDATE pulsarr_group \
                 SET rating_system_id = $2, name = $3, privacy_type = $4 \
-                WHERE pulsarr_group_id = $1\
+                WHERE pulsarr_group_id = $1 \
                 RETURNING *",
         )
             .bind(self.pulsarr_group_id)

@@ -1,10 +1,10 @@
+use crate::data::models::Model;
 use rocket::serde::{Deserialize, Serialize};
 use rocket_okapi::JsonSchema;
-use sqlx::types::Decimal;
-use sqlx::{FromRow, PgPool, Postgres, query_as};
-use sqlx::postgres::{PgAdvisoryLockKey, PgArguments, PgRow};
+use sqlx::postgres::{PgArguments, PgRow};
 use sqlx::query::QueryAs;
-use crate::data::models::Model;
+use sqlx::types::Decimal;
+use sqlx::{query_as, FromRow, Postgres};
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
 pub(crate) struct RatingDetail {
@@ -28,9 +28,9 @@ impl Model for RatingDetail {
 
     fn update<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments> {
         query_as(
-            "UPDATE rating_detail\
-            SET rating_id = $2, rating_system_parameter_id = $3, rating_value = $4\
-            WHERE rating_detail_id = $1\
+            "UPDATE rating_detail \
+            SET rating_id = $2, rating_system_parameter_id = $3, rating_value = $4 \
+            WHERE rating_detail_id = $1 \
             RETURNING *"
         )
             .bind(self.rating_detail_id)

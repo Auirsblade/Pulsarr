@@ -1,6 +1,6 @@
 use rocket::serde::{Deserialize, Serialize};
 use rocket_okapi::JsonSchema;
-use sqlx::{FromRow, PgPool, Postgres, query_as, types::Decimal};
+use sqlx::{FromRow, Postgres, query_as, types::Decimal};
 use sqlx::postgres::{PgArguments, PgRow};
 use sqlx::query::QueryAs;
 use crate::data::models::Model;
@@ -31,9 +31,9 @@ impl Model for Rating {
 
     fn update<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments> {
         query_as(
-            "UPDATE rating\
-            SET pulsarr_user_id = $2, pulsarr_group_id = $3, rating_system_id = $4, comments = $5, rating_value = $6\
-            WHERE rating_id = $1\
+            "UPDATE rating \
+            SET pulsarr_user_id = $2, pulsarr_group_id = $3, rating_system_id = $4, comments = $5, rating_value = $6 \
+            WHERE rating_id = $1 \
             RETURNING *"
         )
             .bind(self.rating_id)

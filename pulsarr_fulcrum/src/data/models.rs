@@ -1,4 +1,4 @@
-use sqlx::{FromRow, Postgres};
+use sqlx::Postgres;
 use sqlx::postgres::{PgArguments, PgRow};
 use sqlx::query::QueryAs;
 
