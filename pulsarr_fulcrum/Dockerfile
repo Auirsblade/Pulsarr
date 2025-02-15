@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG RUST_VERSION=1.76.0
+ARG RUST_VERSION=1.84.0
 ARG APP_NAME=pulsarr_fulcrum
 
 ################################################################################
