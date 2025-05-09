@@ -4,8 +4,9 @@ mod data;
 
 use crate::api::{group, rating, rating_system, user };
 use rocket::serde::json::Json;
-use rocket::{Build, Rocket};
+use rocket::{Build, Rocket, http::Method};
 use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};
+use rocket_cors::{AllowedOrigins, Cors, CorsOptions};
 use sqlx::postgres::PgPool;
 use sqlx::Error;
 use dotenv::dotenv;
@@ -52,6 +53,13 @@ fn create_server() -> Rocket<Build> {
     let figment = rocket::Config::figment()
         .merge(("port", port))
         .merge(("address", "0.0.0.0"));
+    
+    let cors = CorsOptions::default()
+        .allowed_origins(AllowedOrigins::all())
+        .allowed_methods(
+            vec![Method::Get, Method::Post, Method::Patch].into_iter().map(From::from).collect()
+        )
+        .allow_credentials(true);
 
     let mut building_rocket = rocket::custom(figment)
         .mount(
@@ -60,7 +68,8 @@ fn create_server() -> Rocket<Build> {
                 url: "../openapi.json".to_owned(),
                 ..Default::default()
             }),
-        );
+        )
+        .attach(cors.to_cors().unwrap());
     
     let openapi_settings = rocket_okapi::settings::OpenApiSettings::default();
     mount_endpoints_and_merged_docs! {

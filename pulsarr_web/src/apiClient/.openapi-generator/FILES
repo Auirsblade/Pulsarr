@@ -1,0 +1,15 @@
+.openapi-generator-ignore
+apis/GroupApi.ts
+apis/RatingApi.ts
+apis/RatingSystemApi.ts
+apis/UserApi.ts
+apis/index.ts
+index.ts
+models/PulsarrGroupModel.ts
+models/PulsarrUserModel.ts
+models/RatingDetailModel.ts
+models/RatingModel.ts
+models/RatingSystemModel.ts
+models/RatingSystemParameterModel.ts
+models/index.ts
+runtime.ts
