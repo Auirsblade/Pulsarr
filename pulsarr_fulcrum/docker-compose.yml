@@ -20,6 +20,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - dokploy-network
   postgres:
     env_file:
       - path: .env
@@ -51,6 +53,9 @@ services:
           - ${ENV_NAME}-postgres
 volumes:
   db-data:
+networks:
+  dokploy-network:
+    external: true
 #secrets:
 #  db-password:
 #    file: db/password.txt
