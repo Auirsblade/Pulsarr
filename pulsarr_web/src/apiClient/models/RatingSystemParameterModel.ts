@@ -24,19 +24,19 @@ export interface RatingSystemParameterModel {
      * @type {number}
      * @memberof RatingSystemParameterModel
      */
-    ratingSystemParameterId: number;
+    rating_system_parameter_id: number;
     /**
      * 
      * @type {number}
      * @memberof RatingSystemParameterModel
      */
-    ratingSystemId: number;
+    rating_system_id: number;
     /**
      * 
      * @type {string}
      * @memberof RatingSystemParameterModel
      */
-    parameterRatingMax: string;
+    parameter_rating_max: string;
     /**
      * 
      * @type {string}
@@ -49,9 +49,9 @@ export interface RatingSystemParameterModel {
  * Check if a given object implements the RatingSystemParameterModel interface.
  */
 export function instanceOfRatingSystemParameterModel(value: object): value is RatingSystemParameterModel {
-    if (!('ratingSystemParameterId' in value) || value['ratingSystemParameterId'] === undefined) return false;
-    if (!('ratingSystemId' in value) || value['ratingSystemId'] === undefined) return false;
-    if (!('parameterRatingMax' in value) || value['parameterRatingMax'] === undefined) return false;
+    if (!('rating_system_parameter_id' in value) || value['rating_system_parameter_id'] === undefined) return false;
+    if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
+    if (!('parameter_rating_max' in value) || value['parameter_rating_max'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
     return true;
 }
@@ -66,9 +66,9 @@ export function RatingSystemParameterModelFromJSONTyped(json: any, ignoreDiscrim
     }
     return {
         
-        'ratingSystemParameterId': json['rating_system_parameter_id'],
-        'ratingSystemId': json['rating_system_id'],
-        'parameterRatingMax': json['parameter_rating_max'],
+        'rating_system_parameter_id': json['rating_system_parameter_id'],
+        'rating_system_id': json['rating_system_id'],
+        'parameter_rating_max': json['parameter_rating_max'],
         'name': json['name'],
     };
 }
@@ -84,9 +84,9 @@ export function RatingSystemParameterModelToJSONTyped(value?: RatingSystemParame
 
     return {
         
-        'rating_system_parameter_id': value['ratingSystemParameterId'],
-        'rating_system_id': value['ratingSystemId'],
-        'parameter_rating_max': value['parameterRatingMax'],
+        'rating_system_parameter_id': value['rating_system_parameter_id'],
+        'rating_system_id': value['rating_system_id'],
+        'parameter_rating_max': value['parameter_rating_max'],
         'name': value['name'],
     };
 }

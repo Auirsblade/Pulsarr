@@ -24,25 +24,25 @@ export interface RatingModel {
      * @type {number}
      * @memberof RatingModel
      */
-    ratingId: number;
+    rating_id: number;
     /**
      * 
      * @type {number}
      * @memberof RatingModel
      */
-    pulsarrUserId: number;
+    pulsarr_user_id: number;
     /**
      * 
      * @type {number}
      * @memberof RatingModel
      */
-    pulsarrGroupId: number;
+    pulsarr_group_id: number;
     /**
      * 
      * @type {number}
      * @memberof RatingModel
      */
-    ratingSystemId: number;
+    rating_system_id: number;
     /**
      * 
      * @type {string}
@@ -54,19 +54,19 @@ export interface RatingModel {
      * @type {string}
      * @memberof RatingModel
      */
-    ratingValue: string;
+    rating_value: string;
 }
 
 /**
  * Check if a given object implements the RatingModel interface.
  */
 export function instanceOfRatingModel(value: object): value is RatingModel {
-    if (!('ratingId' in value) || value['ratingId'] === undefined) return false;
-    if (!('pulsarrUserId' in value) || value['pulsarrUserId'] === undefined) return false;
-    if (!('pulsarrGroupId' in value) || value['pulsarrGroupId'] === undefined) return false;
-    if (!('ratingSystemId' in value) || value['ratingSystemId'] === undefined) return false;
+    if (!('rating_id' in value) || value['rating_id'] === undefined) return false;
+    if (!('pulsarr_user_id' in value) || value['pulsarr_user_id'] === undefined) return false;
+    if (!('pulsarr_group_id' in value) || value['pulsarr_group_id'] === undefined) return false;
+    if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
     if (!('comments' in value) || value['comments'] === undefined) return false;
-    if (!('ratingValue' in value) || value['ratingValue'] === undefined) return false;
+    if (!('rating_value' in value) || value['rating_value'] === undefined) return false;
     return true;
 }
 
@@ -80,12 +80,12 @@ export function RatingModelFromJSONTyped(json: any, ignoreDiscriminator: boolean
     }
     return {
         
-        'ratingId': json['rating_id'],
-        'pulsarrUserId': json['pulsarr_user_id'],
-        'pulsarrGroupId': json['pulsarr_group_id'],
-        'ratingSystemId': json['rating_system_id'],
+        'rating_id': json['rating_id'],
+        'pulsarr_user_id': json['pulsarr_user_id'],
+        'pulsarr_group_id': json['pulsarr_group_id'],
+        'rating_system_id': json['rating_system_id'],
         'comments': json['comments'],
-        'ratingValue': json['rating_value'],
+        'rating_value': json['rating_value'],
     };
 }
 
@@ -100,12 +100,12 @@ export function RatingModelToJSONTyped(value?: RatingModel | null, ignoreDiscrim
 
     return {
         
-        'rating_id': value['ratingId'],
-        'pulsarr_user_id': value['pulsarrUserId'],
-        'pulsarr_group_id': value['pulsarrGroupId'],
-        'rating_system_id': value['ratingSystemId'],
+        'rating_id': value['rating_id'],
+        'pulsarr_user_id': value['pulsarr_user_id'],
+        'pulsarr_group_id': value['pulsarr_group_id'],
+        'rating_system_id': value['rating_system_id'],
         'comments': value['comments'],
-        'rating_value': value['ratingValue'],
+        'rating_value': value['rating_value'],
     };
 }
 

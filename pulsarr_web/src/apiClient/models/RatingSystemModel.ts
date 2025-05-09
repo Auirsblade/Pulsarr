@@ -24,19 +24,19 @@ export interface RatingSystemModel {
      * @type {number}
      * @memberof RatingSystemModel
      */
-    ratingSystemId: number;
+    rating_system_id: number;
     /**
      * 
      * @type {string}
      * @memberof RatingSystemModel
      */
-    masterRatingType: string;
+    master_rating_type: string;
     /**
      * 
      * @type {string}
      * @memberof RatingSystemModel
      */
-    ratingMax: string;
+    rating_max: string;
     /**
      * 
      * @type {string}
@@ -49,9 +49,9 @@ export interface RatingSystemModel {
  * Check if a given object implements the RatingSystemModel interface.
  */
 export function instanceOfRatingSystemModel(value: object): value is RatingSystemModel {
-    if (!('ratingSystemId' in value) || value['ratingSystemId'] === undefined) return false;
-    if (!('masterRatingType' in value) || value['masterRatingType'] === undefined) return false;
-    if (!('ratingMax' in value) || value['ratingMax'] === undefined) return false;
+    if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
+    if (!('master_rating_type' in value) || value['master_rating_type'] === undefined) return false;
+    if (!('rating_max' in value) || value['rating_max'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
     return true;
 }
@@ -66,9 +66,9 @@ export function RatingSystemModelFromJSONTyped(json: any, ignoreDiscriminator: b
     }
     return {
         
-        'ratingSystemId': json['rating_system_id'],
-        'masterRatingType': json['master_rating_type'],
-        'ratingMax': json['rating_max'],
+        'rating_system_id': json['rating_system_id'],
+        'master_rating_type': json['master_rating_type'],
+        'rating_max': json['rating_max'],
         'name': json['name'],
     };
 }
@@ -84,9 +84,9 @@ export function RatingSystemModelToJSONTyped(value?: RatingSystemModel | null, i
 
     return {
         
-        'rating_system_id': value['ratingSystemId'],
-        'master_rating_type': value['masterRatingType'],
-        'rating_max': value['ratingMax'],
+        'rating_system_id': value['rating_system_id'],
+        'master_rating_type': value['master_rating_type'],
+        'rating_max': value['rating_max'],
         'name': value['name'],
     };
 }

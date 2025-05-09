@@ -24,35 +24,35 @@ export interface RatingDetailModel {
      * @type {number}
      * @memberof RatingDetailModel
      */
-    ratingDetailId: number;
+    rating_detail_id: number;
     /**
      * 
      * @type {number}
      * @memberof RatingDetailModel
      */
-    ratingId: number;
+    rating_id: number;
     /**
      * 
      * @type {number}
      * @memberof RatingDetailModel
      */
-    ratingSystemParameterId: number;
+    rating_system_parameter_id: number;
     /**
      * 
      * @type {string}
      * @memberof RatingDetailModel
      */
-    ratingValue: string;
+    rating_value: string;
 }
 
 /**
  * Check if a given object implements the RatingDetailModel interface.
  */
 export function instanceOfRatingDetailModel(value: object): value is RatingDetailModel {
-    if (!('ratingDetailId' in value) || value['ratingDetailId'] === undefined) return false;
-    if (!('ratingId' in value) || value['ratingId'] === undefined) return false;
-    if (!('ratingSystemParameterId' in value) || value['ratingSystemParameterId'] === undefined) return false;
-    if (!('ratingValue' in value) || value['ratingValue'] === undefined) return false;
+    if (!('rating_detail_id' in value) || value['rating_detail_id'] === undefined) return false;
+    if (!('rating_id' in value) || value['rating_id'] === undefined) return false;
+    if (!('rating_system_parameter_id' in value) || value['rating_system_parameter_id'] === undefined) return false;
+    if (!('rating_value' in value) || value['rating_value'] === undefined) return false;
     return true;
 }
 
@@ -66,10 +66,10 @@ export function RatingDetailModelFromJSONTyped(json: any, ignoreDiscriminator: b
     }
     return {
         
-        'ratingDetailId': json['rating_detail_id'],
-        'ratingId': json['rating_id'],
-        'ratingSystemParameterId': json['rating_system_parameter_id'],
-        'ratingValue': json['rating_value'],
+        'rating_detail_id': json['rating_detail_id'],
+        'rating_id': json['rating_id'],
+        'rating_system_parameter_id': json['rating_system_parameter_id'],
+        'rating_value': json['rating_value'],
     };
 }
 
@@ -84,10 +84,10 @@ export function RatingDetailModelToJSONTyped(value?: RatingDetailModel | null, i
 
     return {
         
-        'rating_detail_id': value['ratingDetailId'],
-        'rating_id': value['ratingId'],
-        'rating_system_parameter_id': value['ratingSystemParameterId'],
-        'rating_value': value['ratingValue'],
+        'rating_detail_id': value['rating_detail_id'],
+        'rating_id': value['rating_id'],
+        'rating_system_parameter_id': value['rating_system_parameter_id'],
+        'rating_value': value['rating_value'],
     };
 }
 

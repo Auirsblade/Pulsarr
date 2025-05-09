@@ -11,9 +11,9 @@
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import type { PulsarrGroupModel, PulsarrUserModel, RatingSystemModel } from "@/apiClient";
 
-    const groups = ref();
-    const ratingSystems = ref();
-    const users = ref();
+    const groups = ref<Array<PulsarrGroupModel>>();
+    const ratingSystems = ref<Array<RatingSystemModel>>();
+    const users = ref<Array<PulsarrUserModel>>();
 
     const getGroups = () => {
         let groupDrh = new DataRequestHandler();
@@ -70,7 +70,7 @@
                             <Card>
                                 <CardHeader>
                                     <CardTitle>
-                                        {{ ratingSystems?.find(x => x.rating_system_id == group.rating_system_id).name }}
+                                        {{ ratingSystems?.find(x => x.rating_system_id == group.rating_system_id)?.name }}
                                     </CardTitle>
                                     <CardDescription>
                                         Rating System
@@ -78,10 +78,10 @@
                                 </CardHeader>
                                 <CardContent>
                                     <div>
-                                        <span class="font-semibold">Rating type: </span>{{ ratingSystems?.find(x => x.rating_system_id == group.rating_system_id).master_rating_type }}
+                                        <span class="font-semibold">Rating type: </span>{{ ratingSystems?.find(x => x.rating_system_id == group.rating_system_id)?.master_rating_type }}
                                     </div>
                                     <div>
-                                        <span class="font-semibold">Max Rating: </span>{{ ratingSystems?.find(x => x.rating_system_id == group.rating_system_id).rating_max }}
+                                        <span class="font-semibold">Max Rating: </span>{{ ratingSystems?.find(x => x.rating_system_id == group.rating_system_id)?.rating_max }}
                                     </div>
                                 </CardContent>
                             </Card>

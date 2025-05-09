@@ -24,7 +24,7 @@ export interface PulsarrUserModel {
      * @type {number}
      * @memberof PulsarrUserModel
      */
-    pulsarrUserId: number;
+    pulsarr_user_id: number;
     /**
      * 
      * @type {string}
@@ -37,7 +37,7 @@ export interface PulsarrUserModel {
  * Check if a given object implements the PulsarrUserModel interface.
  */
 export function instanceOfPulsarrUserModel(value: object): value is PulsarrUserModel {
-    if (!('pulsarrUserId' in value) || value['pulsarrUserId'] === undefined) return false;
+    if (!('pulsarr_user_id' in value) || value['pulsarr_user_id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
     return true;
 }
@@ -52,7 +52,7 @@ export function PulsarrUserModelFromJSONTyped(json: any, ignoreDiscriminator: bo
     }
     return {
         
-        'pulsarrUserId': json['pulsarr_user_id'],
+        'pulsarr_user_id': json['pulsarr_user_id'],
         'name': json['name'],
     };
 }
@@ -68,7 +68,7 @@ export function PulsarrUserModelToJSONTyped(value?: PulsarrUserModel | null, ign
 
     return {
         
-        'pulsarr_user_id': value['pulsarrUserId'],
+        'pulsarr_user_id': value['pulsarr_user_id'],
         'name': value['name'],
     };
 }

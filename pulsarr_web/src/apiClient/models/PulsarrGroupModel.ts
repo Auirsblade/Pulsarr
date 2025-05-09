@@ -24,13 +24,13 @@ export interface PulsarrGroupModel {
      * @type {number}
      * @memberof PulsarrGroupModel
      */
-    pulsarrGroupId: number;
+    pulsarr_group_id: number;
     /**
      * 
      * @type {number}
      * @memberof PulsarrGroupModel
      */
-    ratingSystemId: number;
+    rating_system_id: number;
     /**
      * 
      * @type {string}
@@ -42,17 +42,17 @@ export interface PulsarrGroupModel {
      * @type {string}
      * @memberof PulsarrGroupModel
      */
-    privacyType: string;
+    privacy_type: string;
 }
 
 /**
  * Check if a given object implements the PulsarrGroupModel interface.
  */
 export function instanceOfPulsarrGroupModel(value: object): value is PulsarrGroupModel {
-    if (!('pulsarrGroupId' in value) || value['pulsarrGroupId'] === undefined) return false;
-    if (!('ratingSystemId' in value) || value['ratingSystemId'] === undefined) return false;
+    if (!('pulsarr_group_id' in value) || value['pulsarr_group_id'] === undefined) return false;
+    if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
-    if (!('privacyType' in value) || value['privacyType'] === undefined) return false;
+    if (!('privacy_type' in value) || value['privacy_type'] === undefined) return false;
     return true;
 }
 
@@ -66,10 +66,10 @@ export function PulsarrGroupModelFromJSONTyped(json: any, ignoreDiscriminator: b
     }
     return {
         
-        'pulsarrGroupId': json['pulsarr_group_id'],
-        'ratingSystemId': json['rating_system_id'],
+        'pulsarr_group_id': json['pulsarr_group_id'],
+        'rating_system_id': json['rating_system_id'],
         'name': json['name'],
-        'privacyType': json['privacy_type'],
+        'privacy_type': json['privacy_type'],
     };
 }
 
@@ -84,10 +84,10 @@ export function PulsarrGroupModelToJSONTyped(value?: PulsarrGroupModel | null, i
 
     return {
         
-        'pulsarr_group_id': value['pulsarrGroupId'],
-        'rating_system_id': value['ratingSystemId'],
+        'pulsarr_group_id': value['pulsarr_group_id'],
+        'rating_system_id': value['rating_system_id'],
         'name': value['name'],
-        'privacy_type': value['privacyType'],
+        'privacy_type': value['privacy_type'],
     };
 }
 
