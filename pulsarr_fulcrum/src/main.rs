@@ -2,11 +2,11 @@ mod error;
 mod api;
 mod data;
 
-use crate::api::{group, rating, rating_system, user };
+use crate::api::{group, rating, rating_system, user, auth };
 use rocket::serde::json::Json;
 use rocket::{Build, Rocket, http::Method};
 use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};
-use rocket_cors::{AllowedOrigins, Cors, CorsOptions};
+use rocket_cors::{AllowedOrigins, CorsOptions};
 use sqlx::postgres::PgPool;
 use sqlx::Error;
 use dotenv::dotenv;
@@ -69,11 +69,12 @@ fn create_server() -> Rocket<Build> {
                 ..Default::default()
             }),
         )
-        .attach(cors.to_cors().unwrap());
+        .attach(cors.to_cors().unwrap()); 
     
     let openapi_settings = rocket_okapi::settings::OpenApiSettings::default();
     mount_endpoints_and_merged_docs! {
         building_rocket, "/".to_owned(), openapi_settings,
+        "/auth" => auth::get_routes_and_docs(&openapi_settings),
         "/user" => user::get_routes_and_docs(&openapi_settings),
         "/group" => group::get_routes_and_docs(&openapi_settings),
         "/rating-system" => rating_system::get_routes_and_docs(&openapi_settings),

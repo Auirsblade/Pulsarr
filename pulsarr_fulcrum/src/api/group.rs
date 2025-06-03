@@ -29,33 +29,48 @@ async fn get_privacy_types() -> PulsarrResult<Vec<String>> {
 #[openapi(tag = "Group")]
 #[post("/add", format = "application/json", data = "<group>")]
 async fn add_group(state: &State<PostgresState>, group: Json<PulsarrGroup>) -> PulsarrResult<PulsarrGroup> {
-    data_wrangler::add(group.into_inner(), &state.pool).await
+    match data_wrangler::add(group.into_inner(), &state.pool).await {
+        Ok(r) => Ok(Json(r)),
+        Err(e) => Err(e)
+    }
 }
 
 /// # Update group
 #[openapi(tag = "Group")]
 #[post("/update", format = "application/json", data = "<group>")]
 async fn update_group(state: &State<PostgresState>, group: Json<PulsarrGroup>) -> PulsarrResult<PulsarrGroup> {
-    data_wrangler::update(group.into_inner(), &state.pool).await
+    match data_wrangler::update(group.into_inner(), &state.pool).await {
+        Ok(r) => Ok(Json(r)),
+        Err(e) => Err(e)
+    }
 }
 
 /// # Delete group
 #[openapi(tag = "Group")]
 #[delete("/delete/<id>")]
 async fn delete_group(state: &State<PostgresState>, id: i32) -> PulsarrResult<bool> {
-    data_wrangler::delete::<PulsarrGroup>(id, &state.pool).await
+    match data_wrangler::delete::<PulsarrGroup>(id, &state.pool).await {
+        Ok(r) => Ok(Json(r)),
+        Err(e) => Err(e)
+    }
 }
 
 /// # Get a group by id
 #[openapi(tag = "Group")]
 #[get("/<id>")]
 async fn get_pulsarr_group(state: &State<PostgresState>, id: i32) -> PulsarrResult<PulsarrGroup> {
-    data_wrangler::get_by_id::<PulsarrGroup>(id, &state.pool).await
+    match data_wrangler::get_by_id::<PulsarrGroup>(id, &state.pool).await {
+        Ok(r) => Ok(Json(r)),
+        Err(e) => Err(e)
+    }
 }
 
 /// # Get all groups
 #[openapi(tag = "Group")]
 #[get("/")]
 async fn get_all_groups(state: &State<PostgresState>) -> PulsarrResult<Vec<PulsarrGroup>> {
-    data_wrangler::get_all::<PulsarrGroup>(&state.pool).await
+    match data_wrangler::get_all::<PulsarrGroup>(&state.pool).await {
+        Ok(r) => Ok(Json(r)),
+        Err(e) => Err(e)
+    }
 }

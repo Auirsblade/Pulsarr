@@ -6,14 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sqlx = { version = "0.8.0", features = ["runtime-tokio", "macros", "postgres", "migrate", "rust_decimal"]}
-schemars = { version = "0.8.16", features = ["rust_decimal"] } 
+sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "macros", "postgres", "migrate", "rust_decimal", "uuid", "json"]}
+schemars = { version = "0.8.22", features = ["rust_decimal", "uuid"] }
 rocket_okapi = { version = "0.9.0", features = ["swagger"] }
 rocket = { version = "0.5.0", default-features = false, features = ["json"] }
 rocket_cors = "0.6.0"
-# do not remove this lol
-rust_decimal = { version = "1.36.0", features = ["serde"]}
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.138"
+# do not remove this lol (pretty sure it's because serde feature isn't flagged when imported by sqlx)
+rust_decimal = { version = "1.37.1", features = ["serde"] }
+uuid = { version = "1.17.0", features = ["serde", "v4"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
 dotenv = "0.15.0"
 dotenv_codegen = "0.15.0"
+scrypt = "0.11.0"

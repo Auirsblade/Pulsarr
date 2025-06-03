@@ -1,4 +1,6 @@
 pub mod rating_system;
-pub(crate) mod user;
-pub(crate) mod group;
-pub(crate) mod rating;
+pub mod user;
+pub mod group;
+pub mod rating;
+pub mod structs;
+pub mod auth;
