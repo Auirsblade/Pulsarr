@@ -36,7 +36,7 @@ async fn get_privacy_types() -> PulsarrResult<Vec<String>> {
 }
 
 /// # Add a group
-#[openapi(tag = "Group")]
+#[openapi(deprecated, tag = "Group")]
 #[post("/add", format = "application/json", data = "<group>")]
 #[deprecated(since = "0.1.0", note = "Use /create instead")]
 async fn add_group(state: &State<PostgresState>, group: Json<PulsarrGroup>) -> PulsarrResult<PulsarrGroup> {
