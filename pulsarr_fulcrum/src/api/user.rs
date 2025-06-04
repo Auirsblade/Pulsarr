@@ -15,7 +15,7 @@ use crate::api::structs::api_key::ApiKey;
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
-    openapi_get_routes_spec![settings: add_user, update_user, delete_user, get_pulsarr_user, get_all_users]
+    openapi_get_routes_spec![settings: add_user, update_user, delete_user, get_pulsarr_user, get_current_user, get_all_users]
 }
 
 /// # Add user
