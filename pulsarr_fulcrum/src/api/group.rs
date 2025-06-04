@@ -6,14 +6,18 @@ use rocket::{delete, get, post, State};
 use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec};
+use sqlx::Error;
 use crate::api::dtos::group_dto::GroupDTO;
 use crate::api::dtos::{group_dto, rating_system_dto, rating_system_parameter_dto};
 use crate::api::guards::api_key::ApiKey;
+use crate::data::models::rating_system::RatingSystem;
+use crate::data::models::rating_system_parameter;
+use crate::data::models::rating_system_parameter::RatingSystemParameter;
 use crate::error::PulsarrError;
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
-    openapi_get_routes_spec![settings: add_group, update_group, delete_group, get_pulsarr_group, 
+    openapi_get_routes_spec![settings: add_group, update_group, delete_group, get_pulsarr_group,
         get_all_groups, get_privacy_types, create_group]
 }
 
@@ -63,9 +67,22 @@ async fn delete_group(state: &State<PostgresState>, id: i32) -> PulsarrResult<bo
 /// # Get a group by id
 #[openapi(tag = "Group")]
 #[get("/<id>")]
-async fn get_pulsarr_group(state: &State<PostgresState>, id: i32) -> PulsarrResult<PulsarrGroup> {
+async fn get_pulsarr_group(state: &State<PostgresState>, id: i32, _api_user: ApiKey) -> PulsarrResult<GroupDTO> {
     match data_wrangler::get_by_id::<PulsarrGroup>(id, &state.pool).await {
-        Ok(r) => Ok(Json(r)),
+        Ok(pg) => {
+            match data_wrangler::get_by_id::<RatingSystem>(pg.rating_system_id, &state.pool).await {
+                Ok(rs) => {
+                    match rating_system_parameter::get_by_rating_system_id(rs.rating_system_id).fetch_all(&state.pool).await {
+                        Ok(parameters) => {
+                            let group = group_dto::to_dto(pg, Some(rs), Some(parameters));
+                            Ok(Json(group))
+                        },
+                        Err(e) => Err(PulsarrError::validation_error(e))
+                    }
+                },
+                Err(e) => Err(e)
+            }
+        },
         Err(e) => Err(e)
     }
 }
@@ -92,7 +109,7 @@ async fn create_group(state: &State<PostgresState>, group_dto: Json<GroupDTO>, _
                 match data_wrangler::add(rating_system_dto::to_model(&rsd), &state.pool).await {
                     Ok(rating_system) => {
                         group.rating_system_id = rating_system.rating_system_id;
-                        group.rating_system = Some(rating_system_dto::to_dto(rating_system));
+                        group.rating_system = Some(rating_system_dto::to_dto(rating_system, None));
                     },
                     Err(e) => return Err(e)
                 }

@@ -11,12 +11,12 @@ pub struct RatingSystemParameterDTO {
     pub name: String,
 }
 
-pub fn to_dto(rating_system_parameter: RatingSystemParameter) -> RatingSystemParameterDTO {
+pub fn to_dto(rating_system_parameter: &RatingSystemParameter) -> RatingSystemParameterDTO {
     RatingSystemParameterDTO {
         rating_system_parameter_id: rating_system_parameter.rating_system_parameter_id,
         rating_system_id: rating_system_parameter.rating_system_id,
         parameter_rating_max: rating_system_parameter.parameter_rating_max,
-        name: rating_system_parameter.name,
+        name: rating_system_parameter.name.clone(),
     }
 }
 

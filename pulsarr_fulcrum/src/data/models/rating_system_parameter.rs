@@ -51,3 +51,7 @@ impl Model for RatingSystemParameter {
         query_as("SELECT * FROM rating_system_parameter")
     }
 }
+
+pub fn get_by_rating_system_id(id: i32) -> QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
+    query_as("SELECT * FROM rating_system_parameter WHERE rating_system_id = $1").bind(id)
+}

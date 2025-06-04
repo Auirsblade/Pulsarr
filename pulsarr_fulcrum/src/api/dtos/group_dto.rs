@@ -4,6 +4,7 @@ use crate::api::dtos::rating_system_dto;
 use crate::api::dtos::rating_system_dto::RatingSystemDTO;
 use crate::data::models::pulsarr_group::PulsarrGroup;
 use crate::data::models::rating_system::RatingSystem;
+use crate::data::models::rating_system_parameter::RatingSystemParameter;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct GroupDTO {
@@ -14,14 +15,14 @@ pub struct GroupDTO {
     pub rating_system: Option<RatingSystemDTO>,
 }
 
-pub fn to_dto(pulsarr_group: PulsarrGroup, rating_system: Option<RatingSystem>) -> GroupDTO {
+pub fn to_dto(pulsarr_group: PulsarrGroup, rating_system: Option<RatingSystem>, parameters: Option<Vec<RatingSystemParameter>>) -> GroupDTO {
     GroupDTO{
         pulsarr_group_id: pulsarr_group.pulsarr_group_id,
         rating_system_id: pulsarr_group.rating_system_id,
         name: pulsarr_group.name,
         privacy_type: pulsarr_group.privacy_type,
         rating_system: match rating_system { 
-            Some(rs) => Some(rating_system_dto::to_dto(rs)), 
+            Some(rs) => Some(rating_system_dto::to_dto(rs, parameters)), 
             None => None
         }
     }
