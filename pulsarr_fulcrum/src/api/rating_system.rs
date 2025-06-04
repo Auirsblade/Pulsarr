@@ -58,7 +58,7 @@ async fn get_rating_system(state: &State<PostgresState>, id: i32) -> PulsarrResu
 #[openapi(tag = "Rating System")]
 #[get("/")]
 async fn get_all_rating_systems(state: &State<PostgresState>) -> PulsarrResult<Vec<RatingSystem>> {
-    match data_wrangler::get_all::<RatingSystem>(&state.pool).await {
+    match data_wrangler::get_all::<RatingSystem>(&state.pool, None).await {
         Ok(rating_systems) => Ok(Json(rating_systems)),
         Err(e) => Err(e)
     }
@@ -121,7 +121,7 @@ async fn get_rating_system_parameter(state: &State<PostgresState>, id: i32) -> P
 #[openapi(tag = "Rating System")]
 #[get("/parameter")]
 async fn get_all_rating_system_parameters(state: &State<PostgresState>) -> PulsarrResult<Vec<RatingSystemParameter>> {
-    match data_wrangler::get_all::<RatingSystemParameter>(&state.pool).await {
+    match data_wrangler::get_all::<RatingSystemParameter>(&state.pool, None).await {
         Ok(parameters) => Ok(Json(parameters)),
         Err(e) => Err(e)       
     }

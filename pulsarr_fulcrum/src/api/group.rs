@@ -1,5 +1,13 @@
+use crate::api::dtos::get_request::GetRequest;
+use crate::api::dtos::group_dto::GroupDTO;
+use crate::api::dtos::{group_dto, rating_system_dto, rating_system_parameter_dto};
+use crate::api::guards::api_key::ApiKey;
 use crate::data::data_wrangler;
 use crate::data::models::pulsarr_group::{PulsarrGroup, PRIVACY_TYPE};
+use crate::data::models::rating_system::RatingSystem;
+use crate::data::models::rating_system_parameter;
+use crate::data::models::rating_system_parameter::RatingSystemParameter;
+use crate::error::PulsarrError;
 use crate::{PostgresState, PulsarrResult};
 use rocket::serde::json::Json;
 use rocket::{delete, get, post, State};
@@ -7,13 +15,6 @@ use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec};
 use sqlx::Error;
-use crate::api::dtos::group_dto::GroupDTO;
-use crate::api::dtos::{group_dto, rating_system_dto, rating_system_parameter_dto};
-use crate::api::guards::api_key::ApiKey;
-use crate::data::models::rating_system::RatingSystem;
-use crate::data::models::rating_system_parameter;
-use crate::data::models::rating_system_parameter::RatingSystemParameter;
-use crate::error::PulsarrError;
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
@@ -48,7 +49,7 @@ async fn add_group(state: &State<PostgresState>, group: Json<PulsarrGroup>) -> P
 /// # Update group
 #[openapi(tag = "Group")]
 #[post("/update", format = "application/json", data = "<group>")]
-async fn update_group(state: &State<PostgresState>, group: Json<GroupDTO>) -> PulsarrResult<GroupDTO> {
+async fn update_group(state: &State<PostgresState>, group: Json<GroupDTO>, _api_user: ApiKey) -> PulsarrResult<GroupDTO> {
     match data_wrangler::update(group_dto::to_model(&group), &state.pool).await {
         Ok(r) => Ok(Json(group_dto::to_dto(r, None, None))),
         Err(e) => Err(e)
@@ -58,7 +59,7 @@ async fn update_group(state: &State<PostgresState>, group: Json<GroupDTO>) -> Pu
 /// # Delete group
 #[openapi(tag = "Group")]
 #[delete("/delete/<id>")]
-async fn delete_group(state: &State<PostgresState>, id: i32) -> PulsarrResult<bool> {
+async fn delete_group(state: &State<PostgresState>, id: i32, _api_user: ApiKey) -> PulsarrResult<bool> {
     match data_wrangler::delete::<PulsarrGroup>(id, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
@@ -90,9 +91,9 @@ async fn get_pulsarr_group(state: &State<PostgresState>, id: i32, _api_user: Api
 
 /// # Get all groups
 #[openapi(tag = "Group")]
-#[get("/")]
-async fn get_all_groups(state: &State<PostgresState>) -> PulsarrResult<Vec<PulsarrGroup>> {
-    match data_wrangler::get_all::<PulsarrGroup>(&state.pool).await {
+#[get("/", format = "application/json", data = "<get_request>")]
+async fn get_all_groups(state: &State<PostgresState>, get_request: Json<GetRequest>, _api_user: ApiKey) -> PulsarrResult<Vec<PulsarrGroup>> {
+    match data_wrangler::get_all::<PulsarrGroup>(&state.pool, get_request.into_inner().take_size).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
     }

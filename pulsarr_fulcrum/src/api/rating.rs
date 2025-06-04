@@ -59,7 +59,7 @@ async fn get_rating(state: &State<PostgresState>, id: i32) -> PulsarrResult<Rati
 #[openapi(tag = "Rating")]
 #[get("/")]
 async fn get_all_ratings(state: &State<PostgresState>) -> PulsarrResult<Vec<Rating>> {
-    match data_wrangler::get_all::<Rating>(&state.pool).await {
+    match data_wrangler::get_all::<Rating>(&state.pool, None).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
     }
@@ -109,7 +109,7 @@ async fn get_rating_detail(state: &State<PostgresState>, id: i32) -> PulsarrResu
 #[openapi(tag = "Rating")]
 #[get("/rating_detail")]
 async fn get_all_rating_details(state: &State<PostgresState>) -> PulsarrResult<Vec<RatingDetail>> {
-    match data_wrangler::get_all::<RatingDetail>(&state.pool).await {
+    match data_wrangler::get_all::<RatingDetail>(&state.pool, None).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
     }

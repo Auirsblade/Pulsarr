@@ -50,7 +50,10 @@ impl Model for PulsarrGroup {
             .bind(id)
     }
     
-    fn get_all<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>() -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
-        query_as("SELECT * FROM pulsarr_group")
+    fn get_all<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(take_size: Option<i32>) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        match take_size {
+            Some(size) => query_as("SELECT * FROM pulsarr_group LIMIT $1").bind(size),
+            None => query_as("SELECT * FROM pulsarr_group")
+        }
     }
 }

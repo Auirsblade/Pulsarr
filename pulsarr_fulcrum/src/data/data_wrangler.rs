@@ -30,8 +30,8 @@ pub async fn get_by_id<T: Model>(id: i32, pool: &PgPool) -> Result<T, PulsarrErr
     }
 }
 
-pub async fn get_all<T: Model>(pool: &PgPool) -> Result<Vec<T>, PulsarrError> {
-    match T::get_all::<T>().fetch_all(pool).await {
+pub async fn get_all<T: Model>(pool: &PgPool, take_size: Option<i32>) -> Result<Vec<T>, PulsarrError> {
+    match T::get_all::<T>(take_size).fetch_all(pool).await {
         Ok(result) => Ok(result),
         Err(error) => Err(PulsarrError::validation_error(error))
     }

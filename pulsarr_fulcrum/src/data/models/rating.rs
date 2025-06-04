@@ -52,7 +52,7 @@ impl Model for Rating {
         query_as("SELECT * FROM rating WHERE rating_id = $1").bind(id)
     }
 
-    fn get_all<T: Model>() -> QueryAs<'static, Postgres, T, PgArguments> {
+    fn get_all<T: Model>(take_size: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
         query_as("SELECT * FROM rating")
     }
 }

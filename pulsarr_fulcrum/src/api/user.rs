@@ -70,7 +70,7 @@ async fn get_current_user(state: &State<PostgresState>, api_user: ApiKey) -> cra
 #[openapi(tag = "User")]
 #[get("/")]
 async fn get_all_users(state: &State<PostgresState>, _api_user: ApiKey) -> crate::PulsarrResult<Vec<UserDTO>> {
-    match data_wrangler::get_all::<PulsarrUser>(&state.pool).await {
+    match data_wrangler::get_all::<PulsarrUser>(&state.pool, None).await {
         Ok(pulsarr_user) =>
             Ok(Json(pulsarr_user.iter().map(|user| to_dto(user)).collect::<Vec<UserDTO>>())),
         Err(error) => Err(error),

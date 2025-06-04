@@ -49,7 +49,7 @@ impl Model for PulsarrUser {
             .bind(id)
     }
 
-    fn get_all<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>() -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+    fn get_all<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(take_size: Option<i32>) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
         query_as("SELECT * FROM pulsarr_user")
     }
 }
