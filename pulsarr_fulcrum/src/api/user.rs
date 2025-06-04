@@ -1,6 +1,4 @@
-use crate::data::models::pulsarr_user;
 use crate::data::{data_wrangler, models::pulsarr_user::PulsarrUser};
-use crate::error::PulsarrError;
 use crate::PostgresState;
 use rocket::serde::json::Json;
 use rocket::serde::Deserialize;
@@ -10,7 +8,6 @@ use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec};
 use schemars::JsonSchema;
 use serde::Serialize;
-use sqlx::FromRow;
 use crate::api::structs::api_key::ApiKey;
 
 /// Api Logic
@@ -74,7 +71,7 @@ async fn get_current_user(state: &State<PostgresState>, api_user: ApiKey) -> cra
 /// # Get all users
 #[openapi(tag = "User")]
 #[get("/")]
-async fn get_all_users(state: &State<PostgresState>, user_id: ApiKey) -> crate::PulsarrResult<Vec<UserDTO>> {
+async fn get_all_users(state: &State<PostgresState>, _api_user: ApiKey) -> crate::PulsarrResult<Vec<UserDTO>> {
     match data_wrangler::get_all::<PulsarrUser>(&state.pool).await {
         Ok(pulsarr_user) =>
             Ok(Json(pulsarr_user.iter().map(|user| map_user_dto(user)).collect::<Vec<UserDTO>>())),

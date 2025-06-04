@@ -16,39 +16,39 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface RatingSystemModel
+ * @interface RatingSystem
  */
-export interface RatingSystemModel {
+export interface RatingSystem {
     /**
      * 
      * @type {number}
-     * @memberof RatingSystemModel
+     * @memberof RatingSystem
      */
     rating_system_id: number;
     /**
      * 
      * @type {string}
-     * @memberof RatingSystemModel
+     * @memberof RatingSystem
      */
     master_rating_type: string;
     /**
      * 
      * @type {string}
-     * @memberof RatingSystemModel
+     * @memberof RatingSystem
      */
     rating_max: string;
     /**
      * 
      * @type {string}
-     * @memberof RatingSystemModel
+     * @memberof RatingSystem
      */
     name: string;
 }
 
 /**
- * Check if a given object implements the RatingSystemModel interface.
+ * Check if a given object implements the RatingSystem interface.
  */
-export function instanceOfRatingSystemModel(value: object): value is RatingSystemModel {
+export function instanceOfRatingSystem(value: object): value is RatingSystem {
     if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
     if (!('master_rating_type' in value) || value['master_rating_type'] === undefined) return false;
     if (!('rating_max' in value) || value['rating_max'] === undefined) return false;
@@ -56,11 +56,11 @@ export function instanceOfRatingSystemModel(value: object): value is RatingSyste
     return true;
 }
 
-export function RatingSystemModelFromJSON(json: any): RatingSystemModel {
-    return RatingSystemModelFromJSONTyped(json, false);
+export function RatingSystemFromJSON(json: any): RatingSystem {
+    return RatingSystemFromJSONTyped(json, false);
 }
 
-export function RatingSystemModelFromJSONTyped(json: any, ignoreDiscriminator: boolean): RatingSystemModel {
+export function RatingSystemFromJSONTyped(json: any, ignoreDiscriminator: boolean): RatingSystem {
     if (json == null) {
         return json;
     }
@@ -73,11 +73,11 @@ export function RatingSystemModelFromJSONTyped(json: any, ignoreDiscriminator: b
     };
 }
 
-export function RatingSystemModelToJSON(json: any): RatingSystemModel {
-    return RatingSystemModelToJSONTyped(json, false);
+export function RatingSystemToJSON(json: any): RatingSystem {
+    return RatingSystemToJSONTyped(json, false);
 }
 
-export function RatingSystemModelToJSONTyped(value?: RatingSystemModel | null, ignoreDiscriminator: boolean = false): any {
+export function RatingSystemToJSONTyped(value?: RatingSystem | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

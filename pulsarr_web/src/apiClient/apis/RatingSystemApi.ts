@@ -15,22 +15,22 @@
 
 import * as runtime from '../runtime';
 import type {
-  RatingSystemModel,
-  RatingSystemParameterModel,
+  RatingSystem,
+  RatingSystemParameter,
 } from '../models/index';
 import {
-    RatingSystemModelFromJSON,
-    RatingSystemModelToJSON,
-    RatingSystemParameterModelFromJSON,
-    RatingSystemParameterModelToJSON,
+    RatingSystemFromJSON,
+    RatingSystemToJSON,
+    RatingSystemParameterFromJSON,
+    RatingSystemParameterToJSON,
 } from '../models/index';
 
 export interface AddRatingSystemRequest {
-    ratingSystemModel: RatingSystemModel;
+    ratingSystem: RatingSystem;
 }
 
 export interface AddRatingSystemParameterRequest {
-    ratingSystemParameterModel: RatingSystemParameterModel;
+    ratingSystemParameter: RatingSystemParameter;
 }
 
 export interface DeleteRatingSystemRequest {
@@ -50,11 +50,11 @@ export interface GetRatingSystemParameterRequest {
 }
 
 export interface UpdateRatingSystemRequest {
-    ratingSystemModel: RatingSystemModel;
+    ratingSystem: RatingSystem;
 }
 
 export interface UpdateRatingSystemParameterRequest {
-    ratingSystemParameterModel: RatingSystemParameterModel;
+    ratingSystemParameter: RatingSystemParameter;
 }
 
 /**
@@ -65,11 +65,11 @@ export class RatingSystemApi extends runtime.BaseAPI {
     /**
      * Add rating system
      */
-    async addRatingSystemRaw(requestParameters: AddRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystemModel>> {
-        if (requestParameters['ratingSystemModel'] == null) {
+    async addRatingSystemRaw(requestParameters: AddRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystem>> {
+        if (requestParameters['ratingSystem'] == null) {
             throw new runtime.RequiredError(
-                'ratingSystemModel',
-                'Required parameter "ratingSystemModel" was null or undefined when calling addRatingSystem().'
+                'ratingSystem',
+                'Required parameter "ratingSystem" was null or undefined when calling addRatingSystem().'
             );
         }
 
@@ -84,16 +84,16 @@ export class RatingSystemApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: RatingSystemModelToJSON(requestParameters['ratingSystemModel']),
+            body: RatingSystemToJSON(requestParameters['ratingSystem']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemFromJSON(jsonValue));
     }
 
     /**
      * Add rating system
      */
-    async addRatingSystem(requestParameters: AddRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystemModel> {
+    async addRatingSystem(requestParameters: AddRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystem> {
         const response = await this.addRatingSystemRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -101,11 +101,11 @@ export class RatingSystemApi extends runtime.BaseAPI {
     /**
      * Add rating system parameter
      */
-    async addRatingSystemParameterRaw(requestParameters: AddRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystemParameterModel>> {
-        if (requestParameters['ratingSystemParameterModel'] == null) {
+    async addRatingSystemParameterRaw(requestParameters: AddRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystemParameter>> {
+        if (requestParameters['ratingSystemParameter'] == null) {
             throw new runtime.RequiredError(
-                'ratingSystemParameterModel',
-                'Required parameter "ratingSystemParameterModel" was null or undefined when calling addRatingSystemParameter().'
+                'ratingSystemParameter',
+                'Required parameter "ratingSystemParameter" was null or undefined when calling addRatingSystemParameter().'
             );
         }
 
@@ -120,16 +120,16 @@ export class RatingSystemApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: RatingSystemParameterModelToJSON(requestParameters['ratingSystemParameterModel']),
+            body: RatingSystemParameterToJSON(requestParameters['ratingSystemParameter']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemParameterModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemParameterFromJSON(jsonValue));
     }
 
     /**
      * Add rating system parameter
      */
-    async addRatingSystemParameter(requestParameters: AddRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystemParameterModel> {
+    async addRatingSystemParameter(requestParameters: AddRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystemParameter> {
         const response = await this.addRatingSystemParameterRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -211,7 +211,7 @@ export class RatingSystemApi extends runtime.BaseAPI {
     /**
      * Get all rating system parameters
      */
-    async getAllRatingSystemParametersRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RatingSystemParameterModel>>> {
+    async getAllRatingSystemParametersRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RatingSystemParameter>>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -223,13 +223,13 @@ export class RatingSystemApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RatingSystemParameterModelFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RatingSystemParameterFromJSON));
     }
 
     /**
      * Get all rating system parameters
      */
-    async getAllRatingSystemParameters(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<RatingSystemParameterModel>> {
+    async getAllRatingSystemParameters(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<RatingSystemParameter>> {
         const response = await this.getAllRatingSystemParametersRaw(initOverrides);
         return await response.value();
     }
@@ -237,7 +237,7 @@ export class RatingSystemApi extends runtime.BaseAPI {
     /**
      * Get all rating systems
      */
-    async getAllRatingSystemsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RatingSystemModel>>> {
+    async getAllRatingSystemsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RatingSystem>>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -249,13 +249,13 @@ export class RatingSystemApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RatingSystemModelFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RatingSystemFromJSON));
     }
 
     /**
      * Get all rating systems
      */
-    async getAllRatingSystems(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<RatingSystemModel>> {
+    async getAllRatingSystems(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<RatingSystem>> {
         const response = await this.getAllRatingSystemsRaw(initOverrides);
         return await response.value();
     }
@@ -263,7 +263,7 @@ export class RatingSystemApi extends runtime.BaseAPI {
     /**
      * Get a rating system by id
      */
-    async getRatingSystemRaw(requestParameters: GetRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystemModel>> {
+    async getRatingSystemRaw(requestParameters: GetRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystem>> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -282,13 +282,13 @@ export class RatingSystemApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemFromJSON(jsonValue));
     }
 
     /**
      * Get a rating system by id
      */
-    async getRatingSystem(requestParameters: GetRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystemModel> {
+    async getRatingSystem(requestParameters: GetRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystem> {
         const response = await this.getRatingSystemRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -296,7 +296,7 @@ export class RatingSystemApi extends runtime.BaseAPI {
     /**
      * Get a rating system parameter by id
      */
-    async getRatingSystemParameterRaw(requestParameters: GetRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystemParameterModel>> {
+    async getRatingSystemParameterRaw(requestParameters: GetRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystemParameter>> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -315,13 +315,13 @@ export class RatingSystemApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemParameterModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemParameterFromJSON(jsonValue));
     }
 
     /**
      * Get a rating system parameter by id
      */
-    async getRatingSystemParameter(requestParameters: GetRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystemParameterModel> {
+    async getRatingSystemParameter(requestParameters: GetRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystemParameter> {
         const response = await this.getRatingSystemParameterRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -355,11 +355,11 @@ export class RatingSystemApi extends runtime.BaseAPI {
     /**
      * Update rating system
      */
-    async updateRatingSystemRaw(requestParameters: UpdateRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystemModel>> {
-        if (requestParameters['ratingSystemModel'] == null) {
+    async updateRatingSystemRaw(requestParameters: UpdateRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystem>> {
+        if (requestParameters['ratingSystem'] == null) {
             throw new runtime.RequiredError(
-                'ratingSystemModel',
-                'Required parameter "ratingSystemModel" was null or undefined when calling updateRatingSystem().'
+                'ratingSystem',
+                'Required parameter "ratingSystem" was null or undefined when calling updateRatingSystem().'
             );
         }
 
@@ -374,16 +374,16 @@ export class RatingSystemApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: RatingSystemModelToJSON(requestParameters['ratingSystemModel']),
+            body: RatingSystemToJSON(requestParameters['ratingSystem']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemFromJSON(jsonValue));
     }
 
     /**
      * Update rating system
      */
-    async updateRatingSystem(requestParameters: UpdateRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystemModel> {
+    async updateRatingSystem(requestParameters: UpdateRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystem> {
         const response = await this.updateRatingSystemRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -391,11 +391,11 @@ export class RatingSystemApi extends runtime.BaseAPI {
     /**
      * Update rating system parameter
      */
-    async updateRatingSystemParameterRaw(requestParameters: UpdateRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystemParameterModel>> {
-        if (requestParameters['ratingSystemParameterModel'] == null) {
+    async updateRatingSystemParameterRaw(requestParameters: UpdateRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystemParameter>> {
+        if (requestParameters['ratingSystemParameter'] == null) {
             throw new runtime.RequiredError(
-                'ratingSystemParameterModel',
-                'Required parameter "ratingSystemParameterModel" was null or undefined when calling updateRatingSystemParameter().'
+                'ratingSystemParameter',
+                'Required parameter "ratingSystemParameter" was null or undefined when calling updateRatingSystemParameter().'
             );
         }
 
@@ -410,16 +410,16 @@ export class RatingSystemApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: RatingSystemParameterModelToJSON(requestParameters['ratingSystemParameterModel']),
+            body: RatingSystemParameterToJSON(requestParameters['ratingSystemParameter']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemParameterModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemParameterFromJSON(jsonValue));
     }
 
     /**
      * Update rating system parameter
      */
-    async updateRatingSystemParameter(requestParameters: UpdateRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystemParameterModel> {
+    async updateRatingSystemParameter(requestParameters: UpdateRatingSystemParameterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystemParameter> {
         const response = await this.updateRatingSystemParameterRaw(requestParameters, initOverrides);
         return await response.value();
     }

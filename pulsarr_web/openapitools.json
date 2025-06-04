@@ -8,7 +8,6 @@
         "generatorName": "typescript-fetch",
         "output": "./src/apiClient",
         "inputSpec": "http://localhost:4004/openapi.json",
-        "modelNameSuffix": "Model",
         "additionalProperties": {
           "modelPropertyNaming": "snake_case"
         }

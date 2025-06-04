@@ -15,15 +15,15 @@
 
 import * as runtime from '../runtime';
 import type {
-  PulsarrGroupModel,
+  PulsarrGroup,
 } from '../models/index';
 import {
-    PulsarrGroupModelFromJSON,
-    PulsarrGroupModelToJSON,
+    PulsarrGroupFromJSON,
+    PulsarrGroupToJSON,
 } from '../models/index';
 
 export interface AddGroupRequest {
-    pulsarrGroupModel: PulsarrGroupModel;
+    pulsarrGroup: PulsarrGroup;
 }
 
 export interface DeleteGroupRequest {
@@ -35,7 +35,7 @@ export interface GetPulsarrGroupRequest {
 }
 
 export interface UpdateGroupRequest {
-    pulsarrGroupModel: PulsarrGroupModel;
+    pulsarrGroup: PulsarrGroup;
 }
 
 /**
@@ -46,11 +46,11 @@ export class GroupApi extends runtime.BaseAPI {
     /**
      * Add a group
      */
-    async addGroupRaw(requestParameters: AddGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PulsarrGroupModel>> {
-        if (requestParameters['pulsarrGroupModel'] == null) {
+    async addGroupRaw(requestParameters: AddGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PulsarrGroup>> {
+        if (requestParameters['pulsarrGroup'] == null) {
             throw new runtime.RequiredError(
-                'pulsarrGroupModel',
-                'Required parameter "pulsarrGroupModel" was null or undefined when calling addGroup().'
+                'pulsarrGroup',
+                'Required parameter "pulsarrGroup" was null or undefined when calling addGroup().'
             );
         }
 
@@ -65,16 +65,16 @@ export class GroupApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: PulsarrGroupModelToJSON(requestParameters['pulsarrGroupModel']),
+            body: PulsarrGroupToJSON(requestParameters['pulsarrGroup']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => PulsarrGroupModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => PulsarrGroupFromJSON(jsonValue));
     }
 
     /**
      * Add a group
      */
-    async addGroup(requestParameters: AddGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PulsarrGroupModel> {
+    async addGroup(requestParameters: AddGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PulsarrGroup> {
         const response = await this.addGroupRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -119,7 +119,7 @@ export class GroupApi extends runtime.BaseAPI {
     /**
      * Get all groups
      */
-    async getAllGroupsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<PulsarrGroupModel>>> {
+    async getAllGroupsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<PulsarrGroup>>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -131,13 +131,13 @@ export class GroupApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(PulsarrGroupModelFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(PulsarrGroupFromJSON));
     }
 
     /**
      * Get all groups
      */
-    async getAllGroups(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<PulsarrGroupModel>> {
+    async getAllGroups(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<PulsarrGroup>> {
         const response = await this.getAllGroupsRaw(initOverrides);
         return await response.value();
     }
@@ -171,7 +171,7 @@ export class GroupApi extends runtime.BaseAPI {
     /**
      * Get a group by id
      */
-    async getPulsarrGroupRaw(requestParameters: GetPulsarrGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PulsarrGroupModel>> {
+    async getPulsarrGroupRaw(requestParameters: GetPulsarrGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PulsarrGroup>> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -190,13 +190,13 @@ export class GroupApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => PulsarrGroupModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => PulsarrGroupFromJSON(jsonValue));
     }
 
     /**
      * Get a group by id
      */
-    async getPulsarrGroup(requestParameters: GetPulsarrGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PulsarrGroupModel> {
+    async getPulsarrGroup(requestParameters: GetPulsarrGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PulsarrGroup> {
         const response = await this.getPulsarrGroupRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -204,11 +204,11 @@ export class GroupApi extends runtime.BaseAPI {
     /**
      * Update group
      */
-    async updateGroupRaw(requestParameters: UpdateGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PulsarrGroupModel>> {
-        if (requestParameters['pulsarrGroupModel'] == null) {
+    async updateGroupRaw(requestParameters: UpdateGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PulsarrGroup>> {
+        if (requestParameters['pulsarrGroup'] == null) {
             throw new runtime.RequiredError(
-                'pulsarrGroupModel',
-                'Required parameter "pulsarrGroupModel" was null or undefined when calling updateGroup().'
+                'pulsarrGroup',
+                'Required parameter "pulsarrGroup" was null or undefined when calling updateGroup().'
             );
         }
 
@@ -223,16 +223,16 @@ export class GroupApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: PulsarrGroupModelToJSON(requestParameters['pulsarrGroupModel']),
+            body: PulsarrGroupToJSON(requestParameters['pulsarrGroup']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => PulsarrGroupModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => PulsarrGroupFromJSON(jsonValue));
     }
 
     /**
      * Update group
      */
-    async updateGroup(requestParameters: UpdateGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PulsarrGroupModel> {
+    async updateGroup(requestParameters: UpdateGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PulsarrGroup> {
         const response = await this.updateGroupRaw(requestParameters, initOverrides);
         return await response.value();
     }

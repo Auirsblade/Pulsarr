@@ -16,39 +16,39 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface PulsarrGroupModel
+ * @interface PulsarrGroup
  */
-export interface PulsarrGroupModel {
+export interface PulsarrGroup {
     /**
      * 
      * @type {number}
-     * @memberof PulsarrGroupModel
+     * @memberof PulsarrGroup
      */
     pulsarr_group_id: number;
     /**
      * 
      * @type {number}
-     * @memberof PulsarrGroupModel
+     * @memberof PulsarrGroup
      */
     rating_system_id: number;
     /**
      * 
      * @type {string}
-     * @memberof PulsarrGroupModel
+     * @memberof PulsarrGroup
      */
     name: string;
     /**
      * 
      * @type {string}
-     * @memberof PulsarrGroupModel
+     * @memberof PulsarrGroup
      */
     privacy_type: string;
 }
 
 /**
- * Check if a given object implements the PulsarrGroupModel interface.
+ * Check if a given object implements the PulsarrGroup interface.
  */
-export function instanceOfPulsarrGroupModel(value: object): value is PulsarrGroupModel {
+export function instanceOfPulsarrGroup(value: object): value is PulsarrGroup {
     if (!('pulsarr_group_id' in value) || value['pulsarr_group_id'] === undefined) return false;
     if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
@@ -56,11 +56,11 @@ export function instanceOfPulsarrGroupModel(value: object): value is PulsarrGrou
     return true;
 }
 
-export function PulsarrGroupModelFromJSON(json: any): PulsarrGroupModel {
-    return PulsarrGroupModelFromJSONTyped(json, false);
+export function PulsarrGroupFromJSON(json: any): PulsarrGroup {
+    return PulsarrGroupFromJSONTyped(json, false);
 }
 
-export function PulsarrGroupModelFromJSONTyped(json: any, ignoreDiscriminator: boolean): PulsarrGroupModel {
+export function PulsarrGroupFromJSONTyped(json: any, ignoreDiscriminator: boolean): PulsarrGroup {
     if (json == null) {
         return json;
     }
@@ -73,11 +73,11 @@ export function PulsarrGroupModelFromJSONTyped(json: any, ignoreDiscriminator: b
     };
 }
 
-export function PulsarrGroupModelToJSON(json: any): PulsarrGroupModel {
-    return PulsarrGroupModelToJSONTyped(json, false);
+export function PulsarrGroupToJSON(json: any): PulsarrGroup {
+    return PulsarrGroupToJSONTyped(json, false);
 }
 
-export function PulsarrGroupModelToJSONTyped(value?: PulsarrGroupModel | null, ignoreDiscriminator: boolean = false): any {
+export function PulsarrGroupToJSONTyped(value?: PulsarrGroup | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

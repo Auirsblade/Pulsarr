@@ -9,17 +9,17 @@
     } from "@/components/ui/card";
     import { onMounted, ref } from "vue";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
-    import type { PulsarrGroupModel, PulsarrUserModel, RatingSystemModel } from "@/apiClient";
+    import type { PulsarrGroup, UserDTO, RatingSystem } from "@/apiClient";
 
-    const groups = ref<Array<PulsarrGroupModel>>();
-    const ratingSystems = ref<Array<RatingSystemModel>>();
-    const users = ref<Array<PulsarrUserModel>>();
+    const groups = ref<Array<PulsarrGroup>>();
+    const ratingSystems = ref<Array<RatingSystem>>();
+    const users = ref<Array<UserDTO>>();
 
     const getGroups = () => {
         let groupDrh = new DataRequestHandler();
         groupDrh.onSuccessCallback = (data) => {
             console.log(data);
-            groups.value = data as PulsarrGroupModel[];
+            groups.value = data as PulsarrGroup[];
         };
         groupDrh.get("/group/");
     };
@@ -28,7 +28,7 @@
         let ratingSystemDrh = new DataRequestHandler();
         ratingSystemDrh.onSuccessCallback = (data) => {
             console.log(data);
-            ratingSystems.value = data as RatingSystemModel[];
+            ratingSystems.value = data as RatingSystem[];
         };
         ratingSystemDrh.get("/rating-system/");
     };
@@ -37,7 +37,7 @@
         let userDrh = new DataRequestHandler();
         userDrh.onSuccessCallback = (data) => {
             console.log(data);
-            users.value = data as PulsarrUserModel[];
+            users.value = data as UserDTO[];
         };
         userDrh.get("/user/");
     }

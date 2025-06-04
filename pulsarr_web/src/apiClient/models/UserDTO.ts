@@ -16,37 +16,51 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface PulsarrUserModel
+ * @interface UserDTO
  */
-export interface PulsarrUserModel {
+export interface UserDTO {
     /**
      * 
      * @type {number}
-     * @memberof PulsarrUserModel
+     * @memberof UserDTO
      */
     pulsarr_user_id: number;
     /**
      * 
      * @type {string}
-     * @memberof PulsarrUserModel
+     * @memberof UserDTO
      */
     name: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserDTO
+     */
+    email: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserDTO
+     */
+    password: string;
 }
 
 /**
- * Check if a given object implements the PulsarrUserModel interface.
+ * Check if a given object implements the UserDTO interface.
  */
-export function instanceOfPulsarrUserModel(value: object): value is PulsarrUserModel {
+export function instanceOfUserDTO(value: object): value is UserDTO {
     if (!('pulsarr_user_id' in value) || value['pulsarr_user_id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
+    if (!('email' in value) || value['email'] === undefined) return false;
+    if (!('password' in value) || value['password'] === undefined) return false;
     return true;
 }
 
-export function PulsarrUserModelFromJSON(json: any): PulsarrUserModel {
-    return PulsarrUserModelFromJSONTyped(json, false);
+export function UserDTOFromJSON(json: any): UserDTO {
+    return UserDTOFromJSONTyped(json, false);
 }
 
-export function PulsarrUserModelFromJSONTyped(json: any, ignoreDiscriminator: boolean): PulsarrUserModel {
+export function UserDTOFromJSONTyped(json: any, ignoreDiscriminator: boolean): UserDTO {
     if (json == null) {
         return json;
     }
@@ -54,14 +68,16 @@ export function PulsarrUserModelFromJSONTyped(json: any, ignoreDiscriminator: bo
         
         'pulsarr_user_id': json['pulsarr_user_id'],
         'name': json['name'],
+        'email': json['email'],
+        'password': json['password'],
     };
 }
 
-export function PulsarrUserModelToJSON(json: any): PulsarrUserModel {
-    return PulsarrUserModelToJSONTyped(json, false);
+export function UserDTOToJSON(json: any): UserDTO {
+    return UserDTOToJSONTyped(json, false);
 }
 
-export function PulsarrUserModelToJSONTyped(value?: PulsarrUserModel | null, ignoreDiscriminator: boolean = false): any {
+export function UserDTOToJSONTyped(value?: UserDTO | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }
@@ -70,6 +86,8 @@ export function PulsarrUserModelToJSONTyped(value?: PulsarrUserModel | null, ign
         
         'pulsarr_user_id': value['pulsarr_user_id'],
         'name': value['name'],
+        'email': value['email'],
+        'password': value['password'],
     };
 }
 

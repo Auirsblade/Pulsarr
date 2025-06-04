@@ -16,39 +16,39 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface RatingSystemParameterModel
+ * @interface RatingSystemParameter
  */
-export interface RatingSystemParameterModel {
+export interface RatingSystemParameter {
     /**
      * 
      * @type {number}
-     * @memberof RatingSystemParameterModel
+     * @memberof RatingSystemParameter
      */
     rating_system_parameter_id: number;
     /**
      * 
      * @type {number}
-     * @memberof RatingSystemParameterModel
+     * @memberof RatingSystemParameter
      */
     rating_system_id: number;
     /**
      * 
      * @type {string}
-     * @memberof RatingSystemParameterModel
+     * @memberof RatingSystemParameter
      */
     parameter_rating_max: string;
     /**
      * 
      * @type {string}
-     * @memberof RatingSystemParameterModel
+     * @memberof RatingSystemParameter
      */
     name: string;
 }
 
 /**
- * Check if a given object implements the RatingSystemParameterModel interface.
+ * Check if a given object implements the RatingSystemParameter interface.
  */
-export function instanceOfRatingSystemParameterModel(value: object): value is RatingSystemParameterModel {
+export function instanceOfRatingSystemParameter(value: object): value is RatingSystemParameter {
     if (!('rating_system_parameter_id' in value) || value['rating_system_parameter_id'] === undefined) return false;
     if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
     if (!('parameter_rating_max' in value) || value['parameter_rating_max'] === undefined) return false;
@@ -56,11 +56,11 @@ export function instanceOfRatingSystemParameterModel(value: object): value is Ra
     return true;
 }
 
-export function RatingSystemParameterModelFromJSON(json: any): RatingSystemParameterModel {
-    return RatingSystemParameterModelFromJSONTyped(json, false);
+export function RatingSystemParameterFromJSON(json: any): RatingSystemParameter {
+    return RatingSystemParameterFromJSONTyped(json, false);
 }
 
-export function RatingSystemParameterModelFromJSONTyped(json: any, ignoreDiscriminator: boolean): RatingSystemParameterModel {
+export function RatingSystemParameterFromJSONTyped(json: any, ignoreDiscriminator: boolean): RatingSystemParameter {
     if (json == null) {
         return json;
     }
@@ -73,11 +73,11 @@ export function RatingSystemParameterModelFromJSONTyped(json: any, ignoreDiscrim
     };
 }
 
-export function RatingSystemParameterModelToJSON(json: any): RatingSystemParameterModel {
-    return RatingSystemParameterModelToJSONTyped(json, false);
+export function RatingSystemParameterToJSON(json: any): RatingSystemParameter {
+    return RatingSystemParameterToJSONTyped(json, false);
 }
 
-export function RatingSystemParameterModelToJSONTyped(value?: RatingSystemParameterModel | null, ignoreDiscriminator: boolean = false): any {
+export function RatingSystemParameterToJSONTyped(value?: RatingSystemParameter | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

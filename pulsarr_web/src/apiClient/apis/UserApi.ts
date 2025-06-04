@@ -15,19 +15,23 @@
 
 import * as runtime from '../runtime';
 import type {
-  PulsarrUserModel,
+  UserDTO,
 } from '../models/index';
 import {
-    PulsarrUserModelFromJSON,
-    PulsarrUserModelToJSON,
+    UserDTOFromJSON,
+    UserDTOToJSON,
 } from '../models/index';
 
 export interface AddUserRequest {
-    pulsarrUserModel: PulsarrUserModel;
+    userDTO: UserDTO;
 }
 
 export interface DeleteUserRequest {
     id: number;
+}
+
+export interface GetAllUsersRequest {
+    pulsarrApiKey: string;
 }
 
 export interface GetPulsarrUserRequest {
@@ -35,7 +39,7 @@ export interface GetPulsarrUserRequest {
 }
 
 export interface UpdateUserRequest {
-    pulsarrUserModel: PulsarrUserModel;
+    userDTO: UserDTO;
 }
 
 /**
@@ -46,11 +50,11 @@ export class UserApi extends runtime.BaseAPI {
     /**
      * Add user
      */
-    async addUserRaw(requestParameters: AddUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PulsarrUserModel>> {
-        if (requestParameters['pulsarrUserModel'] == null) {
+    async addUserRaw(requestParameters: AddUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserDTO>> {
+        if (requestParameters['userDTO'] == null) {
             throw new runtime.RequiredError(
-                'pulsarrUserModel',
-                'Required parameter "pulsarrUserModel" was null or undefined when calling addUser().'
+                'userDTO',
+                'Required parameter "userDTO" was null or undefined when calling addUser().'
             );
         }
 
@@ -65,16 +69,16 @@ export class UserApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: PulsarrUserModelToJSON(requestParameters['pulsarrUserModel']),
+            body: UserDTOToJSON(requestParameters['userDTO']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => PulsarrUserModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => UserDTOFromJSON(jsonValue));
     }
 
     /**
      * Add user
      */
-    async addUser(requestParameters: AddUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PulsarrUserModel> {
+    async addUser(requestParameters: AddUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserDTO> {
         const response = await this.addUserRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -119,10 +123,21 @@ export class UserApi extends runtime.BaseAPI {
     /**
      * Get all users
      */
-    async getAllUsersRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<PulsarrUserModel>>> {
+    async getAllUsersRaw(requestParameters: GetAllUsersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<UserDTO>>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling getAllUsers().'
+            );
+        }
+
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
 
         const response = await this.request({
             path: `/user/`,
@@ -131,21 +146,21 @@ export class UserApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(PulsarrUserModelFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(UserDTOFromJSON));
     }
 
     /**
      * Get all users
      */
-    async getAllUsers(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<PulsarrUserModel>> {
-        const response = await this.getAllUsersRaw(initOverrides);
+    async getAllUsers(requestParameters: GetAllUsersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<UserDTO>> {
+        const response = await this.getAllUsersRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Get a user by id
      */
-    async getPulsarrUserRaw(requestParameters: GetPulsarrUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PulsarrUserModel>> {
+    async getPulsarrUserRaw(requestParameters: GetPulsarrUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserDTO>> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -164,13 +179,13 @@ export class UserApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => PulsarrUserModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => UserDTOFromJSON(jsonValue));
     }
 
     /**
      * Get a user by id
      */
-    async getPulsarrUser(requestParameters: GetPulsarrUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PulsarrUserModel> {
+    async getPulsarrUser(requestParameters: GetPulsarrUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserDTO> {
         const response = await this.getPulsarrUserRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -178,11 +193,11 @@ export class UserApi extends runtime.BaseAPI {
     /**
      * Update user
      */
-    async updateUserRaw(requestParameters: UpdateUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PulsarrUserModel>> {
-        if (requestParameters['pulsarrUserModel'] == null) {
+    async updateUserRaw(requestParameters: UpdateUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserDTO>> {
+        if (requestParameters['userDTO'] == null) {
             throw new runtime.RequiredError(
-                'pulsarrUserModel',
-                'Required parameter "pulsarrUserModel" was null or undefined when calling updateUser().'
+                'userDTO',
+                'Required parameter "userDTO" was null or undefined when calling updateUser().'
             );
         }
 
@@ -197,16 +212,16 @@ export class UserApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: PulsarrUserModelToJSON(requestParameters['pulsarrUserModel']),
+            body: UserDTOToJSON(requestParameters['userDTO']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => PulsarrUserModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => UserDTOFromJSON(jsonValue));
     }
 
     /**
      * Update user
      */
-    async updateUser(requestParameters: UpdateUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PulsarrUserModel> {
+    async updateUser(requestParameters: UpdateUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserDTO> {
         const response = await this.updateUserRaw(requestParameters, initOverrides);
         return await response.value();
     }

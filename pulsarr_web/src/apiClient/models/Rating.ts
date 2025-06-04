@@ -16,51 +16,51 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface RatingModel
+ * @interface Rating
  */
-export interface RatingModel {
+export interface Rating {
     /**
      * 
      * @type {number}
-     * @memberof RatingModel
+     * @memberof Rating
      */
     rating_id: number;
     /**
      * 
      * @type {number}
-     * @memberof RatingModel
+     * @memberof Rating
      */
     pulsarr_user_id: number;
     /**
      * 
      * @type {number}
-     * @memberof RatingModel
+     * @memberof Rating
      */
     pulsarr_group_id: number;
     /**
      * 
      * @type {number}
-     * @memberof RatingModel
+     * @memberof Rating
      */
     rating_system_id: number;
     /**
      * 
      * @type {string}
-     * @memberof RatingModel
+     * @memberof Rating
      */
     comments: string;
     /**
      * 
      * @type {string}
-     * @memberof RatingModel
+     * @memberof Rating
      */
     rating_value: string;
 }
 
 /**
- * Check if a given object implements the RatingModel interface.
+ * Check if a given object implements the Rating interface.
  */
-export function instanceOfRatingModel(value: object): value is RatingModel {
+export function instanceOfRating(value: object): value is Rating {
     if (!('rating_id' in value) || value['rating_id'] === undefined) return false;
     if (!('pulsarr_user_id' in value) || value['pulsarr_user_id'] === undefined) return false;
     if (!('pulsarr_group_id' in value) || value['pulsarr_group_id'] === undefined) return false;
@@ -70,11 +70,11 @@ export function instanceOfRatingModel(value: object): value is RatingModel {
     return true;
 }
 
-export function RatingModelFromJSON(json: any): RatingModel {
-    return RatingModelFromJSONTyped(json, false);
+export function RatingFromJSON(json: any): Rating {
+    return RatingFromJSONTyped(json, false);
 }
 
-export function RatingModelFromJSONTyped(json: any, ignoreDiscriminator: boolean): RatingModel {
+export function RatingFromJSONTyped(json: any, ignoreDiscriminator: boolean): Rating {
     if (json == null) {
         return json;
     }
@@ -89,11 +89,11 @@ export function RatingModelFromJSONTyped(json: any, ignoreDiscriminator: boolean
     };
 }
 
-export function RatingModelToJSON(json: any): RatingModel {
-    return RatingModelToJSONTyped(json, false);
+export function RatingToJSON(json: any): Rating {
+    return RatingToJSONTyped(json, false);
 }
 
-export function RatingModelToJSONTyped(value?: RatingModel | null, ignoreDiscriminator: boolean = false): any {
+export function RatingToJSONTyped(value?: Rating | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }
