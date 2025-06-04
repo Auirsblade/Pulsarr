@@ -91,7 +91,7 @@ async fn get_pulsarr_group(state: &State<PostgresState>, id: i32, _api_user: Api
 
 /// # Get all groups
 #[openapi(tag = "Group")]
-#[get("/", format = "application/json", data = "<get_request>")]
+#[post("/", format = "application/json", data = "<get_request>")]
 async fn get_all_groups(state: &State<PostgresState>, get_request: Json<GetRequest>, _api_user: ApiKey) -> PulsarrResult<Vec<PulsarrGroup>> {
     match data_wrangler::get_all::<PulsarrGroup>(&state.pool, get_request.into_inner().take_size).await {
         Ok(r) => Ok(Json(r)),
