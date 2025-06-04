@@ -60,6 +60,17 @@ async fn get_pulsarr_user(state: &State<PostgresState>, id: i32) -> crate::Pulsa
     }
 }
 
+/// # Get a user by active session
+#[openapi(tag = "User")]
+#[get("/currentUser")]
+async fn get_current_user(state: &State<PostgresState>, api_user: ApiKey) -> crate::PulsarrResult<UserDTO> {
+    let ApiKey(user_id) = api_user;
+    match data_wrangler::get_by_id::<PulsarrUser>(user_id, &state.pool).await {
+        Ok(pulsarr_user) => Ok(Json(map_user_dto(&pulsarr_user))),
+        Err(error) => Err(error),
+    }
+}
+
 /// # Get all users
 #[openapi(tag = "User")]
 #[get("/")]

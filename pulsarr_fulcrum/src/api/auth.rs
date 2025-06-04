@@ -1,4 +1,4 @@
-use scrypt::{ password_hash::{ PasswordHash, PasswordHasher, SaltString }, Scrypt };
+use scrypt::{ password_hash::{ PasswordHash }, Scrypt };
 use rocket::{post, State};
 use rocket::serde::{Deserialize, Serialize};
 use rocket::serde::json::Json;

@@ -8,7 +8,7 @@ use uuid::{uuid, Uuid};
 use crate::data::models::user_session::UserSession;
 use crate::PostgresState;
 
-pub struct ApiKey(i32);
+pub struct ApiKey(pub i32);
 
 #[derive(Debug)]
 pub enum ApiKeyError {
@@ -26,7 +26,7 @@ impl<'r> FromRequest<'r> for ApiKey {
         let pool = &state.pool;
     
         match request.headers().get_one("pulsarr-api-key") {
-            None => Outcome::Error((Status::BadRequest, ApiKeyError::Missing)),
+            None => Outcome::Error((Status::Unauthorized, ApiKeyError::Missing)),
             Some(key) => {
                 match get_signed_in_user_id(key, pool).await {
                     Ok(user_id) => Outcome::Success(ApiKey(user_id)),
