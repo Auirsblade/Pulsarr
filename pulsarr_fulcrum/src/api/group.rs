@@ -37,6 +37,7 @@ async fn get_privacy_types() -> PulsarrResult<Vec<String>> {
 /// # Add a group
 #[openapi(tag = "Group")]
 #[post("/add", format = "application/json", data = "<group>")]
+#[deprecated(since = "0.1.0", note = "Use /create instead")]
 async fn add_group(state: &State<PostgresState>, group: Json<PulsarrGroup>) -> PulsarrResult<PulsarrGroup> {
     match data_wrangler::add(group.into_inner(), &state.pool).await {
         Ok(r) => Ok(Json(r)),
@@ -47,9 +48,9 @@ async fn add_group(state: &State<PostgresState>, group: Json<PulsarrGroup>) -> P
 /// # Update group
 #[openapi(tag = "Group")]
 #[post("/update", format = "application/json", data = "<group>")]
-async fn update_group(state: &State<PostgresState>, group: Json<PulsarrGroup>) -> PulsarrResult<PulsarrGroup> {
-    match data_wrangler::update(group.into_inner(), &state.pool).await {
-        Ok(r) => Ok(Json(r)),
+async fn update_group(state: &State<PostgresState>, group: Json<GroupDTO>) -> PulsarrResult<GroupDTO> {
+    match data_wrangler::update(group_dto::to_model(&group), &state.pool).await {
+        Ok(r) => Ok(Json(group_dto::to_dto(r, None, None))),
         Err(e) => Err(e)
     }
 }
