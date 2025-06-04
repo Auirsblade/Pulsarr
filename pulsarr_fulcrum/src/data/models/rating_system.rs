@@ -10,10 +10,10 @@ use crate::data::models::Model;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
 pub(crate) struct RatingSystem {
-    rating_system_id: i32,
-    master_rating_type: String,
-    rating_max: Decimal,
-    name: String,
+    pub rating_system_id: i32,
+    pub master_rating_type: String,
+    pub rating_max: Decimal,
+    pub name: String,
 }
 
 pub(crate) const RATING_TYPE: [&str; 3] = ["Absolute", "Cumulative", "Average"];

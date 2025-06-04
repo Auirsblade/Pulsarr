@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- * Request/response structs
+ * Request/response guards
  * @export
  * @interface SignInRequest
  */

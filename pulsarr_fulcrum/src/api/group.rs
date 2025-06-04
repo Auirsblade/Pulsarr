@@ -6,10 +6,15 @@ use rocket::{delete, get, post, State};
 use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec};
+use crate::api::dtos::group_dto::GroupDTO;
+use crate::api::dtos::{group_dto, rating_system_dto, rating_system_parameter_dto};
+use crate::api::guards::api_key::ApiKey;
+use crate::error::PulsarrError;
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
-    openapi_get_routes_spec![settings: add_group, update_group, delete_group, get_pulsarr_group, get_all_groups, get_privacy_types, ]
+    openapi_get_routes_spec![settings: add_group, update_group, delete_group, get_pulsarr_group, 
+        get_all_groups, get_privacy_types, create_group]
 }
 
 /// # Get the group privacy types
@@ -71,6 +76,49 @@ async fn get_pulsarr_group(state: &State<PostgresState>, id: i32) -> PulsarrResu
 async fn get_all_groups(state: &State<PostgresState>) -> PulsarrResult<Vec<PulsarrGroup>> {
     match data_wrangler::get_all::<PulsarrGroup>(&state.pool).await {
         Ok(r) => Ok(Json(r)),
+        Err(e) => Err(e)
+    }
+}
+
+/// # Create Group
+#[openapi(tag = "Group")]
+#[post("/create", format = "application/json", data = "<group_dto>")]
+async fn create_group(state: &State<PostgresState>, group_dto: Json<GroupDTO>, _api_user: ApiKey) -> PulsarrResult<GroupDTO> {
+
+    let mut group = group_dto.into_inner();
+    if group.rating_system_id == 0 {
+        match group.rating_system {
+            Some(rsd) => {
+                match data_wrangler::add(rating_system_dto::to_model(&rsd), &state.pool).await {
+                    Ok(rating_system) => {
+                        group.rating_system_id = rating_system.rating_system_id;
+                        group.rating_system = Some(rating_system_dto::to_dto(rating_system));
+                    },
+                    Err(e) => return Err(e)
+                }
+
+                for mut parameter in rsd.parameters {
+                    parameter.rating_system_id = group.rating_system_id;
+                    match data_wrangler::add(rating_system_parameter_dto::to_model(&parameter), &state.pool).await {
+                        Ok(rating_system_parameter) => {
+                            parameter.rating_system_parameter_id = rating_system_parameter.rating_system_parameter_id;
+                        },
+                        Err(e) => return Err(e)
+                    }
+                }
+
+            },
+            None =>
+                return Err(PulsarrError::missing_data("Rating System".to_string()))
+        }
+    }
+
+
+    match data_wrangler::add(group_dto::to_model(&group), &state.pool).await {
+        Ok(r) => {
+            group.pulsarr_group_id = r.pulsarr_group_id;
+            Ok(Json(group))
+        },
         Err(e) => Err(e)
     }
 }

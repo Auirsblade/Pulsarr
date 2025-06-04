@@ -8,6 +8,7 @@ use rocket_okapi::settings::OpenApiSettings;
 use scrypt::password_hash::PasswordVerifier;
 use uuid::Uuid;
 use crate::{PostgresState, PulsarrResult};
+use crate::api::dtos::user_dto::*;
 use crate::data::models::{pulsarr_user, user_session};
 use crate::data::models::pulsarr_user::PulsarrUser;
 use crate::error::PulsarrError;
@@ -20,7 +21,7 @@ pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, O
 /// # Sign in
 #[openapi(tag = "Auth")]
 #[post("/signin", format = "application/json", data = "<request>")]
-async fn signin(state: &State<PostgresState>, request: Json<SignInRequest>) -> PulsarrResult<String> {
+async fn signin(state: &State<PostgresState>, request: Json<SignInRequest>) -> PulsarrResult<SignInResponse> {
     match pulsarr_user::get_password_hash::<PulsarrUser>(&request.username).fetch_one(&state.pool).await    
     {
         Ok(user) => {
@@ -32,7 +33,10 @@ async fn signin(state: &State<PostgresState>, request: Json<SignInRequest>) -> P
                     println!("starting session");   
                     let session_id = Uuid::new_v4();
                     match user_session::start_session(session_id, &user.pulsarr_user_id, &state.pool).await {
-                        Ok(result) => Ok(Json(result.user_session_uid.to_string())),
+                        Ok(result) => Ok(Json(SignInResponse {
+                            pulsarr_api_key: result.user_session_uid.to_string(),
+                            user: to_dto(&user)
+                        })),
                         Err(error) => Err(PulsarrError {
                             err: "Failed to start session".to_owned(),
                             msg: Some(error.to_string()),
@@ -50,14 +54,20 @@ async fn signin(state: &State<PostgresState>, request: Json<SignInRequest>) -> P
         Err(error) => Err(PulsarrError {
             err: "User not found".to_owned(),
             msg: Some(error.to_string()),
-            http_status_code: 400,
+            http_status_code: 404,
         })
     }
 }
 
-/// Request/response structs
+/// Request/response guards
 #[derive(Deserialize, Serialize, JsonSchema)]
 struct SignInRequest {
     username: String,
     password: String,   
+}
+
+#[derive(Deserialize, Serialize, JsonSchema)]
+struct SignInResponse {
+    pulsarr_api_key: String,
+    user: UserDTO
 }

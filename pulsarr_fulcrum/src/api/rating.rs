@@ -6,7 +6,6 @@ use rocket_okapi::{openapi, openapi_get_routes_spec};
 use rocket_okapi::settings::OpenApiSettings;
 use crate::{PostgresState, PulsarrResult};
 use crate::data::models::{rating::Rating, rating_detail::RatingDetail};
-use crate::error::PulsarrError;
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {

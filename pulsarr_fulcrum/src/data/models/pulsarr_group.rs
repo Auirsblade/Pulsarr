@@ -6,14 +6,14 @@ use sqlx::query::QueryAs;
 use sqlx::{query_as, FromRow, Postgres};
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
-pub(crate) struct PulsarrGroup {
-    pulsarr_group_id: i32,
-    rating_system_id: i32,
-    name: String,
-    privacy_type: String,
+pub struct PulsarrGroup {
+    pub pulsarr_group_id: i32,
+    pub rating_system_id: i32,
+    pub name: String,
+    pub privacy_type: String,
 }
 
-pub(crate) const PRIVACY_TYPE: [&str; 2] = ["Public", "Private"];
+pub const PRIVACY_TYPE: [&str; 2] = ["Public", "Private"];
 
 impl Model for PulsarrGroup {
     fn add<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {

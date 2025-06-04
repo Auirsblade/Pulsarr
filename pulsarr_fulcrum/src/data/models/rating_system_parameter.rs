@@ -8,10 +8,10 @@ use crate::data::models::Model;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
 pub(crate) struct RatingSystemParameter {
-    rating_system_parameter_id: i32,
-    rating_system_id: i32,
-    parameter_rating_max: Decimal,
-    name: String,
+    pub rating_system_parameter_id: i32,
+    pub rating_system_id: i32,
+    pub parameter_rating_max: Decimal,
+    pub name: String,
 }
 
 impl Model for RatingSystemParameter {
