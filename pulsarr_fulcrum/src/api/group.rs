@@ -94,6 +94,8 @@ async fn get_all_groups(state: &State<PostgresState>, get_request: Json<GetReque
 async fn create_group(state: &State<PostgresState>, group_dto: Json<GroupDTO>, _api_user: ApiKey) -> PulsarrResult<GroupDTO> {
 
     let mut group = group_dto.into_inner();
+    let ApiKey(user_id) = _api_user;
+    group.created_by_user_id = Some(user_id);
     if group.rating_system_id == 0 {
         match group.rating_system {
             Some(rsd) => {
