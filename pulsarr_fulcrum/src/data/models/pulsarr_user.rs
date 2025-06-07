@@ -4,7 +4,8 @@ use scrypt::{password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Para
 use sqlx;
 use sqlx::postgres::{PgArguments, PgRow};
 use sqlx::query::QueryAs;
-use sqlx::{query_as, FromRow, Postgres, QueryBuilder};
+use sqlx::{query_as, FromRow, Postgres};
+use sqlx::types::chrono::NaiveDateTime;
 
 #[derive(FromRow)]
 pub struct PulsarrUser {
@@ -12,6 +13,7 @@ pub struct PulsarrUser {
     pub name: String,
     pub email: String,
     pub password: String,
+    pub join_date: NaiveDateTime
 }
 
 impl Model for PulsarrUser {

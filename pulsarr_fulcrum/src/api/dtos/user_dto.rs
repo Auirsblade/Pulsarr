@@ -1,6 +1,6 @@
 use rocket::serde::{Deserialize, Serialize};
-use rocket::serde::json::Json;
 use rocket_okapi::JsonSchema;
+use sqlx::types::chrono::NaiveDateTime;
 use crate::data::models::pulsarr_user::PulsarrUser;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -9,6 +9,7 @@ pub struct UserDTO {
     pub name: String,
     pub email: String,
     pub password: String,
+    pub join_date: NaiveDateTime
 }
 
 pub fn to_dto(pulsarr_user: &PulsarrUser) -> UserDTO {
@@ -16,15 +17,17 @@ pub fn to_dto(pulsarr_user: &PulsarrUser) -> UserDTO {
         pulsarr_user_id: pulsarr_user.pulsarr_user_id,
         name: pulsarr_user.name.clone(),
         email: pulsarr_user.email.clone(),
-        password: "".to_string()
+        password: "".to_string(),
+        join_date: pulsarr_user.join_date
     }
 }
 
-pub fn to_model(user: Json<UserDTO>) -> PulsarrUser {
+pub fn to_model(user: UserDTO) -> PulsarrUser {
     PulsarrUser {
         pulsarr_user_id: user.pulsarr_user_id,
         name: user.name.clone(),
         email: user.email.clone(),
-        password: user.password.clone()
+        password: user.password.clone(),
+        join_date: user.join_date,
     }
 }

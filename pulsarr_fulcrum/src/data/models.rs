@@ -9,6 +9,7 @@ pub mod rating_system_parameter;
 pub mod rating;
 pub mod rating_detail;
 pub mod user_session;
+pub(crate) mod user_group;
 
 pub trait Model: for<'a> sqlx::FromRow<'a, PgRow> + Send + Unpin {
     fn add<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments>;

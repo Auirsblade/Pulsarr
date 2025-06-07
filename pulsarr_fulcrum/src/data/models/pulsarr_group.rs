@@ -1,16 +1,17 @@
 use crate::data::models::Model;
-use rocket::serde::{Deserialize, Serialize};
-use rocket_okapi::JsonSchema;
 use sqlx::postgres::{PgArguments, PgRow};
 use sqlx::query::QueryAs;
 use sqlx::{query_as, FromRow, Postgres};
+use sqlx::types::chrono::NaiveDateTime;
 
-#[derive(Serialize, Deserialize, FromRow, JsonSchema)]
+#[derive(FromRow)]
 pub struct PulsarrGroup {
     pub pulsarr_group_id: i32,
     pub rating_system_id: i32,
     pub name: String,
     pub privacy_type: String,
+    pub creation_date: NaiveDateTime,
+    pub created_by_user_id: Option<i32>
 }
 
 pub const PRIVACY_TYPE: [&str; 2] = ["Public", "Private"];

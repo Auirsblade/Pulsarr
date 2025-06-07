@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use rocket::serde::{Deserialize, Serialize};
 use rocket_okapi::JsonSchema;
 use crate::api::dtos::rating_system_dto;
@@ -13,18 +14,22 @@ pub struct GroupDTO {
     pub name: String,
     pub privacy_type: String,
     pub rating_system: Option<RatingSystemDTO>,
+    pub created_by_user_id: Option<i32>,
+    pub creation_date: NaiveDateTime,
 }
 
-pub fn to_dto(pulsarr_group: PulsarrGroup, rating_system: Option<RatingSystem>, parameters: Option<Vec<RatingSystemParameter>>) -> GroupDTO {
+pub fn to_dto(pulsarr_group: &PulsarrGroup, rating_system: Option<RatingSystem>, parameters: Option<Vec<RatingSystemParameter>>) -> GroupDTO {
     GroupDTO{
         pulsarr_group_id: pulsarr_group.pulsarr_group_id,
         rating_system_id: pulsarr_group.rating_system_id,
-        name: pulsarr_group.name,
-        privacy_type: pulsarr_group.privacy_type,
+        name: pulsarr_group.name.clone(),
+        privacy_type: pulsarr_group.privacy_type.clone(),
         rating_system: match rating_system { 
             Some(rs) => Some(rating_system_dto::to_dto(rs, parameters)), 
             None => None
-        }
+        },
+        created_by_user_id: pulsarr_group.created_by_user_id,
+        creation_date: pulsarr_group.creation_date,       
     }
 }
 
@@ -34,5 +39,7 @@ pub fn to_model(pulsarr_group_dto: &GroupDTO) -> PulsarrGroup {
         rating_system_id: pulsarr_group_dto.rating_system_id,
         name: pulsarr_group_dto.name.clone(),
         privacy_type: pulsarr_group_dto.privacy_type.clone(),
+        created_by_user_id: pulsarr_group_dto.created_by_user_id,
+        creation_date: pulsarr_group_dto.creation_date,
     }
 }

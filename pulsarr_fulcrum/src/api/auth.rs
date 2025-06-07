@@ -32,7 +32,7 @@ async fn signin(state: &State<PostgresState>, request: Json<SignInRequest>) -> P
                 true => {
                     println!("starting session");   
                     let session_id = Uuid::new_v4();
-                    match user_session::start_session(session_id, &user.pulsarr_user_id, &state.pool).await {
+                    match user_session::start_session(session_id, &user.pulsarr_user_id, &request.into_inner().hw_key, &state.pool).await {
                         Ok(result) => Ok(Json(SignInResponse {
                             pulsarr_api_key: result.user_session_uid.to_string(),
                             user: to_dto(&user)
@@ -63,7 +63,8 @@ async fn signin(state: &State<PostgresState>, request: Json<SignInRequest>) -> P
 #[derive(Deserialize, Serialize, JsonSchema)]
 struct SignInRequest {
     username: String,
-    password: String,   
+    password: String,
+    hw_key: String,
 }
 
 #[derive(Deserialize, Serialize, JsonSchema)]

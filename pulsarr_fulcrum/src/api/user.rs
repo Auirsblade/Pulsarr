@@ -17,7 +17,7 @@ pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, O
 #[openapi(tag = "User")]
 #[post("/add", format = "application/json", data = "<user>")]
 async fn add_user(state: &State<PostgresState>, user: Json<UserDTO>) -> crate::PulsarrResult<UserDTO> {
-    let pulsarr_user = to_model(user);
+    let pulsarr_user = to_model(user.into_inner());
     match data_wrangler::add(pulsarr_user, &state.pool).await {
         Ok(pulsarr_user) => Ok(Json(to_dto(&pulsarr_user))),
         Err(error) => Err(error),
@@ -28,7 +28,7 @@ async fn add_user(state: &State<PostgresState>, user: Json<UserDTO>) -> crate::P
 #[openapi(tag = "User")]
 #[post("/update", format = "application/json", data = "<user>")]
 async fn update_user(state: &State<PostgresState>, user: Json<UserDTO>) -> crate::PulsarrResult<UserDTO> {
-    let pulsarr_user = to_model(user);
+    let pulsarr_user = to_model(user.into_inner());
     match data_wrangler::update(pulsarr_user, &state.pool).await {
         Ok(pulsarr_user) => Ok(Json(to_dto(&pulsarr_user))),
         Err(error) => Err(error),
