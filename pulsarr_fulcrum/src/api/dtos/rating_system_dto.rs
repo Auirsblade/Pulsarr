@@ -14,12 +14,12 @@ pub struct RatingSystemDTO {
     pub parameters: Vec<RatingSystemParameterDTO>,
 }
 
-pub fn to_dto(rating_system: RatingSystem, parameters: Option<Vec<RatingSystemParameter>>) -> RatingSystemDTO {
+pub fn to_dto(rating_system: &RatingSystem, parameters: Option<Vec<RatingSystemParameter>>) -> RatingSystemDTO {
     RatingSystemDTO {
         rating_system_id: rating_system.rating_system_id,
-        master_rating_type: rating_system.master_rating_type,
+        master_rating_type: rating_system.master_rating_type.clone(),
         rating_max: rating_system.rating_max,
-        name: rating_system.name,
+        name: rating_system.name.clone(),
         parameters: match parameters {
             Some(rsps) => 
                 rsps.iter().map(|rsp| rating_system_parameter_dto::to_dto(rsp))

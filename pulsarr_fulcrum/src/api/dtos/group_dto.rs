@@ -18,7 +18,7 @@ pub struct GroupDTO {
     pub creation_date: NaiveDateTime,
 }
 
-pub fn to_dto(pulsarr_group: &PulsarrGroup, rating_system: Option<RatingSystem>, parameters: Option<Vec<RatingSystemParameter>>) -> GroupDTO {
+pub fn to_dto(pulsarr_group: &PulsarrGroup, rating_system: Option<&RatingSystem>, parameters: Option<Vec<RatingSystemParameter>>) -> GroupDTO {
     GroupDTO{
         pulsarr_group_id: pulsarr_group.pulsarr_group_id,
         rating_system_id: pulsarr_group.rating_system_id,

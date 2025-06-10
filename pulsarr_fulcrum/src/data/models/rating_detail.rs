@@ -8,10 +8,10 @@ use sqlx::{query_as, FromRow, Postgres};
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
 pub(crate) struct RatingDetail {
-    rating_detail_id: i32,
-    rating_id: i32,
-    rating_system_parameter_id: i32,
-    rating_value: Decimal,
+    pub rating_detail_id: i32,
+    pub rating_id: i32,
+    pub rating_system_parameter_id: i32,
+    pub rating_value: Decimal,
 }
 
 impl Model for RatingDetail {

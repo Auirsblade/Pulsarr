@@ -65,7 +65,7 @@ async fn get_pulsarr_group(state: &State<PostgresState>, id: i32, _api_user: Api
                 Ok(rs) => {
                     match rating_system_parameter::get_by_rating_system_id(rs.rating_system_id).fetch_all(&state.pool).await {
                         Ok(parameters) => {
-                            let group = group_dto::to_dto(&pg, Some(rs), Some(parameters));
+                            let group = group_dto::to_dto(&pg, Some(&rs), Some(parameters));
                             Ok(Json(group))
                         },
                         Err(e) => Err(PulsarrError::validation_error(e))
@@ -102,7 +102,7 @@ async fn create_group(state: &State<PostgresState>, group_dto: Json<GroupDTO>, _
                 match data_wrangler::add(rating_system_dto::to_model(&rsd), &state.pool).await {
                     Ok(rating_system) => {
                         group.rating_system_id = rating_system.rating_system_id;
-                        group.rating_system = Some(rating_system_dto::to_dto(rating_system, None));
+                        group.rating_system = Some(rating_system_dto::to_dto(&rating_system, None));
                     },
                     Err(e) => return Err(e)
                 }
