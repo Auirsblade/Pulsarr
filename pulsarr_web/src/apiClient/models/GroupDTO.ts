@@ -68,7 +68,7 @@ export interface GroupDTO {
      * @type {string}
      * @memberof GroupDTO
      */
-    creation_date: string;
+    creation_date?: string | null;
 }
 
 /**
@@ -79,7 +79,6 @@ export function instanceOfGroupDTO(value: object): value is GroupDTO {
     if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
     if (!('privacy_type' in value) || value['privacy_type'] === undefined) return false;
-    if (!('creation_date' in value) || value['creation_date'] === undefined) return false;
     return true;
 }
 
@@ -99,7 +98,7 @@ export function GroupDTOFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
         'privacy_type': json['privacy_type'],
         'rating_system': json['rating_system'] == null ? undefined : RatingSystemDTOFromJSON(json['rating_system']),
         'created_by_user_id': json['created_by_user_id'] == null ? undefined : json['created_by_user_id'],
-        'creation_date': json['creation_date'],
+        'creation_date': json['creation_date'] == null ? undefined : json['creation_date'],
     };
 }
 
