@@ -31,6 +31,12 @@ export interface SignInRequest {
      * @memberof SignInRequest
      */
     password: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SignInRequest
+     */
+    hw_key: string;
 }
 
 /**
@@ -39,6 +45,7 @@ export interface SignInRequest {
 export function instanceOfSignInRequest(value: object): value is SignInRequest {
     if (!('username' in value) || value['username'] === undefined) return false;
     if (!('password' in value) || value['password'] === undefined) return false;
+    if (!('hw_key' in value) || value['hw_key'] === undefined) return false;
     return true;
 }
 
@@ -54,6 +61,7 @@ export function SignInRequestFromJSONTyped(json: any, ignoreDiscriminator: boole
         
         'username': json['username'],
         'password': json['password'],
+        'hw_key': json['hw_key'],
     };
 }
 
@@ -70,6 +78,7 @@ export function SignInRequestToJSONTyped(value?: SignInRequest | null, ignoreDis
         
         'username': value['username'],
         'password': value['password'],
+        'hw_key': value['hw_key'],
     };
 }
 

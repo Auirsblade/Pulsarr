@@ -13,9 +13,12 @@ pub struct GroupDTO {
     pub rating_system_id: i32,
     pub name: String,
     pub privacy_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rating_system: Option<RatingSystemDTO>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub created_by_user_id: Option<i32>,
-    pub creation_date: NaiveDateTime,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub creation_date: Option<NaiveDateTime>,
 }
 
 pub fn to_dto(pulsarr_group: &PulsarrGroup, rating_system: Option<&RatingSystem>, parameters: Option<Vec<RatingSystemParameter>>) -> GroupDTO {
@@ -29,7 +32,7 @@ pub fn to_dto(pulsarr_group: &PulsarrGroup, rating_system: Option<&RatingSystem>
             None => None
         },
         created_by_user_id: pulsarr_group.created_by_user_id,
-        creation_date: pulsarr_group.creation_date,       
+        creation_date: Some(pulsarr_group.creation_date),       
     }
 }
 
@@ -40,6 +43,6 @@ pub fn to_model(pulsarr_group_dto: &GroupDTO) -> PulsarrGroup {
         name: pulsarr_group_dto.name.clone(),
         privacy_type: pulsarr_group_dto.privacy_type.clone(),
         created_by_user_id: pulsarr_group_dto.created_by_user_id,
-        creation_date: pulsarr_group_dto.creation_date,
+        creation_date: pulsarr_group_dto.creation_date.unwrap_or_else(|| chrono::Local::now().naive_local()),
     }
 }

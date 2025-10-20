@@ -1,4 +1,5 @@
-﻿// Type defs for callback functions
+﻿import { useContextStore } from "@/stores/context.ts";
+
 type DataResponseCallbackFunction = (data: unknown, response: Response) => void;
 type ErrorResponseCallbackFunction = (data: unknown, response: Response|null, error: unknown) => void;
 type ResponseCallbackFunction = (response: Response|null) => void;
@@ -10,41 +11,46 @@ export class DataRequestHandler {
     logResponse: boolean = false;
     logData: boolean = false;
 
-    async get(url: RequestInfo | URL){
+    private getHeaders(contentType?: boolean): Headers {
+        const headers = new Headers();
+        const contextStore = useContextStore();
+        
+        if (contextStore.apiKey) {
+            headers.append('pulsarr-api-key', contextStore.apiKey);
+        }
+        
+        if (contentType) {
+            headers.append('Content-Type', 'application/json');
+        }
+        
+        return headers
+    }
+
+    async get(url: RequestInfo | URL) {
         return this.handleResponse(url, {
-            //credentials: 'include',
             method: 'GET',
-            // headers: {
-            //     "Authorization": "Basic " + user/password?
-            // }
+            headers: this.getHeaders()
         });
     }
 
-    async post(url: RequestInfo | URL, data?: object){
-        if (data)
+    async post(url: RequestInfo | URL, data?: object) {
+        if (data) {
             return this.handleResponse(url, {
-                //credentials: 'include',
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // 'Authorization': ??
-                },
+                headers: this.getHeaders(true),
                 body: JSON.stringify(data)
             });
+        }
         return this.handleResponse(url, {
-            credentials: 'include',
-            method: 'POST'
+            method: 'POST',
+            headers: this.getHeaders()
         });
     }
 
-    async put(url: RequestInfo | URL, data: object){
+    async put(url: RequestInfo | URL, data: object) {
         return this.handleResponse(url, {
-            //credentials: 'include',
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                // 'Authorization': ??
-            },
+            headers: this.getHeaders(true),
             body: JSON.stringify(data)
         });
     }

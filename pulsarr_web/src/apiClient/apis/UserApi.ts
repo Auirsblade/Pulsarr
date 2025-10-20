@@ -34,6 +34,10 @@ export interface GetAllUsersRequest {
     pulsarrApiKey: string;
 }
 
+export interface GetCurrentUserRequest {
+    pulsarrApiKey: string;
+}
+
 export interface GetPulsarrUserRequest {
     id: number;
 }
@@ -154,6 +158,43 @@ export class UserApi extends runtime.BaseAPI {
      */
     async getAllUsers(requestParameters: GetAllUsersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<UserDTO>> {
         const response = await this.getAllUsersRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get a user by active session
+     */
+    async getCurrentUserRaw(requestParameters: GetCurrentUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserDTO>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling getCurrentUser().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/user/currentUser`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => UserDTOFromJSON(jsonValue));
+    }
+
+    /**
+     * Get a user by active session
+     */
+    async getCurrentUser(requestParameters: GetCurrentUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserDTO> {
+        const response = await this.getCurrentUserRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

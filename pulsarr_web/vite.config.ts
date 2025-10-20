@@ -12,8 +12,7 @@ export default defineConfig({
   plugins: [
     vue(),
     vueDevTools(),
-    tailwindcss(),
-    basicSsl()
+    tailwindcss()
   ],
   css: {
     postcss: {

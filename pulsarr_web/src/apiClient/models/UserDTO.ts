@@ -43,6 +43,12 @@ export interface UserDTO {
      * @memberof UserDTO
      */
     password: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserDTO
+     */
+    join_date?: string | null;
 }
 
 /**
@@ -70,6 +76,7 @@ export function UserDTOFromJSONTyped(json: any, ignoreDiscriminator: boolean): U
         'name': json['name'],
         'email': json['email'],
         'password': json['password'],
+        'join_date': json['join_date'] == null ? undefined : json['join_date'],
     };
 }
 
@@ -88,6 +95,7 @@ export function UserDTOToJSONTyped(value?: UserDTO | null, ignoreDiscriminator: 
         'name': value['name'],
         'email': value['email'],
         'password': value['password'],
+        'join_date': value['join_date'],
     };
 }
 

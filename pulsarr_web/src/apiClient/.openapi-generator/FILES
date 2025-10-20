@@ -5,12 +5,16 @@ apis/RatingSystemApi.ts
 apis/UserApi.ts
 apis/index.ts
 index.ts
-models/PulsarrGroup.ts
+models/GetRequest.ts
+models/GroupDTO.ts
 models/Rating.ts
 models/RatingDetail.ts
 models/RatingSystem.ts
+models/RatingSystemDTO.ts
 models/RatingSystemParameter.ts
+models/RatingSystemParameterDTO.ts
 models/SignInRequest.ts
+models/SignInResponse.ts
 models/UserDTO.ts
 models/index.ts
 runtime.ts

@@ -9,7 +9,8 @@ pub struct UserDTO {
     pub name: String,
     pub email: String,
     pub password: String,
-    pub join_date: NaiveDateTime
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub join_date: Option<NaiveDateTime>
 }
 
 pub fn to_dto(pulsarr_user: &PulsarrUser) -> UserDTO {
@@ -18,7 +19,7 @@ pub fn to_dto(pulsarr_user: &PulsarrUser) -> UserDTO {
         name: pulsarr_user.name.clone(),
         email: pulsarr_user.email.clone(),
         password: "".to_string(),
-        join_date: pulsarr_user.join_date
+        join_date: Some(pulsarr_user.join_date)
     }
 }
 
@@ -28,6 +29,6 @@ pub fn to_model(user: UserDTO) -> PulsarrUser {
         name: user.name.clone(),
         email: user.email.clone(),
         password: user.password.clone(),
-        join_date: user.join_date,
+        join_date: user.join_date.unwrap_or_else(|| chrono::Local::now().naive_local()),
     }
 }

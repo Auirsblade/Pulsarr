@@ -16,10 +16,13 @@
 import * as runtime from '../runtime';
 import type {
   SignInRequest,
+  SignInResponse,
 } from '../models/index';
 import {
     SignInRequestFromJSON,
     SignInRequestToJSON,
+    SignInResponseFromJSON,
+    SignInResponseToJSON,
 } from '../models/index';
 
 export interface SigninRequest {
@@ -34,7 +37,7 @@ export class AuthApi extends runtime.BaseAPI {
     /**
      * Sign in
      */
-    async signinRaw(requestParameters: SigninRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
+    async signinRaw(requestParameters: SigninRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SignInResponse>> {
         if (requestParameters['signInRequest'] == null) {
             throw new runtime.RequiredError(
                 'signInRequest',
@@ -56,17 +59,13 @@ export class AuthApi extends runtime.BaseAPI {
             body: SignInRequestToJSON(requestParameters['signInRequest']),
         }, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<string>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response, (jsonValue) => SignInResponseFromJSON(jsonValue));
     }
 
     /**
      * Sign in
      */
-    async signin(requestParameters: SigninRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
+    async signin(requestParameters: SigninRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SignInResponse> {
         const response = await this.signinRaw(requestParameters, initOverrides);
         return await response.value();
     }
