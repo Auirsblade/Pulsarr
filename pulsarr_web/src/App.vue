@@ -4,6 +4,15 @@
     import { RouterLink, RouterView } from 'vue-router'
     import { useColorMode } from "@vueuse/core";
     import AccountHeader from "@/components/AccountHeader.vue";
+    import { onMounted } from "vue";
+    import { useContextStore } from "@/stores/context.ts";
+
+    const appContext = useContextStore();
+
+    onMounted(async () => {
+        await appContext.loadPrivacyTypes();
+        await appContext.loadRatingTypes();
+    })
 
     const mode = useColorMode();
 </script>
