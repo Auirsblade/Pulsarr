@@ -16,7 +16,6 @@
     onMounted(async () => {
         getGroups();
         getUsers();
-        getRatingSystems();
     });
 
     const getGroups = () => {
