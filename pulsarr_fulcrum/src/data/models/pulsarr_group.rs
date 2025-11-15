@@ -1,19 +1,20 @@
 use crate::data::models::Model;
-use rocket::serde::{Deserialize, Serialize};
-use rocket_okapi::JsonSchema;
 use sqlx::postgres::{PgArguments, PgRow};
 use sqlx::query::QueryAs;
 use sqlx::{query_as, FromRow, Postgres};
+use sqlx::types::chrono::NaiveDateTime;
 
-#[derive(Serialize, Deserialize, FromRow, JsonSchema)]
-pub(crate) struct PulsarrGroup {
-    pulsarr_group_id: i32,
-    rating_system_id: i32,
-    name: String,
-    privacy_type: String,
+#[derive(FromRow)]
+pub struct PulsarrGroup {
+    pub pulsarr_group_id: i32,
+    pub rating_system_id: i32,
+    pub name: String,
+    pub privacy_type: String,
+    pub creation_date: NaiveDateTime,
+    pub created_by_user_id: Option<i32>
 }
 
-pub(crate) const PRIVACY_TYPE: [&str; 2] = ["Public", "Private"];
+pub const PRIVACY_TYPE: [&str; 2] = ["Public", "Private"];
 
 impl Model for PulsarrGroup {
     fn add<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
@@ -50,7 +51,10 @@ impl Model for PulsarrGroup {
             .bind(id)
     }
     
-    fn get_all<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>() -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
-        query_as("SELECT * FROM pulsarr_group")
+    fn get_all<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(take_size: Option<i32>) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        match take_size {
+            Some(size) => query_as("SELECT * FROM pulsarr_group LIMIT $1").bind(size),
+            None => query_as("SELECT * FROM pulsarr_group")
+        }
     }
 }

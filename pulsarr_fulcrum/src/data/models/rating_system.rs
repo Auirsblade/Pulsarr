@@ -10,10 +10,10 @@ use crate::data::models::Model;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
 pub(crate) struct RatingSystem {
-    rating_system_id: i32,
-    master_rating_type: String,
-    rating_max: Decimal,
-    name: String,
+    pub rating_system_id: i32,
+    pub master_rating_type: String,
+    pub rating_max: Decimal,
+    pub name: String,
 }
 
 pub(crate) const RATING_TYPE: [&str; 3] = ["Absolute", "Cumulative", "Average"];
@@ -51,7 +51,7 @@ impl Model for RatingSystem {
         query_as("SELECT * FROM rating_system WHERE rating_system_id = $1").bind(id)
     }
 
-    fn get_all<T: Model>() -> QueryAs<'static, Postgres, T, PgArguments> {
+    fn get_all<T: Model>(take_size: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
         query_as("SELECT * FROM rating_system")
     }
 }

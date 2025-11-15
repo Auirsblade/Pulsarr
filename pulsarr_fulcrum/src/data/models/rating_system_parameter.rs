@@ -8,10 +8,10 @@ use crate::data::models::Model;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
 pub(crate) struct RatingSystemParameter {
-    rating_system_parameter_id: i32,
-    rating_system_id: i32,
-    parameter_rating_max: Decimal,
-    name: String,
+    pub rating_system_parameter_id: i32,
+    pub rating_system_id: i32,
+    pub parameter_rating_max: Decimal,
+    pub name: String,
 }
 
 impl Model for RatingSystemParameter {
@@ -47,7 +47,11 @@ impl Model for RatingSystemParameter {
         query_as("SELECT * FROM rating_system_parameter WHERE rating_system_parameter_id = $1").bind(id)
     }
 
-    fn get_all<T: Model>() -> QueryAs<'static, Postgres, T, PgArguments> {
+    fn get_all<T: Model>(take_size: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
         query_as("SELECT * FROM rating_system_parameter")
     }
+}
+
+pub fn get_by_rating_system_id(id: i32) -> QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
+    query_as("SELECT * FROM rating_system_parameter WHERE rating_system_id = $1").bind(id)
 }

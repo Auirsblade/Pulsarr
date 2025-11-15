@@ -7,12 +7,12 @@ use crate::data::models::Model;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
 pub(crate) struct Rating {
-    rating_id: i32,
-    pulsarr_user_id: i32,
-    pulsarr_group_id: i32,
-    rating_system_id: i32,
-    comments: String,
-    rating_value: Decimal,
+    pub rating_id: i32,
+    pub pulsarr_user_id: i32,
+    pub pulsarr_group_id: i32,
+    pub rating_system_id: i32,
+    pub comments: String,
+    pub rating_value: Decimal,
 }
 
 impl Model for Rating {
@@ -52,7 +52,7 @@ impl Model for Rating {
         query_as("SELECT * FROM rating WHERE rating_id = $1").bind(id)
     }
 
-    fn get_all<T: Model>() -> QueryAs<'static, Postgres, T, PgArguments> {
+    fn get_all<T: Model>(take_size: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
         query_as("SELECT * FROM rating")
     }
 }

@@ -8,10 +8,10 @@ use sqlx::{query_as, FromRow, Postgres};
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
 pub(crate) struct RatingDetail {
-    rating_detail_id: i32,
-    rating_id: i32,
-    rating_system_parameter_id: i32,
-    rating_value: Decimal,
+    pub rating_detail_id: i32,
+    pub rating_id: i32,
+    pub rating_system_parameter_id: i32,
+    pub rating_value: Decimal,
 }
 
 impl Model for RatingDetail {
@@ -47,7 +47,7 @@ impl Model for RatingDetail {
         query_as("SELECT * FROM rating_detail WHERE rating_detail_id = $1").bind(id)
     }
 
-    fn get_all<T: Model>() -> QueryAs<'static, Postgres, T, PgArguments> {
+    fn get_all<T: Model>(take_size: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
         query_as("SELECT * FROM rating_detail")
     }
 }
