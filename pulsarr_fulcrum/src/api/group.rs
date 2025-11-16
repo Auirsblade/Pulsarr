@@ -116,7 +116,7 @@ async fn get_pulsarr_group(
         Err(e) => return Err(PulsarrError::validation_error(e)),
     };
 
-    let memberDtos = memberships.iter().map(|m| {
+    let member_dtos = memberships.iter().map(|m| {
         let user = members
             .iter()
             .find(|u| u.pulsarr_user_id == m.pulsarr_user_id)
@@ -125,7 +125,7 @@ async fn get_pulsarr_group(
     });
 
     let group = GroupDTO {
-        members: Some(memberDtos.collect::<Vec<group_member_dto::GroupMemberDTO>>()),
+        members: Some(member_dtos.collect::<Vec<group_member_dto::GroupMemberDTO>>()),
         ..group_dto::to_dto(&pg, Some(&rs), Some(parameters))
     };
 
@@ -175,20 +175,25 @@ async fn create_group(
                     Err(e) => return Err(e),
                 }
 
-                for mut parameter in rsd.parameters {
-                    parameter.rating_system_id = group.rating_system_id;
-                    match data_wrangler::add(
-                        rating_system_parameter_dto::to_model(&parameter),
-                        &state.pool,
-                    )
-                    .await
-                    {
-                        Ok(rating_system_parameter) => {
-                            parameter.rating_system_parameter_id =
-                                rating_system_parameter.rating_system_parameter_id;
+                match rsd.parameters {
+                    Some(parameters) => {
+                        for mut parameter in parameters {
+                            parameter.rating_system_id = group.rating_system_id;
+                            match data_wrangler::add(
+                                rating_system_parameter_dto::to_model(&parameter),
+                                &state.pool,
+                            )
+                                .await
+                            {
+                                Ok(rating_system_parameter) => {
+                                    parameter.rating_system_parameter_id =
+                                        rating_system_parameter.rating_system_parameter_id;
+                                }
+                                Err(e) => return Err(e),
+                            }
                         }
-                        Err(e) => return Err(e),
-                    }
+                    },
+                    None => ()
                 }
             }
             None => return Err(PulsarrError::missing_data("Rating System".to_string())),
