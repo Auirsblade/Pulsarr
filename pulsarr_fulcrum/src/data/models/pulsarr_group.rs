@@ -107,6 +107,17 @@ pub fn get_by_name<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(name: Option<
             .bind(user_id)
         }
     }
+}
 
 
+pub fn get_my_groups<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(user_id: &i32) -> QueryAs<Postgres, PulsarrGroup, PgArguments> {
+        query_as("
+            SELECT g.*
+            FROM pulsarr_group g
+                JOIN user_group ug on ug.pulsarr_group_id = g.pulsarr_group_id
+                JOIN pulsarr_user u on u.pulsarr_user_id = ug.pulsarr_user_id
+            WHERE
+                u.pulsarr_user_id = $1
+        ")
+        .bind(user_id)
 }
