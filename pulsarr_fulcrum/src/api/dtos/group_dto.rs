@@ -20,7 +20,8 @@ pub struct GroupDTO {
     pub created_by_user_id: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub creation_date: Option<NaiveDateTime>,
-    pub members: Vec<GroupMemberDTO>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub members: Option<Vec<GroupMemberDTO>>,
 }
 
 pub fn to_dto(
@@ -39,7 +40,7 @@ pub fn to_dto(
         },
         created_by_user_id: pulsarr_group.created_by_user_id,
         creation_date: Some(pulsarr_group.creation_date),
-        members: Vec::new(),
+        members: Some(Vec::new()),
     }
 }
 
