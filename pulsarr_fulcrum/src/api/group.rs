@@ -23,7 +23,8 @@ use crate::data::models::pulsarr_user::PulsarrUser;
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![settings: update_group, delete_group, get_pulsarr_group,
-        get_all_groups, get_privacy_types, create_group, get_membership_types, join_group, leave_group, search_groups]
+        get_all_groups, get_privacy_types, create_group, get_membership_types, join_group, leave_group,
+        search_groups, my_groups]
 }
 
 /// # Get the group privacy types
@@ -265,6 +266,16 @@ async fn join(state: &State<PostgresState>, group_id: i32, user_id: i32, role: S
 async fn search_groups(state: &State<PostgresState>, name: Option<&str>, api_user: ApiKey) -> PulsarrResult<Vec<GroupDTO>> {
     let ApiKey(user_id) = api_user;
     match pulsarr_group::get_by_name(name, user_id).fetch_all(&state.pool).await {
+        Ok(groups) => Ok(Json(groups.iter().map(|group| group_dto::to_dto(group, None, None)).collect::<Vec<GroupDTO>>())),
+        Err(e) => Err(PulsarrError::validation_error(e))
+    }
+}
+
+#[openapi(tag = "Group")]
+#[get("/myGroups")]
+async fn my_groups(state: &State<PostgresState>, api_user: ApiKey) -> PulsarrResult<Vec<GroupDTO>> {
+    let ApiKey(user_id) = api_user;
+    match pulsarr_group::get_my_groups(&user_id).fetch_all(&state.pool).await {
         Ok(groups) => Ok(Json(groups.iter().map(|group| group_dto::to_dto(group, None, None)).collect::<Vec<GroupDTO>>())),
         Err(e) => Err(PulsarrError::validation_error(e))
     }
