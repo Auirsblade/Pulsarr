@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "A81F57DA-253B-410B-83BC-D29A447D818D"
+   type = "1"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "ED48AE7E-4A30-4D99-8679-059AC7F011DD"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "164"
+            endingLineNumber = "164"
+            landmarkName = "getAllGroups(pulsarrApiKey:getRequest:apiResponseQueue:completion:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "ED48AE7E-4A30-4D99-8679-059AC7F011DD - 658fb6547d28e62f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "static PulsarrClient.GroupAPI.getAllGroups(pulsarrApiKey: Swift.String, getRequest: PulsarrClient.GetRequest, apiResponseQueue: __C.OS_dispatch_queue, completion: (Swift.Optional&lt;Swift.Array&lt;PulsarrClient.PulsarrGroup&gt;&gt;, Swift.Optional&lt;Swift.Error&gt;) -&gt; ()) -&gt; PulsarrClient.RequestTask"
+                  moduleName = "Pulsarr"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/ethanhart/Desktop/Pulsarr/Pulsarr/Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "164"
+                  endingLineNumber = "164"
+                  offsetFromSymbolStart = "108">
+               </Location>
+               <Location
+                  uuid = "ED48AE7E-4A30-4D99-8679-059AC7F011DD - df3c82e4a50eca96"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 (Swift.Result&lt;PulsarrClient.Response&lt;Swift.Array&lt;PulsarrClient.PulsarrGroup&gt;&gt;, PulsarrClient.ErrorResponse&gt;) -&gt; () in static PulsarrClient.GroupAPI.getAllGroups(pulsarrApiKey: Swift.String, getRequest: PulsarrClient.GetRequest, apiResponseQueue: __C.OS_dispatch_queue, completion: (Swift.Optional&lt;Swift.Array&lt;PulsarrClient.PulsarrGroup&gt;&gt;, Swift.Optional&lt;Swift.Error&gt;) -&gt; ()) -&gt; PulsarrClient.RequestTask"
+                  moduleName = "Pulsarr"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/ethanhart/Desktop/Pulsarr/Pulsarr/Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "166"
+                  endingLineNumber = "166"
+                  offsetFromSymbolStart = "60">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "BED50020-2A86-4970-B7E8-0DF920F1AA62"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "165"
+            endingLineNumber = "165"
+            landmarkName = "getAllGroups(pulsarrApiKey:getRequest:apiResponseQueue:completion:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "BED50020-2A86-4970-B7E8-0DF920F1AA62 - df3c82e4a50eca96"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 (Swift.Result&lt;PulsarrClient.Response&lt;Swift.Array&lt;PulsarrClient.PulsarrGroup&gt;&gt;, PulsarrClient.ErrorResponse&gt;) -&gt; () in static PulsarrClient.GroupAPI.getAllGroups(pulsarrApiKey: Swift.String, getRequest: PulsarrClient.GetRequest, apiResponseQueue: __C.OS_dispatch_queue, completion: (Swift.Optional&lt;Swift.Array&lt;PulsarrClient.PulsarrGroup&gt;&gt;, Swift.Optional&lt;Swift.Error&gt;) -&gt; ()) -&gt; PulsarrClient.RequestTask"
+                  moduleName = "Pulsarr"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/ethanhart/Desktop/Pulsarr/Pulsarr/Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "166"
+                  endingLineNumber = "166"
+                  offsetFromSymbolStart = "60">
+               </Location>
+               <Location
+                  uuid = "BED50020-2A86-4970-B7E8-0DF920F1AA62 - df3c82e4a50eca96"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 (Swift.Result&lt;PulsarrClient.Response&lt;Swift.Array&lt;PulsarrClient.PulsarrGroup&gt;&gt;, PulsarrClient.ErrorResponse&gt;) -&gt; () in static PulsarrClient.GroupAPI.getAllGroups(pulsarrApiKey: Swift.String, getRequest: PulsarrClient.GetRequest, apiResponseQueue: __C.OS_dispatch_queue, completion: (Swift.Optional&lt;Swift.Array&lt;PulsarrClient.PulsarrGroup&gt;&gt;, Swift.Optional&lt;Swift.Error&gt;) -&gt; ()) -&gt; PulsarrClient.RequestTask"
+                  moduleName = "Pulsarr"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/ethanhart/Desktop/Pulsarr/Pulsarr/Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "166"
+                  endingLineNumber = "166"
+                  offsetFromSymbolStart = "80">
+               </Location>
+               <Location
+                  uuid = "BED50020-2A86-4970-B7E8-0DF920F1AA62 - df3c82e4a50eca96"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 (Swift.Result&lt;PulsarrClient.Response&lt;Swift.Array&lt;PulsarrClient.PulsarrGroup&gt;&gt;, PulsarrClient.ErrorResponse&gt;) -&gt; () in static PulsarrClient.GroupAPI.getAllGroups(pulsarrApiKey: Swift.String, getRequest: PulsarrClient.GetRequest, apiResponseQueue: __C.OS_dispatch_queue, completion: (Swift.Optional&lt;Swift.Array&lt;PulsarrClient.PulsarrGroup&gt;&gt;, Swift.Optional&lt;Swift.Error&gt;) -&gt; ()) -&gt; PulsarrClient.RequestTask"
+                  moduleName = "Pulsarr"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/ethanhart/Desktop/Pulsarr/Pulsarr/Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "166"
+                  endingLineNumber = "166"
+                  offsetFromSymbolStart = "184">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "54917457-41E0-4035-9F2B-374E0F9776E7"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "163"
+            endingLineNumber = "163"
+            landmarkName = "getAllGroups(pulsarrApiKey:getRequest:apiResponseQueue:completion:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "703B491C-0CC4-44B8-A3D0-B6D06E25C553"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "183"
+            endingLineNumber = "183"
+            landmarkName = "getAllGroupsWithRequestBuilder(pulsarrApiKey:getRequest:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "1A4F411F-C47C-4999-A38F-18CA2914AFC4"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "167"
+            endingLineNumber = "167"
+            landmarkName = "getAllGroups(pulsarrApiKey:getRequest:apiResponseQueue:completion:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "917AC90E-43FC-44D9-A414-8D01C18BC03E"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Pulsarr/GeneratedAPI/PulsarrClient/Classes/OpenAPIs/APIs/GroupAPI.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "169"
+            endingLineNumber = "169"
+            landmarkName = "getAllGroups(pulsarrApiKey:getRequest:apiResponseQueue:completion:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>
