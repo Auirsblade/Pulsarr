@@ -17,13 +17,14 @@ pub struct PulsarrGroup {
 impl Model for PulsarrGroup {
     fn add<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
         query_as(
-            "INSERT INTO pulsarr_group (rating_system_id, name, privacy_type)\
-                VALUES ($1, $2, $3)\
+            "INSERT INTO pulsarr_group (rating_system_id, name, privacy_type, created_by_user_id)\
+                VALUES ($1, $2, $3, $4)\
                 RETURNING *"
         )
             .bind(self.rating_system_id)
             .bind(self.name)
             .bind(self.privacy_type)
+            .bind(self.created_by_user_id)
     }
 
     fn update<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
