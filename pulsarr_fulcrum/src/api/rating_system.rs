@@ -7,6 +7,9 @@ use rocket::{delete, get, post, State};
 use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec};
+use crate::api::dtos::{rating_system_dto, rating_system_parameter_dto};
+use crate::api::dtos::rating_system_dto::RatingSystemDTO;
+use crate::error::PulsarrError;
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
@@ -17,11 +20,33 @@ pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, O
 
 /// # Add rating system
 #[openapi(tag = "Rating System")]
-#[post("/add", format = "application/json", data = "<rating_system>")]
-async fn add_rating_system(state: &State<PostgresState>, rating_system: Json<RatingSystem>) -> PulsarrResult<RatingSystem> {
-    match data_wrangler::add(rating_system.into_inner(), &state.pool).await{
-        Ok(rating_system) => Ok(Json(rating_system)),
-        Err(e) => Err(e)
+#[post("/add", format = "application/json", data = "<request_dto>")]
+async fn add_rating_system(state: &State<PostgresState>, request_dto: Json<RatingSystemDTO>) -> PulsarrResult<RatingSystemDTO> {
+    let rating_system = match data_wrangler::add(rating_system_dto::to_model(&request_dto), &state.pool).await{
+        Ok(rating_system) => rating_system,
+        Err(e) => return Err(e)
+    };
+
+    let mut parameters = Vec::new();
+    match &request_dto.parameters {
+        Some(params) => {
+            for parameter in params {
+                match data_wrangler::add(rating_system_parameter_dto::to_model(&parameter), &state.pool).await {
+                    Ok(param) => parameters.push(param),
+                    Err(e) => return Err(e)
+                }
+            }
+        },
+        None => ()
+    }
+    
+    match data_wrangler::get_by_id::<RatingSystem>(rating_system.rating_system_id, &state.pool).await {
+        Ok(system) => Ok(Json(rating_system_dto::to_dto(&system, Some(parameters)))),
+        Err(error) => Err(PulsarrError {
+            err: "Failed to create rating system".to_owned(),
+            msg: Some(error.to_string()),
+            http_status_code: 500,
+        })
     }
 }
 
