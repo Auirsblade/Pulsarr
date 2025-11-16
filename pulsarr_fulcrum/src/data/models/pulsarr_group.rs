@@ -1,4 +1,4 @@
-use crate::data::models::Model;
+use crate::data::models::{Model};
 use sqlx::postgres::{PgArguments, PgRow};
 use sqlx::query::QueryAs;
 use sqlx::{query_as, FromRow, Postgres};
@@ -57,4 +57,53 @@ impl Model for PulsarrGroup {
             None => query_as("SELECT * FROM pulsarr_group")
         }
     }
+}
+
+pub fn get_by_name<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(name: Option<&str>, user_id: i32) -> QueryAs<Postgres, PulsarrGroup, PgArguments> {
+    match name {
+        None => {
+            query_as("
+                SELECT g.*
+                FROM pulsarr_group g
+                    JOIN user_group ug on ug.pulsarr_group_id = g.pulsarr_group_id
+                    JOIN pulsarr_user u on u.pulsarr_user_id = ug.pulsarr_user_id
+                WHERE
+                    (
+                        g.privacy_type = 'Public'
+                            OR
+                        (
+                            u.pulsarr_user_id = $1
+                            AND
+                            g.privacy_type = 'Private'
+                        )
+                    )
+            ")
+                .bind(user_id)
+        },
+        Some(name) => {
+            let pattern = format!("%{}%", name);
+            query_as("
+                SELECT g.*
+                FROM pulsarr_group g
+                    JOIN user_group ug on ug.pulsarr_group_id = g.pulsarr_group_id
+                    JOIN pulsarr_user u on u.pulsarr_user_id = ug.pulsarr_user_id
+                WHERE
+                    g.name ILIKE $1
+                    AND
+                    (
+                        g.privacy_type = 'Public'
+                            OR
+                        (
+                            u.pulsarr_user_id = $2
+                            AND
+                            g.privacy_type = 'Private'
+                        )
+                    )
+            ")
+            .bind(pattern)
+            .bind(user_id)
+        }
+    }
+
+
 }
