@@ -11,7 +11,6 @@ schemars = { version = "0.8.22", features = ["rust_decimal", "uuid", "chrono"] }
 rocket_okapi = { version = "0.9.0", features = ["swagger"] }
 rocket = { version = "0.5.0", default-features = false, features = ["json"] }
 rocket_cors = "0.6.0"
-# do not remove this lol (pretty sure it's because serde feature isn't flagged when imported by sqlx)
 rust_decimal = { version = "1.37.1", features = ["serde"] }
 uuid = { version = "1.17.0", features = ["serde", "v4"] }
 chrono = { version = "0.4.41", features = ["serde"]}
@@ -20,3 +19,4 @@ serde_json = "1.0.140"
 dotenv = "0.15.0"
 dotenv_codegen = "0.15.0"
 scrypt = "0.11.0"
+reqwest = { version = "0.12", features = ["json"] }

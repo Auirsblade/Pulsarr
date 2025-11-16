@@ -1,8 +1,11 @@
 mod error;
 mod api;
 mod data;
+mod musicbrainz_client;
 
-use crate::api::{group, rating, rating_system, user, auth };
+use crate::api::{group, rating, rating_system, user, auth, musicbrainz};
+use crate::musicbrainz_client::MusicBrainzClient;
+use crate::api::musicbrainz::MusicBrainzState;
 use rocket::serde::json::Json;
 use rocket::{Build, Rocket, http::Method};
 use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};
@@ -61,6 +64,8 @@ fn create_server() -> Rocket<Build> {
         )
         .allow_credentials(true);
 
+    let mb_client = MusicBrainzClient::new();
+
     let mut building_rocket = rocket::custom(figment)
         .mount(
             "/swagger/",
@@ -69,6 +74,7 @@ fn create_server() -> Rocket<Build> {
                 ..Default::default()
             }),
         )
+        .manage(MusicBrainzState { client: mb_client })
         .attach(cors.to_cors().unwrap()); 
     
     let openapi_settings = rocket_okapi::settings::OpenApiSettings::default();
@@ -79,6 +85,7 @@ fn create_server() -> Rocket<Build> {
         "/group" => group::get_routes_and_docs(&openapi_settings),
         "/rating-system" => rating_system::get_routes_and_docs(&openapi_settings),
         "/rating" => rating::get_routes_and_docs(&openapi_settings),
+        "/musicbrainz" => musicbrainz::get_routes_and_docs(&openapi_settings),
     }
     
     building_rocket

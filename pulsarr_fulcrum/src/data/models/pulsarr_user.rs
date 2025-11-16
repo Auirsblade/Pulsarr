@@ -1,4 +1,3 @@
-use rocket::futures::TryStreamExt;
 use crate::data::models::Model;
 use scrypt::{password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Params, Scrypt};
 use sqlx;
@@ -71,6 +70,11 @@ pub fn get_by_email<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(email: &str) 
 }
 
 pub fn get_password_hash<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(email: &str) -> QueryAs<Postgres, PulsarrUser, PgArguments> {
-    query_as("SELECT * FROM pulsarr_user WHERE email = $1")
+    query_as("SELECT * FROM pulsarr_user WHERE email = $1 OR name = $1")
         .bind(email)
+}
+
+pub fn get_by_ids<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(user_ids: &[i32]) -> QueryAs<Postgres, PulsarrUser, PgArguments> {
+    query_as("SELECT * FROM pulsarr_user WHERE pulsarr_user_id = ANY($1)")
+        .bind(user_ids)
 }

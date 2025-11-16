@@ -5,3 +5,4 @@ pub mod rating;
 pub mod guards;
 pub mod auth;
 pub mod dtos;
+pub mod musicbrainz;
