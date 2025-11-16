@@ -73,3 +73,8 @@ pub fn get_password_hash<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(email: &
     query_as("SELECT * FROM pulsarr_user WHERE email = $1 OR name = $1")
         .bind(email)
 }
+
+pub fn get_by_ids<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(user_ids: &[i32]) -> QueryAs<Postgres, PulsarrUser, PgArguments> {
+    query_as("SELECT * FROM pulsarr_user WHERE pulsarr_user_id = ANY($1)")
+        .bind(user_ids)
+}
