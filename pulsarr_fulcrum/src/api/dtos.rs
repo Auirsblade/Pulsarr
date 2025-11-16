@@ -5,3 +5,4 @@ pub mod group_dto;
 pub mod get_request;
 pub mod rating_dto;
 pub mod group_member_dto;
+pub mod media_dto;

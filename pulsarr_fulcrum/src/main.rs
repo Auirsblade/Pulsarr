@@ -3,7 +3,7 @@ mod api;
 mod data;
 mod musicbrainz_client;
 
-use crate::api::{group, rating, rating_system, user, auth, musicbrainz};
+use crate::api::{group, rating, rating_system, user, auth, musicbrainz, media};
 use crate::musicbrainz_client::MusicBrainzClient;
 use crate::api::musicbrainz::MusicBrainzState;
 use rocket::serde::json::Json;
@@ -85,6 +85,7 @@ fn create_server() -> Rocket<Build> {
         "/group" => group::get_routes_and_docs(&openapi_settings),
         "/rating-system" => rating_system::get_routes_and_docs(&openapi_settings),
         "/rating" => rating::get_routes_and_docs(&openapi_settings),
+        "/media" => media::get_routes_and_docs(&openapi_settings),
         "/musicbrainz" => musicbrainz::get_routes_and_docs(&openapi_settings),
     }
     
