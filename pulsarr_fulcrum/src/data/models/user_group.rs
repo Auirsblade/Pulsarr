@@ -12,7 +12,11 @@ pub struct UserGroup {
     pub join_date: NaiveDateTime,
 }
 
-pub const MEMBERSHIP_TYPE: [&str; 4] = ["Owner", "Admin", "Member", "ViewOnly"];
+pub const OWNER_ROLE: &str = "Owner";
+pub const ADMIN_ROLE: &str = "Admin";
+pub const MEMBER_ROLE: &str = "Member";
+pub const VIEW_ONLY_ROLE: &str = "ViewOnly";
+pub const MEMBERSHIP_TYPE: [&str; 4] = [OWNER_ROLE, ADMIN_ROLE, MEMBER_ROLE, VIEW_ONLY_ROLE];
 
 pub(crate) fn join(group_id: i32, user_id: i32, role: String) -> QueryAs<'static, Postgres, UserGroup, PgArguments>{
     query_as::<Postgres, UserGroup>("

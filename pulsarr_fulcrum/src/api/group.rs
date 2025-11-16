@@ -8,7 +8,7 @@ use crate::data::data_wrangler;
 use crate::data::models::pulsarr_group::{PulsarrGroup, PRIVACY_TYPE};
 use crate::data::models::rating_system::RatingSystem;
 use crate::data::models::user_group;
-use crate::data::models::user_group::MEMBERSHIP_TYPE;
+use crate::data::models::user_group::{MEMBERSHIP_TYPE, MEMBER_ROLE, OWNER_ROLE};
 use crate::data::models::{pulsarr_user, rating_system_parameter};
 use crate::error::PulsarrError;
 use crate::{PostgresState, PulsarrResult};
@@ -123,7 +123,7 @@ async fn get_pulsarr_group(
     });
 
     let group = GroupDTO {
-        members: memberDtos.collect::<Vec<group_member_dto::GroupMemberDTO>>(),
+        members: Some(memberDtos.collect::<Vec<group_member_dto::GroupMemberDTO>>()),
         ..group_dto::to_dto(&pg, Some(&rs), Some(parameters))
     };
 
@@ -196,6 +196,9 @@ async fn create_group(
     match data_wrangler::add(group_dto::to_model(&group), &state.pool).await {
         Ok(r) => {
             group.pulsarr_group_id = r.pulsarr_group_id;
+
+            join(state, r.pulsarr_group_id, user_id, OWNER_ROLE.to_string()).await.expect("Failed to join created group as owner");
+
             Ok(Json(group))
         }
         Err(e) => Err(e),
@@ -225,13 +228,7 @@ async fn join_group(
 ) -> PulsarrResult<bool> {
     let ApiKey(user_id) = api_user;
     // Setting to Member by default?
-    match user_group::join(group_id, user_id, "Member".to_string())
-        .fetch_optional(&state.pool)
-        .await
-    {
-        Ok(_) => Ok(Json(true)),
-        Err(e) => Err(PulsarrError::validation_error(e)),
-    }
+    join(state, group_id, user_id, MEMBER_ROLE.to_string()).await
 }
 
 /// # Leave group
@@ -244,6 +241,16 @@ async fn leave_group(
 ) -> PulsarrResult<bool> {
     let ApiKey(user_id) = api_user;
     match user_group::leave(group_id, user_id)
+        .fetch_optional(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(true)),
+        Err(e) => Err(PulsarrError::validation_error(e)),
+    }
+}
+
+async fn join(state: &State<PostgresState>, group_id: i32, user_id: i32, role: String) -> PulsarrResult<bool> {
+    match user_group::join(group_id, user_id, role)
         .fetch_optional(&state.pool)
         .await
     {
