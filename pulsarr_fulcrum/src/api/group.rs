@@ -10,6 +10,7 @@ use crate::data::models::rating_system::RatingSystem;
 use crate::data::models::user_group;
 use crate::data::models::user_group::{MEMBERSHIP_TYPE, MEMBER_ROLE, OWNER_ROLE};
 use crate::data::models::{pulsarr_user, rating_system_parameter};
+use crate::data::models::pulsarr_group;
 use crate::error::PulsarrError;
 use crate::{PostgresState, PulsarrResult};
 use rocket::serde::json::Json;
@@ -22,7 +23,7 @@ use crate::data::models::pulsarr_user::PulsarrUser;
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![settings: update_group, delete_group, get_pulsarr_group,
-        get_all_groups, get_privacy_types, create_group, get_membership_types, join_group, leave_group]
+        get_all_groups, get_privacy_types, create_group, get_membership_types, join_group, leave_group, search_groups]
 }
 
 /// # Get the group privacy types
@@ -256,5 +257,15 @@ async fn join(state: &State<PostgresState>, group_id: i32, user_id: i32, role: S
     {
         Ok(_) => Ok(Json(true)),
         Err(e) => Err(PulsarrError::validation_error(e)),
+    }
+}
+
+#[openapi(tag = "Group")]
+#[get("/search?<name>")]
+async fn search_groups(state: &State<PostgresState>, name: Option<&str>, api_user: ApiKey) -> PulsarrResult<Vec<GroupDTO>> {
+    let ApiKey(user_id) = api_user;
+    match pulsarr_group::get_by_name(name, user_id).fetch_all(&state.pool).await {
+        Ok(groups) => Ok(Json(groups.iter().map(|group| group_dto::to_dto(group, None, None)).collect::<Vec<GroupDTO>>())),
+        Err(e) => Err(PulsarrError::validation_error(e))
     }
 }
