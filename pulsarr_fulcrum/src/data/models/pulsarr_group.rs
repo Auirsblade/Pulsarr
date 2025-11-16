@@ -14,11 +14,6 @@ pub struct PulsarrGroup {
     pub created_by_user_id: Option<i32>
 }
 
-pub const PUBLIC_PRIVACY_TYPE: &str = "Public";
-pub const PRIVATE_PRIVACY_TYPE: &str = "Private";
-pub const PERSONAL_PRIVACY_TYPE: &str = "Personal";
-pub const PRIVACY_TYPE: [&str; 3] = [PUBLIC_PRIVACY_TYPE, PRIVATE_PRIVACY_TYPE, PERSONAL_PRIVACY_TYPE];
-
 impl Model for PulsarrGroup {
     fn add<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
         query_as(
