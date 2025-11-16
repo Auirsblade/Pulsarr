@@ -4,13 +4,14 @@ use crate::api::dtos::{
     group_dto, group_member_dto, rating_system_dto, rating_system_parameter_dto,
 };
 use crate::api::guards::api_key::ApiKey;
+use crate::constants::{MEMBERSHIP_TYPE, MEMBER_ROLE, OWNER_ROLE, PRIVACY_TYPE};
 use crate::data::data_wrangler;
-use crate::data::models::pulsarr_group::{PulsarrGroup, PRIVACY_TYPE};
+use crate::data::models::pulsarr_group;
+use crate::data::models::pulsarr_group::PulsarrGroup;
+use crate::data::models::pulsarr_user::PulsarrUser;
 use crate::data::models::rating_system::RatingSystem;
 use crate::data::models::user_group;
-use crate::data::models::user_group::{MEMBERSHIP_TYPE, MEMBER_ROLE, OWNER_ROLE};
 use crate::data::models::{pulsarr_user, rating_system_parameter};
-use crate::data::models::pulsarr_group;
 use crate::error::PulsarrError;
 use crate::{PostgresState, PulsarrResult};
 use rocket::serde::json::Json;
@@ -18,7 +19,6 @@ use rocket::{delete, get, post, State};
 use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec};
-use crate::data::models::pulsarr_user::PulsarrUser;
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {

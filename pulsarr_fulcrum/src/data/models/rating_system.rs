@@ -16,11 +16,6 @@ pub(crate) struct RatingSystem {
     pub name: String,
 }
 
-pub const ABSOLUTE_RATING_TYPE: &str = "Absolute";
-pub const CUMULATIVE_RATING_TYPE: &str = "Cumulative";
-pub const AVERAGE_RATING_TYPE: &str = "Average";
-pub(crate) const RATING_TYPE: [&str; 3] = [ABSOLUTE_RATING_TYPE, CUMULATIVE_RATING_TYPE, AVERAGE_RATING_TYPE];
-
 impl Model for RatingSystem {
     fn add<RatingSystem: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, RatingSystem, PgArguments> {
         query_as(

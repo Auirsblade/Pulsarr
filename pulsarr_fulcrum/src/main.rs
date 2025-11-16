@@ -2,6 +2,7 @@ mod error;
 mod api;
 mod data;
 mod musicbrainz_client;
+mod constants;
 
 use crate::api::{group, rating, rating_system, user, auth, musicbrainz};
 use crate::musicbrainz_client::MusicBrainzClient;

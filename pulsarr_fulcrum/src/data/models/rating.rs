@@ -13,11 +13,8 @@ pub(crate) struct Rating {
     pub rating_system_id: i32,
     pub comments: String,
     pub rating_value: Decimal,
+    pub mbid: String,
 }
-
-pub const ALBUM_MEDIA_TYPE: &str = "Album";
-pub const SONG_MEDIA_TYPE: &str = "Song";
-pub(crate) const MEDIA_TYPE: [&str; 2] = [ALBUM_MEDIA_TYPE, SONG_MEDIA_TYPE];
 
 impl Model for Rating {
     fn add<Rating: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, Rating, PgArguments> {

@@ -1,11 +1,12 @@
-use rocket::{delete, get, post, State};
+use crate::constants::RATING_TYPE;
+use crate::data::data_wrangler;
+use crate::data::models::{rating_system::RatingSystem, rating_system_parameter::RatingSystemParameter};
+use crate::{PostgresState, PulsarrResult};
 use rocket::serde::json::Json;
-use rocket_okapi::{openapi, openapi_get_routes_spec};
+use rocket::{delete, get, post, State};
 use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
-use crate::{PostgresState, PulsarrResult};
-use crate::data::data_wrangler;
-use crate::data::models::{rating_system_parameter::RatingSystemParameter, rating_system::{RatingSystem, RATING_TYPE}};
+use rocket_okapi::{openapi, openapi_get_routes_spec};
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
