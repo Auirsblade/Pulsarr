@@ -1,18 +1,22 @@
 mod error;
+mod api;
 mod data;
+mod musicbrainz_client;
+mod constants;
 
-use rocket::{Build, Rocket};
-use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};
-use sqlx::postgres::PgPool;
-use std::env;
+use crate::api::{group, rating, rating_system, user, auth, musicbrainz};
+use crate::musicbrainz_client::MusicBrainzClient;
+use crate::api::musicbrainz::MusicBrainzState;
 use rocket::serde::json::Json;
+use rocket::{Build, Rocket, http::Method};
+use rocket_okapi::{mount_endpoints_and_merged_docs, swagger_ui::*};
+use rocket_cors::{AllowedOrigins, CorsOptions};
+use sqlx::postgres::PgPool;
 use sqlx::Error;
-use crate::data::models::pulsarr_user;
-use crate::data::models::pulsarr_group;
-use crate::data::models::rating_system;
-use crate::data::models::rating_system_parameter;
-use crate::data::models::rating;
-use crate::data::models::rating_detail;
+use dotenv::dotenv;
+
+#[macro_use]
+extern crate dotenv_codegen;
 
 pub type PulsarrResult<T> = Result<Json<T>, error::PulsarrError>;
 
@@ -24,6 +28,7 @@ struct PostgresState {
 async fn main() {
     // setup db connection and run any necessary migrations
     println!("app starting");
+    dotenv().ok();
     let postgres_pool = get_db_pool().await.unwrap();
     
     println!("running migrations");
@@ -39,7 +44,7 @@ async fn main() {
 }
 
 async fn get_db_pool() -> Result<PgPool, Error> {
-    let db_url = env!("DATABASE_URL");
+    let db_url = "postgresql://".to_owned() + dotenv!("POSTGRES_URL");
     println!("connecting to db: {db_url}");
     let pool = PgPool::connect(&db_url).await;
     pool
@@ -47,9 +52,20 @@ async fn get_db_pool() -> Result<PgPool, Error> {
 
 fn create_server() -> Rocket<Build> {
 
+    let port = dotenv!("RUST_PORT").parse::<u16>().unwrap();
+
     let figment = rocket::Config::figment()
-        .merge(("port", 3003))
+        .merge(("port", port))
         .merge(("address", "0.0.0.0"));
+    
+    let cors = CorsOptions::default()
+        .allowed_origins(AllowedOrigins::all())
+        .allowed_methods(
+            vec![Method::Get, Method::Post, Method::Patch].into_iter().map(From::from).collect()
+        )
+        .allow_credentials(true);
+
+    let mb_client = MusicBrainzClient::new();
 
     let mut building_rocket = rocket::custom(figment)
         .mount(
@@ -58,17 +74,19 @@ fn create_server() -> Rocket<Build> {
                 url: "../openapi.json".to_owned(),
                 ..Default::default()
             }),
-        );
+        )
+        .manage(MusicBrainzState { client: mb_client })
+        .attach(cors.to_cors().unwrap()); 
     
     let openapi_settings = rocket_okapi::settings::OpenApiSettings::default();
     mount_endpoints_and_merged_docs! {
         building_rocket, "/".to_owned(), openapi_settings,
-        "/user" => pulsarr_user::get_routes_and_docs(&openapi_settings),
-        "/group" => pulsarr_group::get_routes_and_docs(&openapi_settings),
+        "/auth" => auth::get_routes_and_docs(&openapi_settings),
+        "/user" => user::get_routes_and_docs(&openapi_settings),
+        "/group" => group::get_routes_and_docs(&openapi_settings),
         "/rating-system" => rating_system::get_routes_and_docs(&openapi_settings),
-        "/rating-system_parameter" => rating_system_parameter::get_routes_and_docs(&openapi_settings),
         "/rating" => rating::get_routes_and_docs(&openapi_settings),
-        "/rating-detail" => rating_detail::get_routes_and_docs(&openapi_settings),
+        "/musicbrainz" => musicbrainz::get_routes_and_docs(&openapi_settings),
     }
     
     building_rocket

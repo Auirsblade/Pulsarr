@@ -1,41 +1,57 @@
-use rocket::{get, State};
 use rocket::serde::{Deserialize, Serialize};
-use rocket::serde::json::Json;
-use rocket_okapi::{JsonSchema, openapi, openapi_get_routes_spec};
-use rocket_okapi::okapi::openapi3::OpenApi;
-use rocket_okapi::settings::OpenApiSettings;
-use sqlx::FromRow;
+use rocket_okapi::JsonSchema;
+use sqlx::{FromRow, Postgres, query_as};
+use sqlx::postgres::{PgArguments, PgRow};
+use sqlx::query::QueryAs;
 use sqlx::types::Decimal;
-
-use crate::PostgresState;
+use crate::data::models::Model;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
-struct RatingSystemParameter {
-    rating_system_parameter_id: i32,
-    rating_system_id: i32,
-    parameter_rating_max: Decimal,
-    name: String,
+pub(crate) struct RatingSystemParameter {
+    pub rating_system_parameter_id: i32,
+    pub rating_system_id: i32,
+    pub parameter_rating_max: Decimal,
+    pub name: String,
 }
 
-/// Api Logic
-pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
-    openapi_get_routes_spec![settings: get_rating_system_parameter]
+impl Model for RatingSystemParameter {
+    fn add<RatingSystemParameter: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
+        query_as(
+            "INSERT INTO rating_system_parameter (rating_system_id, parameter_rating_max, name)\
+            VALUES ($1, $2, $3)\
+            RETURNING *",
+        )
+            .bind(self.rating_system_id)
+            .bind(self.parameter_rating_max)
+            .bind(self.name)
+    }
+
+    fn update<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as(
+            "UPDATE rating_system_parameter \
+            SET rating_system_id = $2, parameter_rating_max = $3, name = $4 \
+            WHERE rating_system_parameter_id = $1 \
+            RETURNING *"
+        )
+            .bind(self.rating_system_parameter_id)
+            .bind(self.rating_system_id)
+            .bind(self.parameter_rating_max)
+            .bind(self.name)
+    }
+
+    fn delete<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("DELETE FROM rating_system_parameter WHERE rating_system_parameter_id = $1").bind(id)
+    }
+
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("SELECT * FROM rating_system_parameter WHERE rating_system_parameter_id = $1").bind(id)
+    }
+
+    fn get_all<T: Model>(take_size: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("SELECT * FROM rating_system_parameter")
+    }
 }
 
-/// # Get a rating system parameter by id
-#[openapi(tag = "Rating System")]
-#[get("/<id>")]
-async fn get_rating_system_parameter(
-    state: &State<PostgresState>,
-    id: i32,
-) -> crate::PulsarrResult<RatingSystemParameter> {
-    let rating_system = sqlx::query_as::<_, RatingSystemParameter>(
-        "select * from rating_system_parameter where rating_system_parameter_id = $1",
-    )
-    .bind(&id)
-    .fetch_one(&state.pool)
-    .await
-    .unwrap();
-
-    Ok(Json(rating_system))
+pub fn get_by_rating_system_id(id: i32) -> QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
+    query_as("SELECT * FROM rating_system_parameter WHERE rating_system_id = $1").bind(id)
 }

@@ -1,68 +1,80 @@
-use crate::data::data_wrangler;
-use crate::error::PulsarrError;
-use rocket::serde::json::Json;
-use rocket::serde::{Deserialize, Serialize};
-use rocket::{get, post, State};
-use rocket_okapi::{
-    okapi::openapi3::OpenApi, openapi, openapi_get_routes_spec, settings::OpenApiSettings,
-    JsonSchema,
-};
-use sqlx;
-use sqlx::{FromRow, PgPool};
 use crate::data::models::Model;
-use crate::PostgresState;
+use scrypt::{password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Params, Scrypt};
+use sqlx;
+use sqlx::postgres::{PgArguments, PgRow};
+use sqlx::query::QueryAs;
+use sqlx::{query_as, FromRow, Postgres};
+use sqlx::types::chrono::NaiveDateTime;
 
-#[derive(Serialize, Deserialize, FromRow, JsonSchema)]
-struct PulsarrUser {
-    pulsarr_user_id: i32,
-    name: String,
-}
-
-/// Api Logic
-pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
-    openapi_get_routes_spec![settings: get_pulsarr_user, add_user]
-}
-
-/// # Get a user by id
-#[openapi(tag = "User")]
-#[get("/<id>")]
-async fn get_pulsarr_user(
-    state: &State<PostgresState>,
-    id: i32,
-) -> crate::PulsarrResult<PulsarrUser> {
-    let rating_system =
-        sqlx::query_as::<_, PulsarrUser>("select * from pulsarr_user where pulsarr_user_id = $1")
-            .bind(&id)
-            .fetch_one(&state.pool)
-            .await
-            .unwrap();
-
-    Ok(Json(rating_system))
-}
-
-/// # Add a user
-#[openapi(tag = "User")]
-#[post("/", format = "application/json", data = "<user>")]
-async fn add_user(
-    state: &State<PostgresState>,
-    user: Json<PulsarrUser>,
-) -> crate::PulsarrResult<bool> {
-    data_wrangler::add(user.into_inner(), &state.pool).await
+#[derive(FromRow)]
+pub struct PulsarrUser {
+    pub pulsarr_user_id: i32,
+    pub name: String,
+    pub email: String,
+    pub password: String,
+    pub join_date: NaiveDateTime
 }
 
 impl Model for PulsarrUser {
-    async fn add(self: PulsarrUser, pool: &PgPool) -> (bool, Option<String>) {
-        let result = sqlx::query(
-            "INSERT INTO pulsarr_user (name)\
-            VALUES ($1)",
+    fn add<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+        let password_hash = hash_password(self.password);
+        sqlx::query_as(
+            "INSERT INTO pulsarr_user (name, email, password)\
+            VALUES ($1, $2, $3)\
+            RETURNING *"
         )
             .bind(self.name)
-            .execute(pool)
-            .await;
-    
-        match result {
-            Ok(_) => (true, None),
-            Err(err) => (false, Some(err.to_string()))
-        }
+            .bind(self.email)
+            .bind(password_hash)
     }
+
+    fn update<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+        sqlx::query_as(
+            "UPDATE pulsarr_user \
+             SET name = $2, email = $3 \
+            WHERE pulsarr_user_id = $1 \
+            RETURNING *"
+        )
+            .bind(self.pulsarr_user_id)
+            .bind(self.name)
+            .bind(self.email)
+    }
+
+    fn delete<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+        query_as("DELETE FROM pulsarr_user WHERE pulsarr_user_id = $1")
+            .bind(id)
+    }
+
+    fn get_by_id<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+        query_as("SELECT * FROM pulsarr_user WHERE pulsarr_user_id = $1")
+            .bind(id)
+    }
+
+    fn get_all<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(take_size: Option<i32>) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+        query_as("SELECT * FROM pulsarr_user")
+    }
+}
+
+fn hash_password(password: String) -> String {
+    Scrypt.hash_password_customized(
+        password.as_ref(), 
+        None, None, 
+        Params::new(8, 8, 1, 32).expect("Invalid password hashing parameters"), 
+        &SaltString::generate(&mut OsRng)
+    ).expect("Failed to hash password").to_string()
+}
+
+pub fn get_by_email<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(email: &str) -> QueryAs<Postgres, PulsarrUser, PgArguments> {
+    query_as("SELECT * FROM pulsarr_user WHERE email = $1")
+        .bind(email)
+}
+
+pub fn get_password_hash<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(email: &str) -> QueryAs<Postgres, PulsarrUser, PgArguments> {
+    query_as("SELECT * FROM pulsarr_user WHERE email = $1 OR name = $1")
+        .bind(email)
+}
+
+pub fn get_by_ids<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(user_ids: &[i32]) -> QueryAs<Postgres, PulsarrUser, PgArguments> {
+    query_as("SELECT * FROM pulsarr_user WHERE pulsarr_user_id = ANY($1)")
+        .bind(user_ids)
 }

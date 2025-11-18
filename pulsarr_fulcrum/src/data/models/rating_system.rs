@@ -1,58 +1,55 @@
-use rocket::serde::json::Json;
 use rocket::serde::{Deserialize, Serialize};
-use rocket::{get, State};
-use rocket_okapi::{
-    okapi::openapi3::OpenApi, openapi, openapi_get_routes_spec, settings::OpenApiSettings,
-    JsonSchema,
-};
+use rocket_okapi::JsonSchema;
 use sqlx;
 use sqlx::types::Decimal;
-use sqlx::FromRow;
+use sqlx::{FromRow, Postgres, query_as};
+use sqlx::postgres::{PgArguments, PgRow};
+use sqlx::query::QueryAs;
+use crate::data::models::Model;
 
-use crate::PostgresState;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
-struct RatingSystem {
-    rating_system_id: i32,
-    master_rating_type: String,
-    rating_max: Decimal,
-    name: String,
+pub(crate) struct RatingSystem {
+    pub rating_system_id: i32,
+    pub master_rating_type: String,
+    pub rating_max: Decimal,
+    pub name: String,
 }
 
-const RATING_TYPE: [&str; 3] = ["Absolute", "Cumulative", "Average"];
-
-/// Api Logic
-pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
-    openapi_get_routes_spec![settings: get_rating_system, get_rating_types]
-}
-
-/// # Get a rating system by id
-#[openapi(tag = "Rating System")]
-#[get("/<id>")]
-async fn get_rating_system(
-    state: &State<PostgresState>,
-    id: i32,
-) -> crate::PulsarrResult<RatingSystem> {
-    let rating_system = sqlx::query_as::<_, RatingSystem>(
-        "select * from rating_system where rating_system_id = $1",
-    )
-    .bind(&id)
-    .fetch_one(&state.pool)
-    .await
-    .unwrap();
-
-    Ok(Json(rating_system))
-}
-
-/// # Get the master rating types
-#[openapi(tag = "Rating System")]
-#[get("/ratingTypes")]
-async fn get_rating_types() -> crate::PulsarrResult<Vec<String>> {
-    let mut rating_types = vec![];
-
-    for typ in RATING_TYPE {
-        rating_types.push(typ.to_owned());
+impl Model for RatingSystem {
+    fn add<RatingSystem: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, RatingSystem, PgArguments> {
+        query_as(
+            "INSERT INTO rating_system (master_rating_type, rating_max, name)\
+            VALUES ($1,$2,$3)\
+            RETURNING *",
+        )
+            .bind(self.master_rating_type)
+            .bind(self.rating_max)
+            .bind(self.name)
     }
 
-    Ok(Json(rating_types))
+    fn update<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as(
+            "UPDATE rating_system \
+            SET master_rating_type = $2, rating_max = $3, name = $4 \
+            WHERE rating_system_id = $1 \
+            RETURNING *"
+        )
+            .bind(self.rating_system_id)
+            .bind(self.master_rating_type)
+            .bind(self.rating_max)
+            .bind(self.name)
+    }
+
+    fn delete<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("DELETE FROM rating_system WHERE rating_system_id = $1").bind(id)
+    }
+
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("SELECT * FROM rating_system WHERE rating_system_id = $1").bind(id)
+    }
+
+    fn get_all<T: Model>(take_size: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("SELECT * FROM rating_system")
+    }
 }

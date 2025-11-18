@@ -1,41 +1,53 @@
-use rocket::{get, State};
+use crate::data::models::Model;
 use rocket::serde::{Deserialize, Serialize};
-use rocket::serde::json::Json;
-use rocket_okapi::{JsonSchema, openapi, openapi_get_routes_spec};
-use rocket_okapi::okapi::openapi3::OpenApi;
-use rocket_okapi::settings::OpenApiSettings;
-use sqlx::FromRow;
+use rocket_okapi::JsonSchema;
+use sqlx::postgres::{PgArguments, PgRow};
+use sqlx::query::QueryAs;
 use sqlx::types::Decimal;
-
-use crate::PostgresState;
+use sqlx::{query_as, FromRow, Postgres};
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
-struct RatingDetail {
-    rating_detail_id: i32,
-    rating_id: i32,
-    rating_system_parameter_id: i32,
-    rating_value: Decimal,
+pub(crate) struct RatingDetail {
+    pub rating_detail_id: i32,
+    pub rating_id: i32,
+    pub rating_system_parameter_id: i32,
+    pub rating_value: Decimal,
 }
 
-/// Api Logic
-pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
-    openapi_get_routes_spec![settings: get_rating_detail]
-}
+impl Model for RatingDetail {
+    fn add<RatingDetail: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, RatingDetail, PgArguments> {
+        query_as(
+            "INSERT INTO rating_detail (rating_id, rating_system_parameter_id, rating_value)\
+            VALUES ($1, $2, $3)\
+            RETURNING *",
+        )
+            .bind(self.rating_id)
+            .bind(self.rating_system_parameter_id)
+            .bind(self.rating_value)
+    }
 
-/// # Get a rating detail by id
-#[openapi(tag = "Rating")]
-#[get("/<id>")]
-async fn get_rating_detail(
-    state: &State<PostgresState>,
-    id: i32,
-) -> crate::PulsarrResult<RatingDetail> {
-    let group = sqlx::query_as::<_, RatingDetail>(
-        "select * from rating_detail where rating_detail_id = $1",
-    )
-    .bind(&id)
-    .fetch_one(&state.pool)
-    .await
-    .unwrap();
+    fn update<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as(
+            "UPDATE rating_detail \
+            SET rating_id = $2, rating_system_parameter_id = $3, rating_value = $4 \
+            WHERE rating_detail_id = $1 \
+            RETURNING *"
+        )
+            .bind(self.rating_detail_id)
+            .bind(self.rating_id)
+            .bind(self.rating_system_parameter_id)
+            .bind(self.rating_value)
+    }
 
-    Ok(Json(group))
+    fn delete<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("DELETE FROM rating_detail WHERE rating_detail_id = $1").bind(id)
+    }
+
+    fn get_by_id<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("SELECT * FROM rating_detail WHERE rating_detail_id = $1").bind(id)
+    }
+
+    fn get_all<T: Model>(take_size: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
+        query_as("SELECT * FROM rating_detail")
+    }
 }

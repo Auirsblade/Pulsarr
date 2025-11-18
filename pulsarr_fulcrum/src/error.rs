@@ -19,6 +19,25 @@ pub struct PulsarrError {
     pub http_status_code: u16,
 }
 
+impl PulsarrError {
+    pub fn validation_error<T: ToString>(message: T) -> Self {
+        Self {
+            err: "validation error".to_string(),
+            msg: Some(message.to_string()),
+            http_status_code: 400,
+        }
+    }
+    
+    pub fn missing_data(missing_data: String) -> Self {
+        Self {
+            err: "missing data".to_string(),
+            msg: Some(missing_data + " not found but required"),
+            http_status_code: 400,
+        }
+    }
+}
+
+
 impl OpenApiResponderInner for PulsarrError {
     fn responses(_generator: &mut OpenApiGenerator) -> Result<Responses, OpenApiError> {
         use rocket_okapi::okapi::openapi3::{RefOr, Response as OpenApiReponse};

@@ -1,3 +1,4 @@
+
 # Comments are provided throughout this file to help you get started.
 # If you need more help, visit the Docker Compose reference guide at
 # https://docs.docker.com/go/compose-spec-reference/
@@ -9,35 +10,52 @@
 # https://github.com/docker/awesome-compose
 services:
   rust:
+    env_file:
+      - path: .env
     build:
       context: .
       target: final
     ports:
-      - 3003:3003
+      - ${RUST_PORT:-3003}:${RUST_PORT:-3003}
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - dokploy-network
   postgres:
+    env_file:
+      - path: .env
     image: postgres
     restart: always
     user: postgres
 #    secrets:
 #      - db-password
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql
     environment:
       - POSTGRES_DB=pulsarrdb
       - POSTGRES_HOST_AUTH_METHOD=trust
+      - PGPORT=${POSTGRES_PORT}
 #      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+    expose: 
+      - ${POSTGRES_PORT:-5432}
     ports:
-      - 5432:5432
+      - ${POSTGRES_PORT:-5432}:${POSTGRES_PORT:-5432}
+    command: -p ${POSTGRES_PORT:-5432}
     healthcheck:
       test: [ "CMD", "pg_isready" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks: 
+      dokploy-network: 
+        aliases: 
+          - ${ENV_NAME}-postgres
 volumes:
   db-data:
+networks:
+  dokploy-network:
+    external: true
 #secrets:
 #  db-password:
 #    file: db/password.txt

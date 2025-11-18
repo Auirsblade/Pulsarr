@@ -1,2 +1,2 @@
 pub mod models;
-mod data_wrangler;
+pub mod data_wrangler;

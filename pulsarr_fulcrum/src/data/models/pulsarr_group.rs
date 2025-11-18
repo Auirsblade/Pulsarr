@@ -1,90 +1,119 @@
-use rocket::serde::json::Json;
-use rocket::serde::{Deserialize, Serialize};
-use rocket::{get, post, State};
-use rocket_okapi::okapi::openapi3::OpenApi;
-use rocket_okapi::settings::OpenApiSettings;
-use rocket_okapi::{openapi, openapi_get_routes_spec, JsonSchema};
-use sqlx::{FromRow, PgPool};
+use crate::data::models::{Model};
+use sqlx::postgres::{PgArguments, PgRow};
+use sqlx::query::QueryAs;
+use sqlx::{query_as, FromRow, Postgres};
+use sqlx::types::chrono::NaiveDateTime;
 
-use crate::error::PulsarrError;
-use crate::PostgresState;
-
-#[derive(Serialize, Deserialize, FromRow, JsonSchema)]
-struct PulsarrGroup {
-    pulsarr_group_id: i32,
-    rating_system_id: i32,
-    name: String,
-    privacy_type: String,
+#[derive(FromRow)]
+pub struct PulsarrGroup {
+    pub pulsarr_group_id: i32,
+    pub rating_system_id: i32,
+    pub name: String,
+    pub privacy_type: String,
+    pub creation_date: NaiveDateTime,
+    pub created_by_user_id: Option<i32>
 }
 
-const PRIVACY_TYPE: [&str; 2] = ["Public", "Private"];
-
-/// Api Logic
-pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
-    openapi_get_routes_spec![settings: get_pulsarr_group, get_privacy_types, add_group]
-}
-
-/// # Get a group by id
-#[openapi(tag = "Group")]
-#[get("/<id>")]
-async fn get_pulsarr_group(
-    state: &State<PostgresState>,
-    id: i32,
-) -> crate::PulsarrResult<PulsarrGroup> {
-    let group = sqlx::query_as::<_, PulsarrGroup>(
-        "select * from pulsarr_group where pulsarr_group_id = $1",
-    )
-    .bind(&id)
-    .fetch_one(&state.pool)
-    .await
-    .unwrap();
-
-    Ok(Json(group))
-}
-
-/// # Get the group privacy types
-#[openapi(tag = "Group")]
-#[get("/privacyTypes")]
-async fn get_privacy_types() -> crate::PulsarrResult<Vec<String>> {
-    let mut privacy_types = vec![];
-
-    for typ in PRIVACY_TYPE {
-        privacy_types.push(typ.to_owned());
+impl Model for PulsarrGroup {
+    fn add<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        query_as(
+            "INSERT INTO pulsarr_group (rating_system_id, name, privacy_type, created_by_user_id)\
+                VALUES ($1, $2, $3, $4)\
+                RETURNING *"
+        )
+            .bind(self.rating_system_id)
+            .bind(self.name)
+            .bind(self.privacy_type)
+            .bind(self.created_by_user_id)
     }
 
-    Ok(Json(privacy_types))
-}
+    fn update<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        query_as(
+            "UPDATE pulsarr_group \
+                SET rating_system_id = $2, name = $3, privacy_type = $4 \
+                WHERE pulsarr_group_id = $1 \
+                RETURNING *",
+        )
+            .bind(self.pulsarr_group_id)
+            .bind(self.rating_system_id)
+            .bind(self.name)
+            .bind(self.privacy_type)
+    }
 
-/// # Add a group
-#[openapi(tag = "Group")]
-#[post("/", format = "application/json", data = "<group>")]
-async fn add_group(
-    state: &State<PostgresState>,
-    group: Json<PulsarrGroup>,
-) -> crate::PulsarrResult<bool> {
-    match new_save(group.into_inner(), &state.pool).await {
-        (true, _) => Ok(Json(true)),
-        (false, error_message) => Err(PulsarrError {
-            err: "validation error".to_owned(),
-            msg: error_message,
-            http_status_code: 400
-        })
+    fn delete<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        query_as("DELETE FROM pulsarr_group WHERE pulsarr_group_id = $1")
+            .bind(id)
+    }
+
+    fn get_by_id<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        query_as("SELECT * FROM pulsarr_group WHERE pulsarr_group_id = $1")
+            .bind(id)
+    }
+    
+    fn get_all<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(take_size: Option<i32>) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+        match take_size {
+            Some(size) => query_as("SELECT * FROM pulsarr_group LIMIT $1").bind(size),
+            None => query_as("SELECT * FROM pulsarr_group")
+        }
     }
 }
 
-async fn new_save(group: PulsarrGroup, pool: &PgPool) -> (bool, Option<String>) {
-    let result = sqlx::query(
-        "INSERT INTO pulsarr_group (rating_system_id, name, privacy_type)\
-        VALUES ($1, $2, $3)",
-    )
-        .bind(group.rating_system_id)
-        .bind(group.name)
-        .bind(group.privacy_type)
-        .execute(pool)
-        .await;
-
-    match result {
-        Ok(_) => (true, None),
-        Err(err) => (false, Some(err.to_string()))
+pub fn get_by_name<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(name: Option<&str>, user_id: i32) -> QueryAs<Postgres, PulsarrGroup, PgArguments> {
+    match name {
+        None => {
+            query_as("
+                SELECT g.*
+                FROM pulsarr_group g
+                    JOIN user_group ug on ug.pulsarr_group_id = g.pulsarr_group_id
+                    JOIN pulsarr_user u on u.pulsarr_user_id = ug.pulsarr_user_id
+                WHERE
+                    (
+                        g.privacy_type = 'Public'
+                            OR
+                        (
+                            u.pulsarr_user_id = $1
+                            AND
+                            g.privacy_type = 'Private'
+                        )
+                    )
+            ")
+                .bind(user_id)
+        },
+        Some(name) => {
+            let pattern = format!("%{}%", name);
+            query_as("
+                SELECT g.*
+                FROM pulsarr_group g
+                    JOIN user_group ug on ug.pulsarr_group_id = g.pulsarr_group_id
+                    JOIN pulsarr_user u on u.pulsarr_user_id = ug.pulsarr_user_id
+                WHERE
+                    g.name ILIKE $1
+                    AND
+                    (
+                        g.privacy_type = 'Public'
+                            OR
+                        (
+                            u.pulsarr_user_id = $2
+                            AND
+                            g.privacy_type = 'Private'
+                        )
+                    )
+            ")
+            .bind(pattern)
+            .bind(user_id)
+        }
     }
+}
+
+
+pub fn get_my_groups<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(user_id: &i32) -> QueryAs<Postgres, PulsarrGroup, PgArguments> {
+        query_as("
+            SELECT g.*
+            FROM pulsarr_group g
+                JOIN user_group ug on ug.pulsarr_group_id = g.pulsarr_group_id
+                JOIN pulsarr_user u on u.pulsarr_user_id = ug.pulsarr_user_id
+            WHERE
+                u.pulsarr_user_id = $1
+        ")
+        .bind(user_id)
 }
