@@ -98,6 +98,15 @@
         submitting.value = true;
         error.value = null;
 
+        // Format date for NaiveDateTime (no timezone, format: YYYY-MM-DDTHH:MM:SS)
+        const formatNaiveDateTime = (date: Date): string => {
+            return date.toISOString().slice(0, 19);
+        };
+
+        const releaseDate = selectedMusic.value.release_date
+            ? new Date(selectedMusic.value.release_date)
+            : new Date();
+
         const ratingPayload = {
             rating_id: 0,
             pulsarr_user_id: user.value.pulsarr_user_id,
@@ -109,10 +118,7 @@
             media_title: selectedMusic.value.media_title,
             musicbrainz_id: selectedMusic.value.musicbrainz_id,
             artist_name: selectedMusic.value.artist_name,
-            rating_date: new Date().toISOString(),
-            release_date: selectedMusic.value.release_date
-                ? new Date(selectedMusic.value.release_date).toISOString()
-                : new Date().toISOString()
+            release_date: formatNaiveDateTime(releaseDate)
         };
 
         const drh = new DataRequestHandler();

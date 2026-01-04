@@ -1,4 +1,7 @@
+use chrono::NaiveDateTime;
 use rust_decimal::Decimal;
+use rocket::serde::{Deserialize, Serialize};
+use rocket_okapi::JsonSchema;
 use crate::api::dtos::{group_dto, rating_system_dto, rating_system_parameter_dto};
 use crate::api::dtos::group_dto::GroupDTO;
 use crate::api::dtos::rating_system_dto::RatingSystemDTO;
@@ -8,6 +11,39 @@ use crate::data::models::rating::Rating;
 use crate::data::models::rating_detail::RatingDetail;
 use crate::data::models::rating_system::RatingSystem;
 use crate::data::models::rating_system_parameter::RatingSystemParameter;
+
+/// Input DTO for creating a new rating (rating_date is set by server)
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct CreateRatingDTO {
+    pub rating_id: i32,
+    pub pulsarr_user_id: i32,
+    pub pulsarr_group_id: i32,
+    pub rating_system_id: i32,
+    pub comments: String,
+    pub rating_value: Decimal,
+    pub media_type: String,
+    pub media_title: String,
+    pub musicbrainz_id: String,
+    pub artist_name: String,
+    pub release_date: NaiveDateTime,
+}
+
+pub fn create_rating_to_model(dto: CreateRatingDTO) -> Rating {
+    Rating {
+        rating_id: dto.rating_id,
+        pulsarr_user_id: dto.pulsarr_user_id,
+        pulsarr_group_id: dto.pulsarr_group_id,
+        rating_system_id: dto.rating_system_id,
+        comments: dto.comments,
+        rating_value: dto.rating_value,
+        media_type: dto.media_type,
+        media_title: dto.media_title,
+        musicbrainz_id: dto.musicbrainz_id,
+        artist_name: dto.artist_name,
+        rating_date: chrono::Utc::now().naive_utc(),
+        release_date: dto.release_date,
+    }
+}
 
 pub(crate) struct RatingDTO {
     pub rating_id: i32,

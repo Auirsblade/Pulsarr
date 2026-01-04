@@ -6,6 +6,7 @@ use rocket_okapi::{openapi, openapi_get_routes_spec};
 use rocket_okapi::settings::OpenApiSettings;
 use crate::{PostgresState, PulsarrResult};
 use crate::data::models::{rating::Rating, rating_detail::RatingDetail};
+use crate::api::dtos::rating_dto::{CreateRatingDTO, create_rating_to_model};
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
@@ -18,8 +19,9 @@ pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, O
 /// # Add rating
 #[openapi(tag = "Rating")]
 #[post("/add", format = "application/json", data = "<rating>")]
-async fn add_rating(state: &State<PostgresState>, rating: Json<Rating>) -> PulsarrResult<Rating>{
-    match data_wrangler::add(rating.into_inner(), &state.pool).await {
+async fn add_rating(state: &State<PostgresState>, rating: Json<CreateRatingDTO>) -> PulsarrResult<Rating>{
+    let rating_model = create_rating_to_model(rating.into_inner());
+    match data_wrangler::add(rating_model, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
     }
