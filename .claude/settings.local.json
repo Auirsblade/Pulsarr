@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd /c \"dir /B\")",
+      "Bash(ls:*)",
+      "Bash(git -C \"A:\\\\Git\\\\Pulsarr\" status)",
+      "Bash(git -C \"A:\\\\Git\\\\Pulsarr\" log --oneline -5)",
+      "Bash(cd:*)",
+      "Bash(A:)",
+      "Bash(dir:*)",
+      "Bash(cmd /c \"git status\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git push)",
+      "Bash(cargo run)",
+      "Bash(curl:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(git -C \"A:\\\\Git\\\\Pulsarr\" diff --stat)"
+    ]
+  }
+}

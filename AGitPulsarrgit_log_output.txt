@@ -1,0 +1,3 @@
+e951b74 Add group management, rating, and MusicBrainz search UI
+5212131 Add CLAUDE.md for Claude Code guidance
+7c73d7b more updates (#24)
