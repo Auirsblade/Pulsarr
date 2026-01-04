@@ -7,11 +7,28 @@
     import { useForm } from "vee-validate";
     import * as yup from "yup";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
-    import type { RatingSystemDTO } from "@/apiClient";
+    import type { RatingSystemDTO, RatingSystemParameterDTO } from "@/apiClient";
     import { storeToRefs } from "pinia";
     import { useContextStore } from "@/stores/context.ts";
+    import { ref } from "vue";
+    import { Plus, Trash2 } from "lucide-vue-next";
 
     const { ratingTypes } = storeToRefs(useContextStore());
+
+    interface ParameterInput {
+        name: string;
+        parameter_rating_max: string;
+    }
+
+    const parameters = ref<ParameterInput[]>([]);
+
+    const addParameter = () => {
+        parameters.value.push({ name: '', parameter_rating_max: '' });
+    };
+
+    const removeParameter = (index: number) => {
+        parameters.value.splice(index, 1);
+    };
 
     const props = defineProps({
         showDialog: {
@@ -64,10 +81,16 @@
             name: values.name,
             master_rating_type: values.master_rating_type,
             rating_max: values.rating_max,
-            parameters: [] // Empty parameters array for initial creation
+            parameters: parameters.value.map((p) => ({
+                rating_system_parameter_id: 0,
+                rating_system_id: 0,
+                name: p.name,
+                parameter_rating_max: p.parameter_rating_max
+            }))
         }
 
         await drh.post('/rating-system/add', ratingSystemPayload)
+        parameters.value = []
     })
 
 </script>
@@ -116,6 +139,49 @@
                     <span v-if="errors.rating_max" class="text-red-500 text-sm">
                         {{ errors.rating_max }}
                     </span>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <Label>Rating Parameters (Optional)</Label>
+                        <Button type="button" variant="outline" size="sm" @click="addParameter">
+                            <Plus class="w-4 h-4 mr-1" />
+                            Add Parameter
+                        </Button>
+                    </div>
+                    <p class="text-sm text-muted-foreground">
+                        Add sub-ratings for more detailed reviews (e.g., Lyrics, Production, Vocals)
+                    </p>
+                    <div v-if="parameters.length > 0" class="space-y-3 mt-2">
+                        <div v-for="(param, index) in parameters" :key="index" class="flex gap-2 items-end">
+                            <div class="flex-1 space-y-1">
+                                <Label :for="`param-name-${index}`" class="text-xs">Name</Label>
+                                <Input
+                                    :id="`param-name-${index}`"
+                                    v-model="param.name"
+                                    placeholder="e.g., Lyrics"
+                                />
+                            </div>
+                            <div class="w-24 space-y-1">
+                                <Label :for="`param-max-${index}`" class="text-xs">Max</Label>
+                                <Input
+                                    :id="`param-max-${index}`"
+                                    type="number"
+                                    v-model="param.parameter_rating_max"
+                                    placeholder="10"
+                                />
+                            </div>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                class="text-destructive hover:text-destructive"
+                                @click="removeParameter(index)"
+                            >
+                                <Trash2 class="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
                 </div>
 
                 <DialogFooter>
