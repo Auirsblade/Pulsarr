@@ -4,14 +4,15 @@ use rocket::serde::json::Json;
 use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::{openapi, openapi_get_routes_spec};
 use rocket_okapi::settings::OpenApiSettings;
+use sqlx::query_as;
 use crate::{PostgresState, PulsarrResult};
 use crate::data::models::{rating::Rating, rating_detail::RatingDetail};
 use crate::api::dtos::rating_dto::{CreateRatingDTO, create_rating_to_model};
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
-    openapi_get_routes_spec![ settings: 
-        add_rating, update_rating, delete_rating, get_rating, get_all_ratings, 
+    openapi_get_routes_spec![ settings:
+        add_rating, update_rating, delete_rating, get_rating, get_all_ratings, get_ratings_by_group,
         add_rating_detail, update_rating_detail, delete_rating_detail, get_rating_detail, get_all_rating_details ]
 }
 
@@ -64,6 +65,25 @@ async fn get_all_ratings(state: &State<PostgresState>) -> PulsarrResult<Vec<Rati
     match data_wrangler::get_all::<Rating>(&state.pool, None).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
+    }
+}
+
+/// # Get ratings by group IDs
+#[openapi(tag = "Rating")]
+#[post("/byGroups", format = "application/json", data = "<group_ids>")]
+async fn get_ratings_by_group(state: &State<PostgresState>, group_ids: Json<Vec<i32>>) -> PulsarrResult<Vec<Rating>> {
+    let ids = group_ids.into_inner();
+    if ids.is_empty() {
+        return Ok(Json(Vec::new()));
+    }
+
+    match query_as::<_, Rating>("SELECT * FROM rating WHERE pulsarr_group_id = ANY($1) ORDER BY rating_date DESC")
+        .bind(&ids)
+        .fetch_all(&state.pool)
+        .await
+    {
+        Ok(ratings) => Ok(Json(ratings)),
+        Err(_) => Err(rocket::http::Status::InternalServerError)
     }
 }
 

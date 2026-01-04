@@ -18,8 +18,8 @@
 
     const isLoggedIn = computed(() => !!apiKey.value && !!user.value);
 
-    onMounted(() => {
-        contextStore.getSession();
+    onMounted(async () => {
+        await contextStore.getSession();
     })
 
     const { values, errors, defineField } = useForm({
