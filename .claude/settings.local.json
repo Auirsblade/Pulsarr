@@ -18,6 +18,7 @@
       "Bash(npm run type-check:*)",
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
+<<<<<<< HEAD
       "Bash(git -C \"A:\\\\Git\\\\Pulsarr\" diff --stat)",
       "Bash(cargo build:*)",
       "Bash(npx shadcn-vue@latest add dropdown-menu alert-dialog -y)",
@@ -30,6 +31,9 @@
       "Bash(npx shadcn-vue:*)",
       "Bash(powershell -Command \"cd A:\\\\Git\\\\Pulsarr\\\\pulsarr_web; npx shadcn-vue add dropdown-menu alert-dialog --overwrite 2>&1 | Out-String\")",
       "Bash(powershell -Command \"cd A:\\\\Git\\\\Pulsarr\\\\pulsarr_web; npx shadcn-vue add dropdown-menu alert-dialog --overwrite *>&1 | Tee-Object -FilePath shadcn-log.txt\")"
+=======
+      "Bash(git -C \"A:\\\\Git\\\\Pulsarr\" diff --stat)"
+>>>>>>> 4f68674 (Add group management, rating, and MusicBrainz search UI)
     ]
   }
 }
