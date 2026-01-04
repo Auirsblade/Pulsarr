@@ -50,7 +50,7 @@
 
     const schema = yup.object({
         name: yup.string().required().min(3).max(50),
-        rating_system_id: yup.number().required().positive().integer(),
+        rating_system_id: yup.number().required().integer().notOneOf([0], 'Please select a rating system'),
         privacy_type: yup.string().required(),
     });
 

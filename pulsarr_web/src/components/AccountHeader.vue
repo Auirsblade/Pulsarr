@@ -3,13 +3,20 @@
     import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
     import { Input } from "@/components/ui/input";
     import { Label } from "@/components/ui/label";
-    import { onMounted, ref, watch } from "vue";
+    import { onMounted, ref, watch, computed } from "vue";
     import type { SignInRequest, SignInResponse, UserDTO } from "@/apiClient";
     import { useForm } from 'vee-validate';
     import * as yup from 'yup';
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import { useContextStore } from "@/stores/context.ts";
+    import { storeToRefs } from "pinia";
     import { CookieManager } from "@/helpers/CookieManager.ts";
+    import { LogOut, User } from "lucide-vue-next";
+
+    const contextStore = useContextStore();
+    const { user, apiKey } = storeToRefs(contextStore);
+
+    const isLoggedIn = computed(() => !!apiKey.value && !!user.value);
 
     onMounted(() => {
         contextStore.getSession();
@@ -32,8 +39,6 @@
     const [passwordInput] = defineField('passwordInput');
 
     const signInOpen = ref(false);
-
-    const contextStore = useContextStore();
 
     const signinDrh = new DataRequestHandler();
     signinDrh.onSuccessCallback = (data) => {
@@ -85,11 +90,29 @@
         await signinDrh.post('/auth/signin', signInPayload);
     }
 
+    const signOut = () => {
+        CookieManager.removeApiKey();
+        contextStore.$reset();
+        window.location.reload();
+    }
+
 </script>
 
 <template>
     <div>
-        <Dialog v-model:open="signInOpen">
+        <!-- Logged in state -->
+        <div v-if="isLoggedIn" class="flex items-center gap-2">
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary">
+                <User class="w-4 h-4" />
+                <span class="text-sm font-medium">{{ user?.name }}</span>
+            </div>
+            <Button variant="ghost" size="icon" @click="signOut" title="Sign Out">
+                <LogOut class="w-4 h-4" />
+            </Button>
+        </div>
+
+        <!-- Logged out state -->
+        <Dialog v-else v-model:open="signInOpen">
             <DialogTrigger as-child>
                 <Button variant="outline">
                     Sign In
