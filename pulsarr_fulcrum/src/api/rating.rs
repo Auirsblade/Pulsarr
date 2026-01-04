@@ -8,6 +8,7 @@ use sqlx::query_as;
 use crate::{PostgresState, PulsarrResult};
 use crate::data::models::{rating::Rating, rating_detail::RatingDetail};
 use crate::api::dtos::rating_dto::{CreateRatingDTO, create_rating_to_model};
+use crate::error::PulsarrError;
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
@@ -83,7 +84,7 @@ async fn get_ratings_by_group(state: &State<PostgresState>, group_ids: Json<Vec<
         .await
     {
         Ok(ratings) => Ok(Json(ratings)),
-        Err(_) => Err(rocket::http::Status::InternalServerError)
+        Err(e) => Err(PulsarrError::validation_error(e))
     }
 }
 
