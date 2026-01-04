@@ -108,9 +108,10 @@
         if (coverArtCache.value[releaseId]) return;
 
         const drh = new DataRequestHandler();
-        drh.onSuccessCallback = (data: CoverArtInfo) => {
-            if (data.front_thumbnail_small || data.front) {
-                coverArtCache.value[releaseId] = data.front_thumbnail_small || data.front || '';
+        drh.onSuccessCallback = (data) => {
+            const coverArt = data as CoverArtInfo;
+            if (coverArt.front_thumbnail_small || coverArt.front) {
+                coverArtCache.value[releaseId] = coverArt.front_thumbnail_small || coverArt.front || '';
             }
         };
         drh.onErrorCallback = () => {
@@ -154,7 +155,6 @@
     const formatRatingValue = (value: string): string => {
         const num = parseFloat(value);
         if (isNaN(num)) return value;
-        // parseFloat + toString automatically trims trailing zeros
         return num.toString();
     };
 </script>
