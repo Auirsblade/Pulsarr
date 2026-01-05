@@ -155,6 +155,7 @@
     const formatRatingValue = (value: string): string => {
         const num = parseFloat(value);
         if (isNaN(num)) return value;
+        // parseFloat + toString automatically trims trailing zeros
         return num.toString();
     };
 </script>
