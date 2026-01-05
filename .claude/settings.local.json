@@ -19,7 +19,17 @@
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
       "Bash(git -C \"A:\\\\Git\\\\Pulsarr\" diff --stat)",
-      "Bash(cargo build:*)"
+      "Bash(cargo build:*)",
+      "Bash(npx shadcn-vue@latest add dropdown-menu alert-dialog -y)",
+      "Bash(npx shadcn-vue@latest add:*)",
+      "Bash(cmd /c \"dir /B A:\\\\Git\\\\Pulsarr\\\\pulsarr_web\\\\src\\\\components\\\\ui\")",
+      "Bash(cmd /c \"cd /d A:\\\\Git\\\\Pulsarr\\\\pulsarr_web && npx shadcn-vue@latest add dropdown-menu alert-dialog --yes\")",
+      "Bash(cmd /c \"cd /d A:\\\\Git\\\\Pulsarr\\\\pulsarr_web && npx shadcn-vue add dropdown-menu alert-dialog --overwrite\")",
+      "Bash(cmd /c \"cd /d A:\\\\Git\\\\Pulsarr\\\\pulsarr_web && npx shadcn-vue add dropdown-menu --overwrite > shadcn-output.txt 2>&1 && type shadcn-output.txt\")",
+      "Bash(npx shadcn-vue add:*)",
+      "Bash(npx shadcn-vue:*)",
+      "Bash(powershell -Command \"cd A:\\\\Git\\\\Pulsarr\\\\pulsarr_web; npx shadcn-vue add dropdown-menu alert-dialog --overwrite 2>&1 | Out-String\")",
+      "Bash(powershell -Command \"cd A:\\\\Git\\\\Pulsarr\\\\pulsarr_web; npx shadcn-vue add dropdown-menu alert-dialog --overwrite *>&1 | Tee-Object -FilePath shadcn-log.txt\")"
     ]
   }
 }

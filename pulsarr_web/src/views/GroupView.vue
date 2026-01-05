@@ -150,6 +150,13 @@
         const date = new Date(dateStr);
         return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     };
+
+    const formatRatingValue = (value: string): string => {
+        const num = parseFloat(value);
+        if (isNaN(num)) return value;
+        // parseFloat + toString automatically trims trailing zeros
+        return num.toString();
+    };
 </script>
 
 <template>
@@ -206,41 +213,48 @@
                         </Button>
                     </div>
 
-                    <!-- Rating System Info -->
-                    <div v-if="group.rating_system" class="p-3 bg-muted/50 rounded-lg">
-                        <div class="flex items-center gap-2 text-sm font-medium">
-                            <Star class="w-4 h-4" />
-                            {{ group.rating_system.name }}
-                            <span class="text-muted-foreground font-normal">
-                                ({{ group.rating_system.master_rating_type }}, max: {{ group.rating_system.rating_max }})
-                            </span>
+                    <!-- Rating System and Members - Side by side on large screens -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <!-- Rating System Info -->
+                        <div v-if="group.rating_system" class="p-3 bg-muted/50 rounded-lg">
+                            <div class="flex items-center gap-2 text-sm font-semibold mb-2">
+                                <Star class="w-4 h-4" />
+                                Rating System
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium">{{ group.rating_system.name }}</span>
+                                <span class="text-muted-foreground ml-2">
+                                    {{ group.rating_system.master_rating_type }} · max {{ group.rating_system.rating_max }}
+                                </span>
+                            </div>
+                            <div v-if="group.rating_system.parameters && group.rating_system.parameters.length > 0" class="mt-2 flex flex-wrap gap-1">
+                                <span
+                                    v-for="param in group.rating_system.parameters"
+                                    :key="param.rating_system_parameter_id"
+                                    class="px-2 py-0.5 bg-secondary rounded text-xs"
+                                >
+                                    {{ param.name }}
+                                </span>
+                            </div>
                         </div>
-                        <div v-if="group.rating_system.parameters && group.rating_system.parameters.length > 0" class="mt-2 flex flex-wrap gap-1">
-                            <span
-                                v-for="param in group.rating_system.parameters"
-                                :key="param.rating_system_parameter_id"
-                                class="px-2 py-0.5 bg-secondary rounded text-xs"
-                            >
-                                {{ param.name }}
-                            </span>
-                        </div>
-                    </div>
 
-                    <!-- Members -->
-                    <div class="p-3 bg-muted/50 rounded-lg">
-                        <div class="flex items-center gap-2 text-sm font-medium mb-2">
-                            <Users class="w-4 h-4" />
-                            Members ({{ group.members?.length ?? 0 }})
-                        </div>
-                        <div v-if="group.members && group.members.length > 0" class="flex flex-wrap gap-2">
-                            <span
-                                v-for="member in group.members"
-                                :key="member.user?.pulsarr_user_id"
-                                class="inline-flex items-center gap-1 px-2 py-1 bg-secondary rounded text-sm"
-                            >
-                                {{ member.user?.name }}
-                                <span v-if="member.group_role === 'OWNER'" class="text-xs text-muted-foreground">(owner)</span>
-                            </span>
+                        <!-- Members -->
+                        <div class="p-3 bg-muted/50 rounded-lg">
+                            <div class="flex items-center gap-2 text-sm font-semibold mb-2">
+                                <Users class="w-4 h-4" />
+                                Members ({{ group.members?.length ?? 0 }})
+                            </div>
+                            <ul v-if="group.members && group.members.length > 0" class="space-y-1">
+                                <li
+                                    v-for="member in group.members"
+                                    :key="member.user?.pulsarr_user_id"
+                                    class="text-sm flex items-center gap-2"
+                                >
+                                    <span class="w-2 h-2 rounded-full bg-primary"></span>
+                                    {{ member.user?.name }}
+                                    <span v-if="member.group_role === 'OWNER'" class="text-xs text-muted-foreground">(owner)</span>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </CardContent>
@@ -257,10 +271,10 @@
                     No ratings yet. Be the first to add one!
                 </div>
 
-                <Card v-for="rating in ratings" :key="rating.rating_id" class="overflow-hidden">
-                    <div class="flex">
+                <Card v-for="rating in ratings" :key="rating.rating_id">
+                    <div class="flex px-3 gap-3">
                         <!-- Album Art -->
-                        <div class="w-24 h-24 flex-shrink-0 bg-muted flex items-center justify-center">
+                        <div class="w-20 h-20 flex-shrink-0 bg-muted rounded-md flex items-center justify-center overflow-hidden">
                             <img
                                 v-if="coverArtCache[rating.musicbrainz_id]"
                                 :src="coverArtCache[rating.musicbrainz_id]"
@@ -272,15 +286,15 @@
                         </div>
 
                         <!-- Rating Content -->
-                        <div class="flex-1 p-3">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h3 class="font-semibold">{{ rating.media_title }}</h3>
-                                    <p class="text-sm text-muted-foreground">{{ rating.artist_name }}</p>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start gap-2">
+                                <div class="min-w-0">
+                                    <h3 class="font-semibold truncate">{{ rating.media_title }}</h3>
+                                    <p class="text-sm text-muted-foreground truncate">{{ rating.artist_name }}</p>
                                 </div>
-                                <div class="flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground rounded font-bold text-sm">
+                                <div class="flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground rounded font-bold text-sm flex-shrink-0">
                                     <Star class="w-3 h-3" />
-                                    {{ rating.rating_value }}
+                                    {{ formatRatingValue(rating.rating_value) }}
                                 </div>
                             </div>
 
