@@ -17,6 +17,16 @@ const router = createRouter({
       // which is lazy-loaded when the route is visited.
       component: () => import('../views/AboutView.vue'),
     },
+    {
+      path: '/group/:groupId',
+      name: 'group',
+      component: () => import('../views/GroupView.vue'),
+    },
+    {
+      path: '/join/:groupId',
+      name: 'join-group',
+      component: () => import('../views/JoinGroupView.vue'),
+    },
   ],
 })
 

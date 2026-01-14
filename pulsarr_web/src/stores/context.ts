@@ -16,10 +16,22 @@ export const useContextStore = defineStore('context', () => {
         setApiKey();
     }
 
-    const getSession = () => {
+    const getSession = async () => {
         const pulsarrApiKey = CookieManager.getApiKey();
         if (pulsarrApiKey) {
             apiKey.value = pulsarrApiKey;
+            // Fetch current user data
+            const drh = new DataRequestHandler();
+            drh.onSuccessCallback = (data) => {
+                user.value = data as UserDTO;
+            };
+            drh.onErrorCallback = (error) => {
+                console.error('Failed to fetch current user:', error);
+                // API key might be invalid, clear it
+                apiKey.value = undefined;
+                CookieManager.removeApiKey();
+            };
+            await drh.get("/user/currentUser");
         }
     }
 

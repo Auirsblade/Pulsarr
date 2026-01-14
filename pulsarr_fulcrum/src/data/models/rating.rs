@@ -27,8 +27,8 @@ impl Model for Rating {
         self,
     ) -> QueryAs<'static, Postgres, Rating, PgArguments> {
         query_as(
-            "INSERT INTO rating (pulsarr_user_id, pulsarr_group_id, rating_system_id, comments, rating_value, media_type, media_title, musicbrainz_id, artist_name, rating_date, release_date)\
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\
+            "INSERT INTO rating (pulsarr_user_id, pulsarr_group_id, rating_system_id, comments, rating_value, media_type, media_title, musicbrainz_id, artist_name, release_date)\
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\
             RETURNING *",
         )
             .bind(self.pulsarr_user_id)
@@ -40,7 +40,6 @@ impl Model for Rating {
             .bind(self.media_title)
             .bind(self.musicbrainz_id)
             .bind(self.artist_name)
-            .bind(self.rating_date)
             .bind(self.release_date)
     }
 
