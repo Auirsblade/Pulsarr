@@ -56,7 +56,7 @@ export interface RatingSystemDTO {
      * @type {Array<RatingSystemParameterDTO>}
      * @memberof RatingSystemDTO
      */
-    parameters: Array<RatingSystemParameterDTO>;
+    parameters?: Array<RatingSystemParameterDTO> | null;
 }
 
 /**
@@ -67,7 +67,6 @@ export function instanceOfRatingSystemDTO(value: object): value is RatingSystemD
     if (!('master_rating_type' in value) || value['master_rating_type'] === undefined) return false;
     if (!('rating_max' in value) || value['rating_max'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
-    if (!('parameters' in value) || value['parameters'] === undefined) return false;
     return true;
 }
 
@@ -85,7 +84,7 @@ export function RatingSystemDTOFromJSONTyped(json: any, ignoreDiscriminator: boo
         'master_rating_type': json['master_rating_type'],
         'rating_max': json['rating_max'],
         'name': json['name'],
-        'parameters': ((json['parameters'] as Array<any>).map(RatingSystemParameterDTOFromJSON)),
+        'parameters': json['parameters'] == null ? undefined : ((json['parameters'] as Array<any>).map(RatingSystemParameterDTOFromJSON)),
     };
 }
 
@@ -104,7 +103,7 @@ export function RatingSystemDTOToJSONTyped(value?: RatingSystemDTO | null, ignor
         'master_rating_type': value['master_rating_type'],
         'rating_max': value['rating_max'],
         'name': value['name'],
-        'parameters': ((value['parameters'] as Array<any>).map(RatingSystemParameterDTOToJSON)),
+        'parameters': value['parameters'] == null ? undefined : ((value['parameters'] as Array<any>).map(RatingSystemParameterDTOToJSON)),
     };
 }
 

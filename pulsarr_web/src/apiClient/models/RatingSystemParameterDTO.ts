@@ -20,31 +20,31 @@ import { mapValues } from '../runtime';
  */
 export interface RatingSystemParameterDTO {
     /**
-     *
+     * 
      * @type {number}
      * @memberof RatingSystemParameterDTO
      */
     rating_system_parameter_id: number;
     /**
-     *
+     * 
      * @type {number}
      * @memberof RatingSystemParameterDTO
      */
     rating_system_id: number;
     /**
-     *
+     * 
      * @type {string}
      * @memberof RatingSystemParameterDTO
      */
     parameter_rating_max: string;
     /**
-     *
+     * 
      * @type {string}
      * @memberof RatingSystemParameterDTO
      */
     name: string;
     /**
-     *
+     * 
      * @type {string}
      * @memberof RatingSystemParameterDTO
      */
@@ -72,6 +72,7 @@ export function RatingSystemParameterDTOFromJSONTyped(json: any, ignoreDiscrimin
         return json;
     }
     return {
+        
         'rating_system_parameter_id': json['rating_system_parameter_id'],
         'rating_system_id': json['rating_system_id'],
         'parameter_rating_max': json['parameter_rating_max'],
@@ -90,6 +91,7 @@ export function RatingSystemParameterDTOToJSONTyped(value?: RatingSystemParamete
     }
 
     return {
+        
         'rating_system_parameter_id': value['rating_system_parameter_id'],
         'rating_system_id': value['rating_system_id'],
         'parameter_rating_max': value['parameter_rating_max'],

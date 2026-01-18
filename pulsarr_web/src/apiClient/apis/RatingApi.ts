@@ -15,10 +15,13 @@
 
 import * as runtime from '../runtime';
 import type {
+  CreateRatingDTO,
   Rating,
   RatingDetail,
 } from '../models/index';
 import {
+    CreateRatingDTOFromJSON,
+    CreateRatingDTOToJSON,
     RatingFromJSON,
     RatingToJSON,
     RatingDetailFromJSON,
@@ -26,7 +29,7 @@ import {
 } from '../models/index';
 
 export interface AddRatingRequest {
-    rating: Rating;
+    createRatingDTO: CreateRatingDTO;
 }
 
 export interface AddRatingDetailRequest {
@@ -49,6 +52,14 @@ export interface GetRatingDetailRequest {
     id: number;
 }
 
+export interface GetRatingDetailsByRatingRequest {
+    ratingId: number;
+}
+
+export interface GetRatingsByGroupRequest {
+    requestBody: Array<number>;
+}
+
 export interface UpdateRatingRequest {
     rating: Rating;
 }
@@ -66,10 +77,10 @@ export class RatingApi extends runtime.BaseAPI {
      * Add rating
      */
     async addRatingRaw(requestParameters: AddRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Rating>> {
-        if (requestParameters['rating'] == null) {
+        if (requestParameters['createRatingDTO'] == null) {
             throw new runtime.RequiredError(
-                'rating',
-                'Required parameter "rating" was null or undefined when calling addRating().'
+                'createRatingDTO',
+                'Required parameter "createRatingDTO" was null or undefined when calling addRating().'
             );
         }
 
@@ -84,7 +95,7 @@ export class RatingApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: RatingToJSON(requestParameters['rating']),
+            body: CreateRatingDTOToJSON(requestParameters['createRatingDTO']),
         }, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => RatingFromJSON(jsonValue));
@@ -323,6 +334,75 @@ export class RatingApi extends runtime.BaseAPI {
      */
     async getRatingDetail(requestParameters: GetRatingDetailRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingDetail> {
         const response = await this.getRatingDetailRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get rating details by rating ID
+     */
+    async getRatingDetailsByRatingRaw(requestParameters: GetRatingDetailsByRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RatingDetail>>> {
+        if (requestParameters['ratingId'] == null) {
+            throw new runtime.RequiredError(
+                'ratingId',
+                'Required parameter "ratingId" was null or undefined when calling getRatingDetailsByRating().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/rating/rating_detail/by_rating/{rating_id}`.replace(`{${"rating_id"}}`, encodeURIComponent(String(requestParameters['ratingId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RatingDetailFromJSON));
+    }
+
+    /**
+     * Get rating details by rating ID
+     */
+    async getRatingDetailsByRating(requestParameters: GetRatingDetailsByRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<RatingDetail>> {
+        const response = await this.getRatingDetailsByRatingRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get ratings by group IDs
+     */
+    async getRatingsByGroupRaw(requestParameters: GetRatingsByGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Rating>>> {
+        if (requestParameters['requestBody'] == null) {
+            throw new runtime.RequiredError(
+                'requestBody',
+                'Required parameter "requestBody" was null or undefined when calling getRatingsByGroup().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/rating/byGroups`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['requestBody'],
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RatingFromJSON));
+    }
+
+    /**
+     * Get ratings by group IDs
+     */
+    async getRatingsByGroup(requestParameters: GetRatingsByGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Rating>> {
+        const response = await this.getRatingsByGroupRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
