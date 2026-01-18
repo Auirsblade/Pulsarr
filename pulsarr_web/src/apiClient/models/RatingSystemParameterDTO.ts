@@ -20,29 +20,35 @@ import { mapValues } from '../runtime';
  */
 export interface RatingSystemParameterDTO {
     /**
-     * 
+     *
      * @type {number}
      * @memberof RatingSystemParameterDTO
      */
     rating_system_parameter_id: number;
     /**
-     * 
+     *
      * @type {number}
      * @memberof RatingSystemParameterDTO
      */
     rating_system_id: number;
     /**
-     * 
+     *
      * @type {string}
      * @memberof RatingSystemParameterDTO
      */
     parameter_rating_max: string;
     /**
-     * 
+     *
      * @type {string}
      * @memberof RatingSystemParameterDTO
      */
     name: string;
+    /**
+     *
+     * @type {string}
+     * @memberof RatingSystemParameterDTO
+     */
+    weight: string;
 }
 
 /**
@@ -53,6 +59,7 @@ export function instanceOfRatingSystemParameterDTO(value: object): value is Rati
     if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
     if (!('parameter_rating_max' in value) || value['parameter_rating_max'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
+    if (!('weight' in value) || value['weight'] === undefined) return false;
     return true;
 }
 
@@ -65,11 +72,11 @@ export function RatingSystemParameterDTOFromJSONTyped(json: any, ignoreDiscrimin
         return json;
     }
     return {
-        
         'rating_system_parameter_id': json['rating_system_parameter_id'],
         'rating_system_id': json['rating_system_id'],
         'parameter_rating_max': json['parameter_rating_max'],
         'name': json['name'],
+        'weight': json['weight'],
     };
 }
 
@@ -83,11 +90,11 @@ export function RatingSystemParameterDTOToJSONTyped(value?: RatingSystemParamete
     }
 
     return {
-        
         'rating_system_parameter_id': value['rating_system_parameter_id'],
         'rating_system_id': value['rating_system_id'],
         'parameter_rating_max': value['parameter_rating_max'],
         'name': value['name'],
+        'weight': value['weight'],
     };
 }
 

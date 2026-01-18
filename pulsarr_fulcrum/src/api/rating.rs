@@ -14,7 +14,8 @@ use crate::error::PulsarrError;
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![ settings:
         add_rating, update_rating, delete_rating, get_rating, get_all_ratings, get_ratings_by_group,
-        add_rating_detail, update_rating_detail, delete_rating_detail, get_rating_detail, get_all_rating_details ]
+        add_rating_detail, update_rating_detail, delete_rating_detail, get_rating_detail, get_all_rating_details,
+        get_rating_details_by_rating ]
 }
 
 
@@ -135,5 +136,19 @@ async fn get_all_rating_details(state: &State<PostgresState>) -> PulsarrResult<V
     match data_wrangler::get_all::<RatingDetail>(&state.pool, None).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
+    }
+}
+
+/// # Get rating details by rating ID
+#[openapi(tag = "Rating")]
+#[get("/rating_detail/by_rating/<rating_id>")]
+async fn get_rating_details_by_rating(state: &State<PostgresState>, rating_id: i32) -> PulsarrResult<Vec<RatingDetail>> {
+    match query_as::<_, RatingDetail>("SELECT * FROM rating_detail WHERE rating_id = $1")
+        .bind(rating_id)
+        .fetch_all(&state.pool)
+        .await
+    {
+        Ok(details) => Ok(Json(details)),
+        Err(e) => Err(PulsarrError::validation_error(e))
     }
 }
