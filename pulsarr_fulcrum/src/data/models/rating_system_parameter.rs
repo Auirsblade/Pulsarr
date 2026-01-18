@@ -12,24 +12,26 @@ pub(crate) struct RatingSystemParameter {
     pub rating_system_id: i32,
     pub parameter_rating_max: Decimal,
     pub name: String,
+    pub weight: Decimal,
 }
 
 impl Model for RatingSystemParameter {
     fn add<RatingSystemParameter: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, RatingSystemParameter, PgArguments> {
         query_as(
-            "INSERT INTO rating_system_parameter (rating_system_id, parameter_rating_max, name)\
-            VALUES ($1, $2, $3)\
+            "INSERT INTO rating_system_parameter (rating_system_id, parameter_rating_max, name, weight)\
+            VALUES ($1, $2, $3, $4)\
             RETURNING *",
         )
             .bind(self.rating_system_id)
             .bind(self.parameter_rating_max)
             .bind(self.name)
+            .bind(self.weight)
     }
 
     fn update<T: Model>(self) -> QueryAs<'static, Postgres, T, PgArguments> {
         query_as(
             "UPDATE rating_system_parameter \
-            SET rating_system_id = $2, parameter_rating_max = $3, name = $4 \
+            SET rating_system_id = $2, parameter_rating_max = $3, name = $4, weight = $5 \
             WHERE rating_system_parameter_id = $1 \
             RETURNING *"
         )
@@ -37,6 +39,7 @@ impl Model for RatingSystemParameter {
             .bind(self.rating_system_id)
             .bind(self.parameter_rating_max)
             .bind(self.name)
+            .bind(self.weight)
     }
 
     fn delete<T: Model>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {

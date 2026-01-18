@@ -10,25 +10,60 @@
     import type { RatingSystemDTO, RatingSystemParameterDTO } from "@/apiClient";
     import { storeToRefs } from "pinia";
     import { useContextStore } from "@/stores/context.ts";
-    import { ref } from "vue";
+    import { ref, computed } from "vue";
     import { Plus, Trash2 } from "lucide-vue-next";
 
     const { ratingTypes } = storeToRefs(useContextStore());
 
+    const WEIGHT_OPTIONS = [
+        { value: '0.5', label: '0.5x' },
+        { value: '1', label: '1x' },
+        { value: '1.5', label: '1.5x' },
+        { value: '2', label: '2x' },
+        { value: '2.5', label: '2.5x' },
+        { value: '3', label: '3x' },
+    ];
+
     interface ParameterInput {
         name: string;
         parameter_rating_max: string;
+        weight: string;
     }
 
     const parameters = ref<ParameterInput[]>([]);
 
     const addParameter = () => {
-        parameters.value.push({ name: '', parameter_rating_max: '' });
+        parameters.value.push({ name: '', parameter_rating_max: '', weight: '1' });
     };
 
     const removeParameter = (index: number) => {
         parameters.value.splice(index, 1);
     };
+
+    // Computed properties for type-aware UI
+    const parametersRequired = computed(() => {
+        return masterRatingType.value === 'Average' || masterRatingType.value === 'Cumulative';
+    });
+
+    const parametersLabel = computed(() => {
+        if (masterRatingType.value === 'Absolute') {
+            return 'Rating Parameters (Optional)';
+        }
+        return 'Rating Parameters (Required)';
+    });
+
+    const parametersDescription = computed(() => {
+        switch (masterRatingType.value) {
+            case 'Absolute':
+                return 'Add optional sub-ratings for detailed breakdown. Overall rating is manually entered.';
+            case 'Average':
+                return 'Overall rating = weighted average of these parameters. All parameters required.';
+            case 'Cumulative':
+                return 'Overall rating = sum of (parameter × weight). Max = sum of all (parameter max × weight).';
+            default:
+                return 'Add sub-ratings for more detailed reviews (e.g., Lyrics, Production, Vocals)';
+        }
+    });
 
     const props = defineProps({
         showDialog: {
@@ -85,7 +120,8 @@
                 rating_system_parameter_id: 0,
                 rating_system_id: 0,
                 name: p.name,
-                parameter_rating_max: p.parameter_rating_max
+                parameter_rating_max: p.parameter_rating_max,
+                weight: p.weight
             }))
         }
 
@@ -143,14 +179,14 @@
 
                 <div class="space-y-2">
                     <div class="flex items-center justify-between">
-                        <Label>Rating Parameters (Optional)</Label>
+                        <Label>{{ parametersLabel }}</Label>
                         <Button type="button" variant="outline" size="sm" @click="addParameter">
                             <Plus class="w-4 h-4 mr-1" />
                             Add Parameter
                         </Button>
                     </div>
                     <p class="text-sm text-muted-foreground">
-                        Add sub-ratings for more detailed reviews (e.g., Lyrics, Production, Vocals)
+                        {{ parametersDescription }}
                     </p>
                     <div v-if="parameters.length > 0" class="space-y-3 mt-2">
                         <div v-for="(param, index) in parameters" :key="index" class="flex gap-2 items-end">
@@ -162,7 +198,7 @@
                                     placeholder="e.g., Lyrics"
                                 />
                             </div>
-                            <div class="w-24 space-y-1">
+                            <div class="w-20 space-y-1">
                                 <Label :for="`param-max-${index}`" class="text-xs">Max</Label>
                                 <Input
                                     :id="`param-max-${index}`"
@@ -170,6 +206,23 @@
                                     v-model="param.parameter_rating_max"
                                     placeholder="10"
                                 />
+                            </div>
+                            <div class="w-20 space-y-1">
+                                <Label :for="`param-weight-${index}`" class="text-xs">Weight</Label>
+                                <Select v-model="param.weight">
+                                    <SelectTrigger :id="`param-weight-${index}`">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="opt in WEIGHT_OPTIONS"
+                                            :key="opt.value"
+                                            :value="opt.value"
+                                        >
+                                            {{ opt.label }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <Button
                                 type="button"

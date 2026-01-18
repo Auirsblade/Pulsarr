@@ -15,6 +15,7 @@
         rating_system_parameter_id: number;
         name: string;
         max: string;
+        weight: string;
         value: string;
     }
 
@@ -42,12 +43,83 @@
         return props.group.rating_system?.rating_max || '10';
     });
 
+    // Rating type and calculation logic
+    const ratingType = computed(() => {
+        return props.group.rating_system?.master_rating_type || 'Absolute';
+    });
+
+    const isManualOverall = computed(() => {
+        return ratingType.value === 'Absolute';
+    });
+
+    const hasParameters = computed(() => {
+        return parameterRatings.value.length > 0;
+    });
+
+    const allParametersFilled = computed(() => {
+        return parameterRatings.value.every(p => p.value !== '');
+    });
+
+    const calculatedRating = computed(() => {
+        if (isManualOverall.value || !hasParameters.value) return null;
+        if (!allParametersFilled.value) return null;
+
+        const ratings = parameterRatings.value;
+
+        if (ratingType.value === 'Average') {
+            // Weighted average: (sum of value * weight) / (sum of weights)
+            let weightedSum = 0;
+            let totalWeight = 0;
+            ratings.forEach(r => {
+                const value = parseFloat(r.value) || 0;
+                const weight = parseFloat(r.weight) || 1;
+                weightedSum += value * weight;
+                totalWeight += weight;
+            });
+            return totalWeight > 0 ? (weightedSum / totalWeight).toFixed(2) : '0';
+        }
+
+        if (ratingType.value === 'Cumulative') {
+            // Weighted sum: sum of (value * weight)
+            let sum = 0;
+            ratings.forEach(r => {
+                const value = parseFloat(r.value) || 0;
+                const weight = parseFloat(r.weight) || 1;
+                sum += value * weight;
+            });
+            return sum.toFixed(2);
+        }
+
+        return null;
+    });
+
+    const calculatedMax = computed(() => {
+        if (ratingType.value !== 'Cumulative' || !hasParameters.value) return null;
+
+        // Sum of (param_max * weight)
+        let maxSum = 0;
+        parameterRatings.value.forEach(p => {
+            const max = parseFloat(p.max) || 0;
+            const weight = parseFloat(p.weight) || 1;
+            maxSum += max * weight;
+        });
+        return maxSum.toFixed(2);
+    });
+
+    const displayMax = computed(() => {
+        if (ratingType.value === 'Cumulative' && calculatedMax.value) {
+            return calculatedMax.value;
+        }
+        return ratingMax.value;
+    });
+
     const initializeParameterRatings = () => {
         if (props.group.rating_system?.parameters) {
             parameterRatings.value = props.group.rating_system.parameters.map(p => ({
                 rating_system_parameter_id: p.rating_system_parameter_id,
                 name: p.name,
                 max: p.parameter_rating_max,
+                weight: p.weight || '1',
                 value: ''
             }));
         }
@@ -83,13 +155,32 @@
     const submit = async () => {
         if (!selectedMusic.value || !user.value) return;
 
-        if (!ratingValue.value) {
-            error.value = 'Please enter a rating';
-            return;
+        // For non-Absolute types with parameters, validate all parameters are filled
+        if (!isManualOverall.value && hasParameters.value) {
+            if (!allParametersFilled.value) {
+                error.value = 'All parameter ratings are required';
+                return;
+            }
         }
 
-        const rating = parseFloat(ratingValue.value);
-        const max = parseFloat(ratingMax.value);
+        // Determine the final rating value
+        let finalRatingValue: string;
+        if (isManualOverall.value) {
+            if (!ratingValue.value) {
+                error.value = 'Please enter a rating';
+                return;
+            }
+            finalRatingValue = ratingValue.value;
+        } else {
+            if (!calculatedRating.value) {
+                error.value = 'Please rate all parameters';
+                return;
+            }
+            finalRatingValue = calculatedRating.value;
+        }
+
+        const rating = parseFloat(finalRatingValue);
+        const max = parseFloat(displayMax.value);
         if (isNaN(rating) || rating < 0 || rating > max) {
             error.value = `Rating must be between 0 and ${max}`;
             return;
@@ -113,7 +204,7 @@
             pulsarr_group_id: props.group.pulsarr_group_id,
             rating_system_id: props.group.rating_system_id,
             comments: comments.value,
-            rating_value: ratingValue.value,
+            rating_value: finalRatingValue,
             media_type: selectedMusic.value.media_type,
             media_title: selectedMusic.value.media_title,
             musicbrainz_id: selectedMusic.value.musicbrainz_id,
@@ -217,30 +308,26 @@
                     </div>
                 </div>
 
-                <!-- Overall Rating -->
-                <div v-if="selectedMusic" class="space-y-2">
-                    <Label for="rating">Overall Rating (0 - {{ ratingMax }})</Label>
-                    <Input
-                        id="rating"
-                        type="number"
-                        v-model="ratingValue"
-                        :min="0"
-                        :max="ratingMax"
-                        step="0.1"
-                        placeholder="Enter rating..."
-                    />
-                </div>
-
-                <!-- Parameter Ratings -->
-                <div v-if="selectedMusic && parameterRatings.length > 0" class="space-y-3">
-                    <Label>Detailed Ratings</Label>
+                <!-- Parameter Ratings (shown first for non-Absolute types) -->
+                <div v-if="selectedMusic && hasParameters" class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <Label>{{ isManualOverall ? 'Detailed Ratings (Optional)' : 'Parameter Ratings (Required)' }}</Label>
+                    </div>
+                    <p v-if="!isManualOverall" class="text-xs text-muted-foreground">
+                        {{ ratingType === 'Average' ? 'Overall = weighted average of these ratings' : 'Overall = sum of (rating × weight)' }}
+                    </p>
                     <div class="space-y-2">
                         <div
                             v-for="param in parameterRatings"
                             :key="param.rating_system_parameter_id"
                             class="flex items-center gap-2"
                         >
-                            <Label class="flex-1 text-sm">{{ param.name }} (0 - {{ param.max }})</Label>
+                            <div class="flex-1">
+                                <Label class="text-sm">{{ param.name }}</Label>
+                                <span class="text-xs text-muted-foreground ml-1">
+                                    (0-{{ param.max }}{{ parseFloat(param.weight) !== 1 ? `, ${param.weight}x` : '' }})
+                                </span>
+                            </div>
                             <Input
                                 type="number"
                                 v-model="param.value"
@@ -251,6 +338,33 @@
                                 placeholder="--"
                             />
                         </div>
+                    </div>
+                </div>
+
+                <!-- Overall Rating -->
+                <div v-if="selectedMusic" class="space-y-2">
+                    <Label for="rating">Overall Rating (0 - {{ displayMax }})</Label>
+
+                    <!-- Manual input for Absolute type -->
+                    <Input
+                        v-if="isManualOverall"
+                        id="rating"
+                        type="number"
+                        v-model="ratingValue"
+                        :min="0"
+                        :max="ratingMax"
+                        step="0.1"
+                        placeholder="Enter rating..."
+                    />
+
+                    <!-- Auto-calculated display for Average/Cumulative -->
+                    <div v-else class="flex items-center gap-3">
+                        <div class="px-4 py-2 bg-muted rounded-md font-mono text-xl font-semibold min-w-[80px] text-center">
+                            {{ calculatedRating ?? '--' }}
+                        </div>
+                        <span class="text-sm text-muted-foreground">
+                            (auto-calculated from parameters)
+                        </span>
                     </div>
                 </div>
 
@@ -274,7 +388,7 @@
             <DialogFooter>
                 <Button variant="outline" @click="closeDialog">Cancel</Button>
                 <Button
-                    :disabled="!selectedMusic || !ratingValue || submitting"
+                    :disabled="!selectedMusic || submitting || (isManualOverall ? !ratingValue : !calculatedRating)"
                     @click="submit"
                 >
                     {{ submitting ? 'Submitting...' : 'Submit Rating' }}

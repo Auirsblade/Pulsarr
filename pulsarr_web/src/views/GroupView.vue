@@ -7,7 +7,7 @@
     import type { GroupDTO } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
-    import { Copy, Check, LogOut, Plus, Users, Star, Disc, Music, MessageSquare } from "lucide-vue-next";
+    import { Copy, Check, LogOut, Plus, Users, Star, Disc, Music, MessageSquare, ChevronDown } from "lucide-vue-next";
     import AddRatingModal from "@/components/modals/AddRatingModal.vue";
 
     interface Rating {
@@ -23,6 +23,13 @@
         artist_name: string;
         rating_date: string;
         release_date: string;
+    }
+
+    interface RatingDetail {
+        rating_detail_id: number;
+        rating_id: number;
+        rating_system_parameter_id: number;
+        rating_value: string;
     }
 
     interface CoverArtInfo {
@@ -42,6 +49,10 @@
     const error = ref<string | null>(null);
     const copied = ref(false);
     const showAddRatingModal = ref(false);
+
+    // Expandable rating details
+    const expandedRatings = ref<Set<number>>(new Set());
+    const ratingDetails = ref<Record<number, RatingDetail[]>>({});
 
     const groupId = computed(() => Number(route.params.groupId));
 
@@ -157,6 +168,42 @@
         if (isNaN(num)) return value;
         // parseFloat + toString automatically trims trailing zeros
         return num.toString();
+    };
+
+    // Check if the rating system has parameters (for showing expand button)
+    const hasRatingParameters = computed(() => {
+        return (group.value?.rating_system?.parameters?.length ?? 0) > 0;
+    });
+
+    // Get parameter info by ID
+    const getParameterInfo = (parameterId: number) => {
+        const params = group.value?.rating_system?.parameters || [];
+        return params.find(p => p.rating_system_parameter_id === parameterId);
+    };
+
+    // Toggle rating expansion and fetch details if needed
+    const toggleRatingExpanded = async (ratingId: number) => {
+        if (expandedRatings.value.has(ratingId)) {
+            expandedRatings.value.delete(ratingId);
+        } else {
+            expandedRatings.value.add(ratingId);
+            // Fetch details if not already loaded
+            if (!ratingDetails.value[ratingId]) {
+                await fetchRatingDetails(ratingId);
+            }
+        }
+    };
+
+    // Fetch rating details for a specific rating
+    const fetchRatingDetails = async (ratingId: number) => {
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = (data) => {
+            ratingDetails.value[ratingId] = data as RatingDetail[];
+        };
+        drh.onErrorCallback = (err) => {
+            console.error('Failed to fetch rating details:', err);
+        };
+        drh.get(`/rating/rating_detail/by_rating/${ratingId}`);
     };
 </script>
 
@@ -307,6 +354,46 @@
                             <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                                 <span>by {{ getUserName(rating.pulsarr_user_id) }}</span>
                                 <span>{{ formatDate(rating.rating_date) }}</span>
+                            </div>
+
+                            <!-- Expand button for parameter breakdown -->
+                            <Button
+                                v-if="hasRatingParameters"
+                                variant="ghost"
+                                size="sm"
+                                class="mt-2 h-7 px-2 text-xs"
+                                @click="toggleRatingExpanded(rating.rating_id)"
+                            >
+                                <ChevronDown
+                                    :class="['w-3 h-3 mr-1 transition-transform', { 'rotate-180': expandedRatings.has(rating.rating_id) }]"
+                                />
+                                {{ expandedRatings.has(rating.rating_id) ? 'Hide' : 'Show' }} breakdown
+                            </Button>
+
+                            <!-- Expanded rating details -->
+                            <div
+                                v-if="expandedRatings.has(rating.rating_id) && ratingDetails[rating.rating_id]"
+                                class="mt-2 p-2 bg-muted/50 rounded-md space-y-1"
+                            >
+                                <div
+                                    v-for="detail in ratingDetails[rating.rating_id]"
+                                    :key="detail.rating_detail_id"
+                                    class="flex justify-between text-sm"
+                                >
+                                    <span class="text-muted-foreground">
+                                        {{ getParameterInfo(detail.rating_system_parameter_id)?.name || 'Unknown' }}
+                                        <span v-if="parseFloat(getParameterInfo(detail.rating_system_parameter_id)?.weight || '1') !== 1" class="text-xs">
+                                            ({{ getParameterInfo(detail.rating_system_parameter_id)?.weight }}x)
+                                        </span>
+                                    </span>
+                                    <span class="font-mono">
+                                        {{ formatRatingValue(detail.rating_value) }}
+                                        <span class="text-muted-foreground">/ {{ getParameterInfo(detail.rating_system_parameter_id)?.parameter_rating_max }}</span>
+                                    </span>
+                                </div>
+                                <div v-if="ratingDetails[rating.rating_id].length === 0" class="text-sm text-muted-foreground">
+                                    No parameter ratings recorded
+                                </div>
                             </div>
                         </div>
                     </div>
