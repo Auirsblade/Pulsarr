@@ -119,9 +119,10 @@
         if (coverArtCache.value[releaseId]) return;
 
         const drh = new DataRequestHandler();
-        drh.onSuccessCallback = (data: CoverArtInfo) => {
-            if (data.front_thumbnail_small || data.front) {
-                coverArtCache.value[releaseId] = data.front_thumbnail_small || data.front || '';
+        drh.onSuccessCallback = (data) => {
+            let coverArtInfo = data as CoverArtInfo
+            if (coverArtInfo.front_thumbnail_small || coverArtInfo.front) {
+                coverArtCache.value[releaseId] = coverArtInfo.front_thumbnail_small || coverArtInfo.front || '';
             }
         };
         drh.onErrorCallback = () => {

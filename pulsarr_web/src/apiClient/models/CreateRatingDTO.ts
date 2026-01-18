@@ -14,89 +14,83 @@
 
 import { mapValues } from '../runtime';
 /**
- * 
+ * Input DTO for creating a new rating (rating_date is set by server)
  * @export
- * @interface Rating
+ * @interface CreateRatingDTO
  */
-export interface Rating {
+export interface CreateRatingDTO {
     /**
      * 
      * @type {number}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     rating_id: number;
     /**
      * 
      * @type {number}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     pulsarr_user_id: number;
     /**
      * 
      * @type {number}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     pulsarr_group_id: number;
     /**
      * 
      * @type {number}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     rating_system_id: number;
     /**
      * 
      * @type {string}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     comments: string;
     /**
      * 
      * @type {string}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     rating_value: string;
     /**
      * 
      * @type {string}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     media_type: string;
     /**
      * 
      * @type {string}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     media_title: string;
     /**
      * 
      * @type {string}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     musicbrainz_id: string;
     /**
      * 
      * @type {string}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     artist_name: string;
     /**
      * 
      * @type {string}
-     * @memberof Rating
-     */
-    rating_date: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof Rating
+     * @memberof CreateRatingDTO
      */
     release_date: string;
 }
 
 /**
- * Check if a given object implements the Rating interface.
+ * Check if a given object implements the CreateRatingDTO interface.
  */
-export function instanceOfRating(value: object): value is Rating {
+export function instanceOfCreateRatingDTO(value: object): value is CreateRatingDTO {
     if (!('rating_id' in value) || value['rating_id'] === undefined) return false;
     if (!('pulsarr_user_id' in value) || value['pulsarr_user_id'] === undefined) return false;
     if (!('pulsarr_group_id' in value) || value['pulsarr_group_id'] === undefined) return false;
@@ -107,16 +101,15 @@ export function instanceOfRating(value: object): value is Rating {
     if (!('media_title' in value) || value['media_title'] === undefined) return false;
     if (!('musicbrainz_id' in value) || value['musicbrainz_id'] === undefined) return false;
     if (!('artist_name' in value) || value['artist_name'] === undefined) return false;
-    if (!('rating_date' in value) || value['rating_date'] === undefined) return false;
     if (!('release_date' in value) || value['release_date'] === undefined) return false;
     return true;
 }
 
-export function RatingFromJSON(json: any): Rating {
-    return RatingFromJSONTyped(json, false);
+export function CreateRatingDTOFromJSON(json: any): CreateRatingDTO {
+    return CreateRatingDTOFromJSONTyped(json, false);
 }
 
-export function RatingFromJSONTyped(json: any, ignoreDiscriminator: boolean): Rating {
+export function CreateRatingDTOFromJSONTyped(json: any, ignoreDiscriminator: boolean): CreateRatingDTO {
     if (json == null) {
         return json;
     }
@@ -132,16 +125,15 @@ export function RatingFromJSONTyped(json: any, ignoreDiscriminator: boolean): Ra
         'media_title': json['media_title'],
         'musicbrainz_id': json['musicbrainz_id'],
         'artist_name': json['artist_name'],
-        'rating_date': json['rating_date'],
         'release_date': json['release_date'],
     };
 }
 
-export function RatingToJSON(json: any): Rating {
-    return RatingToJSONTyped(json, false);
+export function CreateRatingDTOToJSON(json: any): CreateRatingDTO {
+    return CreateRatingDTOToJSONTyped(json, false);
 }
 
-export function RatingToJSONTyped(value?: Rating | null, ignoreDiscriminator: boolean = false): any {
+export function CreateRatingDTOToJSONTyped(value?: CreateRatingDTO | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }
@@ -158,7 +150,6 @@ export function RatingToJSONTyped(value?: Rating | null, ignoreDiscriminator: bo
         'media_title': value['media_title'],
         'musicbrainz_id': value['musicbrainz_id'],
         'artist_name': value['artist_name'],
-        'rating_date': value['rating_date'],
         'release_date': value['release_date'],
     };
 }

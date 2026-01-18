@@ -55,6 +55,15 @@ export interface LeaveGroupRequest {
     pulsarrApiKey: string;
 }
 
+export interface MyGroupsRequest {
+    pulsarrApiKey: string;
+}
+
+export interface SearchGroupsRequest {
+    pulsarrApiKey: string;
+    name?: string | null;
+}
+
 export interface UpdateGroupRequest {
     pulsarrApiKey: string;
     groupDTO: GroupDTO;
@@ -396,6 +405,80 @@ export class GroupApi extends runtime.BaseAPI {
      */
     async leaveGroup(requestParameters: LeaveGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<boolean> {
         const response = await this.leaveGroupRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async myGroupsRaw(requestParameters: MyGroupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<GroupDTO>>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling myGroups().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/group/myGroups`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(GroupDTOFromJSON));
+    }
+
+    /**
+     */
+    async myGroups(requestParameters: MyGroupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<GroupDTO>> {
+        const response = await this.myGroupsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async searchGroupsRaw(requestParameters: SearchGroupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<GroupDTO>>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling searchGroups().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['name'] != null) {
+            queryParameters['name'] = requestParameters['name'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/group/search`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(GroupDTOFromJSON));
+    }
+
+    /**
+     */
+    async searchGroups(requestParameters: SearchGroupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<GroupDTO>> {
+        const response = await this.searchGroupsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

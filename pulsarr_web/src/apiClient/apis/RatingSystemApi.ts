@@ -16,17 +16,20 @@
 import * as runtime from '../runtime';
 import type {
   RatingSystem,
+  RatingSystemDTO,
   RatingSystemParameter,
 } from '../models/index';
 import {
     RatingSystemFromJSON,
     RatingSystemToJSON,
+    RatingSystemDTOFromJSON,
+    RatingSystemDTOToJSON,
     RatingSystemParameterFromJSON,
     RatingSystemParameterToJSON,
 } from '../models/index';
 
 export interface AddRatingSystemRequest {
-    ratingSystem: RatingSystem;
+    ratingSystemDTO: RatingSystemDTO;
 }
 
 export interface AddRatingSystemParameterRequest {
@@ -65,11 +68,11 @@ export class RatingSystemApi extends runtime.BaseAPI {
     /**
      * Add rating system
      */
-    async addRatingSystemRaw(requestParameters: AddRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystem>> {
-        if (requestParameters['ratingSystem'] == null) {
+    async addRatingSystemRaw(requestParameters: AddRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingSystemDTO>> {
+        if (requestParameters['ratingSystemDTO'] == null) {
             throw new runtime.RequiredError(
-                'ratingSystem',
-                'Required parameter "ratingSystem" was null or undefined when calling addRatingSystem().'
+                'ratingSystemDTO',
+                'Required parameter "ratingSystemDTO" was null or undefined when calling addRatingSystem().'
             );
         }
 
@@ -84,16 +87,16 @@ export class RatingSystemApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: RatingSystemToJSON(requestParameters['ratingSystem']),
+            body: RatingSystemDTOToJSON(requestParameters['ratingSystemDTO']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => RatingSystemDTOFromJSON(jsonValue));
     }
 
     /**
      * Add rating system
      */
-    async addRatingSystem(requestParameters: AddRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystem> {
+    async addRatingSystem(requestParameters: AddRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingSystemDTO> {
         const response = await this.addRatingSystemRaw(requestParameters, initOverrides);
         return await response.value();
     }
