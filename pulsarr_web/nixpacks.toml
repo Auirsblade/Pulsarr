@@ -1,5 +1,0 @@
-[phases.build]
-cmds = ["npm install", "npm run build"]
-
-[start]
-cmd = "nginx -g 'daemon off;'"
