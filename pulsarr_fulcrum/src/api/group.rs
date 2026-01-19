@@ -11,6 +11,7 @@ use crate::data::models::pulsarr_group::PulsarrGroup;
 use crate::data::models::pulsarr_user::PulsarrUser;
 use crate::data::models::rating_system::RatingSystem;
 use crate::data::models::user_group;
+use crate::data::models::rating_system_parameter::RatingSystemParameter;
 use crate::data::models::{pulsarr_user, rating_system_parameter};
 use crate::error::PulsarrError;
 use crate::{PostgresState, PulsarrResult};
@@ -175,25 +176,22 @@ async fn create_group(
                     Err(e) => return Err(e),
                 }
 
-                match rsd.parameters {
-                    Some(parameters) => {
-                        for mut parameter in parameters {
-                            parameter.rating_system_id = group.rating_system_id;
-                            match data_wrangler::add(
-                                rating_system_parameter_dto::to_model(&parameter),
-                                &state.pool,
-                            )
-                                .await
-                            {
-                                Ok(rating_system_parameter) => {
-                                    parameter.rating_system_parameter_id =
-                                        rating_system_parameter.rating_system_parameter_id;
-                                }
-                                Err(e) => return Err(e),
-                            }
-                        }
-                    },
-                    None => ()
+                // Map DTOs to models
+                let parameter_models: Vec<RatingSystemParameter> = rsd.parameters
+                    .map(|params| {
+                        params.iter().map(|p| {
+                            let mut dto = p.clone();
+                            dto.rating_system_id = group.rating_system_id;
+                            rating_system_parameter_dto::to_model(&dto)
+                        }).collect()
+                    })
+                    .unwrap_or_default();
+
+                // Persist models
+                for parameter in parameter_models {
+                    if let Err(e) = data_wrangler::add(parameter, &state.pool).await {
+                        return Err(e);
+                    }
                 }
             }
             None => return Err(PulsarrError::missing_data("Rating System".to_string())),
