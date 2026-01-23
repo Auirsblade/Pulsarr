@@ -31,6 +31,7 @@ models/Recording.ts
 models/RecordingSearchResponse.ts
 models/Release.ts
 models/ReleaseGroup.ts
+models/ReleaseGroupSearchResponse.ts
 models/ReleaseSearchResponse.ts
 models/SignInRequest.ts
 models/SignInResponse.ts
