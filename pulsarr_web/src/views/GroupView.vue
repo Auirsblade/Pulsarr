@@ -102,9 +102,9 @@
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
             ratings.value = data as Rating[];
-            // Fetch cover art for releases
+            // Fetch cover art for albums (release groups)
             ratings.value.forEach(rating => {
-                if (rating.media_type === 'release' && rating.musicbrainz_id) {
+                if (rating.media_type === 'album' && rating.musicbrainz_id) {
                     fetchCoverArt(rating.musicbrainz_id);
                 }
             });
@@ -128,7 +128,7 @@
         drh.onErrorCallback = () => {
             // Cover art not available, ignore
         };
-        drh.get(`/musicbrainz/release/${releaseId}/cover-art-info`);
+        drh.get(`/musicbrainz/release-group/${releaseId}/cover-art-info`);
     };
 
     const copyShareLink = async () => {
@@ -329,7 +329,7 @@
                                 class="w-full h-full object-cover"
                                 alt=""
                             />
-                            <Disc v-else-if="rating.media_type === 'release'" class="w-8 h-8 text-muted-foreground" />
+                            <Disc v-else-if="rating.media_type === 'album'" class="w-8 h-8 text-muted-foreground" />
                             <Music v-else class="w-8 h-8 text-muted-foreground" />
                         </div>
 
