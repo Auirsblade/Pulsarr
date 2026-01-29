@@ -22,6 +22,8 @@ import type {
   Recording,
   RecordingSearchResponse,
   Release,
+  ReleaseGroup,
+  ReleaseGroupSearchResponse,
   ReleaseSearchResponse,
 } from '../models/index';
 import {
@@ -39,6 +41,10 @@ import {
     RecordingSearchResponseToJSON,
     ReleaseFromJSON,
     ReleaseToJSON,
+    ReleaseGroupFromJSON,
+    ReleaseGroupToJSON,
+    ReleaseGroupSearchResponseFromJSON,
+    ReleaseGroupSearchResponseToJSON,
     ReleaseSearchResponseFromJSON,
     ReleaseSearchResponseToJSON,
 } from '../models/index';
@@ -63,7 +69,15 @@ export interface GetReleaseCoverArtInfoRequest {
     mbid: string;
 }
 
+export interface GetReleaseGroupRequest {
+    mbid: string;
+}
+
 export interface GetReleaseGroupCoverArtRequest {
+    mbid: string;
+}
+
+export interface GetReleaseGroupCoverArtInfoRequest {
     mbid: string;
 }
 
@@ -74,6 +88,12 @@ export interface SearchArtistsRequest {
 }
 
 export interface SearchRecordingsRequest {
+    query: string;
+    limit?: number | null;
+    offset?: number | null;
+}
+
+export interface SearchReleaseGroupsRequest {
     query: string;
     limit?: number | null;
     offset?: number | null;
@@ -256,6 +276,39 @@ export class MusicBrainzApi extends runtime.BaseAPI {
     }
 
     /**
+     * Get release group by MBID
+     */
+    async getReleaseGroupRaw(requestParameters: GetReleaseGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReleaseGroup>> {
+        if (requestParameters['mbid'] == null) {
+            throw new runtime.RequiredError(
+                'mbid',
+                'Required parameter "mbid" was null or undefined when calling getReleaseGroup().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/musicbrainz/release-group/{mbid}`.replace(`{${"mbid"}}`, encodeURIComponent(String(requestParameters['mbid']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ReleaseGroupFromJSON(jsonValue));
+    }
+
+    /**
+     * Get release group by MBID
+     */
+    async getReleaseGroup(requestParameters: GetReleaseGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReleaseGroup> {
+        const response = await this.getReleaseGroupRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Get cover art for a release group
      */
     async getReleaseGroupCoverArtRaw(requestParameters: GetReleaseGroupCoverArtRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CoverArtArchive>> {
@@ -285,6 +338,39 @@ export class MusicBrainzApi extends runtime.BaseAPI {
      */
     async getReleaseGroupCoverArt(requestParameters: GetReleaseGroupCoverArtRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CoverArtArchive> {
         const response = await this.getReleaseGroupCoverArtRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get cover art info for a release group (convenience method with front/back URLs)
+     */
+    async getReleaseGroupCoverArtInfoRaw(requestParameters: GetReleaseGroupCoverArtInfoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CoverArtInfo>> {
+        if (requestParameters['mbid'] == null) {
+            throw new runtime.RequiredError(
+                'mbid',
+                'Required parameter "mbid" was null or undefined when calling getReleaseGroupCoverArtInfo().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/musicbrainz/release-group/{mbid}/cover-art-info`.replace(`{${"mbid"}}`, encodeURIComponent(String(requestParameters['mbid']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CoverArtInfoFromJSON(jsonValue));
+    }
+
+    /**
+     * Get cover art info for a release group (convenience method with front/back URLs)
+     */
+    async getReleaseGroupCoverArtInfo(requestParameters: GetReleaseGroupCoverArtInfoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CoverArtInfo> {
+        const response = await this.getReleaseGroupCoverArtInfoRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -375,6 +461,51 @@ export class MusicBrainzApi extends runtime.BaseAPI {
      */
     async searchRecordings(requestParameters: SearchRecordingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RecordingSearchResponse> {
         const response = await this.searchRecordingsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Search for release groups on MusicBrainz
+     */
+    async searchReleaseGroupsRaw(requestParameters: SearchReleaseGroupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReleaseGroupSearchResponse>> {
+        if (requestParameters['query'] == null) {
+            throw new runtime.RequiredError(
+                'query',
+                'Required parameter "query" was null or undefined when calling searchReleaseGroups().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['query'] != null) {
+            queryParameters['query'] = requestParameters['query'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/musicbrainz/search/release-group`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ReleaseGroupSearchResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Search for release groups on MusicBrainz
+     */
+    async searchReleaseGroups(requestParameters: SearchReleaseGroupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ReleaseGroupSearchResponse> {
+        const response = await this.searchReleaseGroupsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

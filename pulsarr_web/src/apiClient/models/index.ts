@@ -25,6 +25,7 @@ export * from './Recording';
 export * from './RecordingSearchResponse';
 export * from './Release';
 export * from './ReleaseGroup';
+export * from './ReleaseGroupSearchResponse';
 export * from './ReleaseSearchResponse';
 export * from './SignInRequest';
 export * from './SignInResponse';

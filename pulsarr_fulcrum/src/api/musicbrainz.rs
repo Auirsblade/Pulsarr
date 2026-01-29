@@ -1,7 +1,7 @@
 use rocket::{get, State};
 use rocket::serde::json::Json;
 use rocket_okapi::openapi;
-use crate::musicbrainz_client::{MusicBrainzClient, ArtistSearchResponse, ReleaseSearchResponse, RecordingSearchResponse, Artist, Release, Recording, CoverArtArchive, CoverArtInfo};
+use crate::musicbrainz_client::{MusicBrainzClient, ArtistSearchResponse, ReleaseSearchResponse, RecordingSearchResponse, ReleaseGroupSearchResponse, Artist, Release, Recording, ReleaseGroup, CoverArtArchive, CoverArtInfo};
 use crate::error::PulsarrError;
 
 pub struct MusicBrainzState {
@@ -167,9 +167,62 @@ async fn get_release_group_cover_art(
     }
 }
 
+/// Search for release groups on MusicBrainz
+#[openapi(tag = "MusicBrainz")]
+#[get("/search/release-group?<query>&<limit>&<offset>")]
+async fn search_release_groups(
+    state: &State<MusicBrainzState>,
+    query: &str,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<Json<ReleaseGroupSearchResponse>, PulsarrError> {
+    match state.client.search_release_groups(&query, limit, offset).await {
+        Ok(response) => Ok(Json(response)),
+        Err(e) => Err(PulsarrError {
+            err: "MusicBrainz API Error".to_string(),
+            msg: Some(e.to_string()),
+            http_status_code: 500,
+        }),
+    }
+}
+
+/// Get release group by MBID
+#[openapi(tag = "MusicBrainz")]
+#[get("/release-group/<mbid>")]
+async fn get_release_group(
+    state: &State<MusicBrainzState>,
+    mbid: &str,
+) -> Result<Json<ReleaseGroup>, PulsarrError> {
+    match state.client.get_release_group(&mbid, None).await {
+        Ok(release_group) => Ok(Json(release_group)),
+        Err(e) => Err(PulsarrError {
+            err: "MusicBrainz API Error".to_string(),
+            msg: Some(e.to_string()),
+            http_status_code: 500,
+        }),
+    }
+}
+
+/// Get cover art info for a release group (convenience method with front/back URLs)
+#[openapi(tag = "MusicBrainz")]
+#[get("/release-group/<mbid>/cover-art-info")]
+async fn get_release_group_cover_art_info(
+    state: &State<MusicBrainzState>,
+    mbid: &str,
+) -> Result<Json<CoverArtInfo>, PulsarrError> {
+    match state.client.get_release_group_cover_art_info(&mbid).await {
+        Ok(info) => Ok(Json(info)),
+        Err(e) => Err(PulsarrError {
+            err: "Cover Art Archive API Error".to_string(),
+            msg: Some(e.to_string()),
+            http_status_code: 500,
+        }),
+    }
+}
+
 pub fn get_routes_and_docs(settings: &rocket_okapi::settings::OpenApiSettings) -> (Vec<rocket::Route>, rocket_okapi::okapi::openapi3::OpenApi) {
     rocket_okapi::openapi_get_routes_spec![
-        settings: 
+        settings:
         search_artists,
         get_artist,
         search_releases,
@@ -178,6 +231,9 @@ pub fn get_routes_and_docs(settings: &rocket_okapi::settings::OpenApiSettings) -
         get_recording,
         get_release_cover_art,
         get_release_cover_art_info,
-        get_release_group_cover_art
+        get_release_group_cover_art,
+        search_release_groups,
+        get_release_group,
+        get_release_group_cover_art_info
     ]
 }

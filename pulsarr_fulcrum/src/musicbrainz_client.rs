@@ -1060,6 +1060,35 @@ impl MusicBrainzClient {
             Err(e) => Err(e),
         }
     }
+
+    /// Convenience method to get all relevant cover art URLs for a release group
+    pub async fn get_release_group_cover_art_info(&self, release_group_mbid: &str) -> Result<CoverArtInfo, reqwest::Error> {
+        match self.get_release_group_cover_art(release_group_mbid).await {
+            Ok(archive) => {
+                let front_image = archive.images.iter().find(|img| img.front);
+                let back_image = archive.images.iter().find(|img| img.back);
+
+                Ok(CoverArtInfo {
+                    front: front_image.map(|img| img.image.clone()),
+                    back: back_image.map(|img| img.image.clone()),
+                    front_thumbnail_small: front_image
+                        .and_then(|img| img.thumbnails.as_ref())
+                        .and_then(|t| t.small.clone()),
+                    front_thumbnail_large: front_image
+                        .and_then(|img| img.thumbnails.as_ref())
+                        .and_then(|t| t.large.clone()),
+                    back_thumbnail_small: back_image
+                        .and_then(|img| img.thumbnails.as_ref())
+                        .and_then(|t| t.small.clone()),
+                    back_thumbnail_large: back_image
+                        .and_then(|img| img.thumbnails.as_ref())
+                        .and_then(|t| t.large.clone()),
+                    all_images: archive.images,
+                })
+            }
+            Err(e) => Err(e),
+        }
+    }
 }
 
 impl Default for MusicBrainzClient {

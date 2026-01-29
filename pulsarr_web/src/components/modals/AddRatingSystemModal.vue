@@ -10,7 +10,7 @@
     import type { RatingSystemDTO, RatingSystemParameterDTO } from "@/apiClient";
     import { storeToRefs } from "pinia";
     import { useContextStore } from "@/stores/context.ts";
-    import { ref, computed } from "vue";
+    import { ref, computed, watch } from "vue";
     import { Plus, Trash2 } from "lucide-vue-next";
 
     const { ratingTypes } = storeToRefs(useContextStore());
@@ -50,6 +50,33 @@
             return 'Rating Parameters (Optional)';
         }
         return 'Rating Parameters (Required)';
+    });
+
+    const isManualRatingMax = computed(() => masterRatingType.value === 'Absolute');
+
+    const computedRatingMax = computed(() => {
+        if (masterRatingType.value === 'Average') {
+            let totalWeight = 0;
+            let weightedSum = 0;
+            parameters.value.forEach(p => {
+                const max = parseFloat(p.parameter_rating_max) || 0;
+                const weight = parseFloat(p.weight) || 1;
+                weightedSum += max * weight;
+                totalWeight += weight;
+            });
+            if (totalWeight === 0) return '';
+            const avg = weightedSum / totalWeight;
+            return avg > 0 ? avg.toString() : '';
+        }
+        if (masterRatingType.value === 'Cumulative') {
+            const sum = parameters.value.reduce((acc, p) => {
+                const max = parseFloat(p.parameter_rating_max) || 0;
+                const weight = parseFloat(p.weight) || 1;
+                return acc + (max * weight);
+            }, 0);
+            return sum > 0 ? sum.toString() : '';
+        }
+        return '';
     });
 
     const parametersDescription = computed(() => {
@@ -99,6 +126,12 @@
     const [name, nameProps] = defineField('name');
     const [masterRatingType, masterRatingTypeProps] = defineField('master_rating_type');
     const [ratingMax, ratingMaxProps] = defineField('rating_max');
+
+    watch([computedRatingMax, () => masterRatingType.value], () => {
+        if (!isManualRatingMax.value) {
+            ratingMax.value = computedRatingMax.value;
+        }
+    });
 
     const onSubmit = handleSubmit(async (values) => {
         const drh = new DataRequestHandler()
@@ -171,7 +204,17 @@
 
                 <div class="space-y-2">
                     <Label for="rating_max">Maximum Rating</Label>
-                    <Input id="rating_max" type="number" v-model="ratingMax" :class="{ 'border-red-500': errors.rating_max }" v-bind="ratingMaxProps"/>
+                    <Input
+                        id="rating_max"
+                        type="number"
+                        v-model="ratingMax"
+                        :disabled="!isManualRatingMax"
+                        :class="{ 'border-red-500': errors.rating_max }"
+                        v-bind="ratingMaxProps"
+                    />
+                    <p v-if="!isManualRatingMax" class="text-xs text-muted-foreground">
+                        Automatically calculated from parameters.
+                    </p>
                     <span v-if="errors.rating_max" class="text-red-500 text-sm">
                         {{ errors.rating_max }}
                     </span>
