@@ -106,6 +106,15 @@ pub fn get_by_name<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(name: Option<
 }
 
 
+pub fn get_public_groups<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>() -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+    query_as("SELECT * FROM pulsarr_group WHERE privacy_type = 'Public'")
+}
+
+pub fn get_group_preview<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
+    query_as("SELECT * FROM pulsarr_group WHERE pulsarr_group_id = $1")
+        .bind(id)
+}
+
 pub fn get_my_groups<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(user_id: &i32) -> QueryAs<Postgres, PulsarrGroup, PgArguments> {
         query_as("
             SELECT g.*

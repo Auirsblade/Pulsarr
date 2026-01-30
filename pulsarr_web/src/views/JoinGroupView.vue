@@ -1,7 +1,7 @@
 <script setup lang="ts">
     import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
     import { Button } from "@/components/ui/button";
-    import { onMounted, ref, computed } from "vue";
+    import { onMounted, ref, computed, watch } from "vue";
     import { useRoute, useRouter } from "vue-router";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import type { GroupDTO } from "@/apiClient";
@@ -11,7 +11,8 @@
 
     const route = useRoute();
     const router = useRouter();
-    const { user, apiKey } = storeToRefs(useContextStore());
+    const contextStore = useContextStore();
+    const { user, isLoggedIn, showSignInDialog } = storeToRefs(contextStore);
 
     const group = ref<GroupDTO | null>(null);
     const loading = ref(true);
@@ -21,14 +22,16 @@
 
     const groupId = computed(() => Number(route.params.groupId));
 
-    const isLoggedIn = computed(() => !!apiKey.value);
-
     const isAlreadyMember = computed(() => {
         if (!group.value?.members || !user.value) return false;
         return group.value.members.some(m => m.user?.pulsarr_user_id === user.value?.pulsarr_user_id);
     });
 
     onMounted(() => {
+        fetchGroup();
+    });
+
+    watch(isLoggedIn, () => {
         fetchGroup();
     });
 
@@ -45,7 +48,11 @@
             loading.value = false;
             console.error('Failed to fetch group:', err);
         };
-        drh.get(`/group/${groupId.value}`);
+        if (isLoggedIn.value) {
+            drh.get(`/group/${groupId.value}`);
+        } else {
+            drh.get(`/group/preview/${groupId.value}`);
+        }
     };
 
     const joinGroup = () => {
@@ -116,8 +123,13 @@
                 </div>
             </CardContent>
             <CardFooter class="flex flex-col gap-2">
-                <div v-if="!isLoggedIn" class="text-center text-sm text-muted-foreground mb-2">
-                    Please sign in to join this group
+                <div v-if="!isLoggedIn" class="w-full text-center">
+                    <p class="text-sm text-muted-foreground mb-3">
+                        Create an account to join {{ group?.name }}
+                    </p>
+                    <Button class="w-full" @click="showSignInDialog = true">
+                        Sign Up / Sign In
+                    </Button>
                 </div>
                 <div v-else-if="isAlreadyMember" class="w-full">
                     <Button class="w-full" @click="goToGroup">

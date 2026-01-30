@@ -1,14 +1,17 @@
 <script setup lang="ts">
     import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from "@/components/ui/card";
-    import { onMounted, ref } from "vue";
+    import { onMounted, ref, watch } from "vue";
     import { useRouter } from "vue-router";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import type { GroupDTO } from "@/apiClient";
     import { Plus, Users, ChevronRight } from 'lucide-vue-next'
     import { Button } from "@/components/ui/button"
     import AddGroupModal from "@/components/modals/AddGroupModal.vue";
+    import { useContextStore } from "@/stores/context.ts";
+    import { storeToRefs } from "pinia";
 
     const router = useRouter();
+    const { isLoggedIn } = storeToRefs(useContextStore());
 
     const showAddGroupModal = ref(false);
     const groups = ref<Array<GroupDTO>>();
@@ -17,12 +20,20 @@
         getGroups();
     });
 
+    watch(isLoggedIn, () => {
+        getGroups();
+    });
+
     const getGroups = () => {
         let groupDrh = new DataRequestHandler();
         groupDrh.onSuccessCallback = (data) => {
             groups.value = data as GroupDTO[];
         };
-        groupDrh.post("/group/", {});
+        if (isLoggedIn.value) {
+            groupDrh.post("/group/", {});
+        } else {
+            groupDrh.get("/group/public");
+        }
     };
 </script>
 
@@ -32,7 +43,7 @@
             <CardHeader>
                 <div class="flex justify-between items-center">
                     <CardTitle>Groups</CardTitle>
-                    <AddGroupModal :show-dialog="showAddGroupModal"
+                    <AddGroupModal v-if="isLoggedIn" :show-dialog="showAddGroupModal"
                                    @update:show-dialog="(value) => { showAddGroupModal = value; getGroups() }">
                         <template #openModal>
                             <Button variant="ghost" size="icon" @click="showAddGroupModal = true">
@@ -44,7 +55,7 @@
             </CardHeader>
             <CardContent>
                 <div v-if="!groups || groups.length === 0" class="text-center py-8 text-muted-foreground">
-                    No groups yet. Create one to get started!
+                    {{ isLoggedIn ? 'No groups yet. Create one to get started!' : 'No public groups available. Sign in to see more.' }}
                 </div>
                 <div v-for="group in groups" :key="group.pulsarr_group_id">
                     <Card

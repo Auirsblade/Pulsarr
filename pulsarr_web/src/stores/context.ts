@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { SignInResponse, UserDTO } from "@/apiClient";
 import { CookieManager } from "@/helpers/CookieManager.ts";
@@ -9,6 +9,8 @@ export const useContextStore = defineStore('context', () => {
     const apiKey = ref();
     const privacyTypes = ref<Array<string>>([]);
     const ratingTypes = ref<Array<string>>([]);
+    const showSignInDialog = ref(false);
+    const isLoggedIn = computed(() => !!apiKey.value && !!user.value);
 
     const setSession = (signin: SignInResponse) => {
         user.value = signin.user;
@@ -43,6 +45,13 @@ export const useContextStore = defineStore('context', () => {
         }
     }
 
+    const clearSession = () => {
+        user.value = undefined;
+        apiKey.value = undefined;
+        showSignInDialog.value = false;
+        CookieManager.removeApiKey();
+    }
+
     const loadPrivacyTypes = async () => {
         if (privacyTypes.value.length > 0) return; // Already loaded
         
@@ -69,13 +78,16 @@ export const useContextStore = defineStore('context', () => {
         await drh.get("/rating-system/ratingTypes");
     }
 
-    return { 
-        user, 
-        apiKey, 
-        privacyTypes, 
+    return {
+        user,
+        apiKey,
+        privacyTypes,
         ratingTypes,
-        setSession, 
+        showSignInDialog,
+        isLoggedIn,
+        setSession,
         getSession,
+        clearSession,
         loadPrivacyTypes,
         loadRatingTypes
     }

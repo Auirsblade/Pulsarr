@@ -3,7 +3,7 @@
     import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
     import { Input } from "@/components/ui/input";
     import { Label } from "@/components/ui/label";
-    import { onMounted, ref, watch, computed } from "vue";
+    import { onMounted, ref, watch } from "vue";
     import type { SignInRequest, SignInResponse, UserDTO } from "@/apiClient";
     import { useForm } from 'vee-validate';
     import * as yup from 'yup';
@@ -14,9 +14,7 @@
     import { LogOut, User } from "lucide-vue-next";
 
     const contextStore = useContextStore();
-    const { user, apiKey } = storeToRefs(contextStore);
-
-    const isLoggedIn = computed(() => !!apiKey.value && !!user.value);
+    const { user, isLoggedIn, showSignInDialog } = storeToRefs(contextStore);
 
     onMounted(async () => {
         await contextStore.getSession();
@@ -38,13 +36,11 @@
     const [emailInput] = defineField('emailInput');
     const [passwordInput] = defineField('passwordInput');
 
-    const signInOpen = ref(false);
-
     const signinDrh = new DataRequestHandler();
     signinDrh.onSuccessCallback = (data) => {
         console.log('Signin successful:', data);
         contextStore.setSession(data as SignInResponse);
-        signInOpen.value = false;
+        showSignInDialog.value = false;
     };
     signinDrh.onErrorCallback = (error) => {
         console.error('Signin failed:', error);
@@ -91,9 +87,7 @@
     }
 
     const signOut = () => {
-        CookieManager.removeApiKey();
-        contextStore.$reset();
-        window.location.reload();
+        contextStore.clearSession();
     }
 
 </script>
@@ -112,7 +106,7 @@
         </div>
 
         <!-- Logged out state -->
-        <Dialog v-else v-model:open="signInOpen">
+        <Dialog v-else v-model:open="showSignInDialog">
             <DialogTrigger as-child>
                 <Button variant="outline">
                     Sign In

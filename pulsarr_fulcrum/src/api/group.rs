@@ -25,7 +25,7 @@ use rocket_okapi::{openapi, openapi_get_routes_spec};
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![settings: update_group, delete_group, get_pulsarr_group,
         get_all_groups, get_privacy_types, create_group, get_membership_types, join_group, leave_group,
-        search_groups, my_groups]
+        search_groups, my_groups, get_public_groups_endpoint, get_group_preview_endpoint]
 }
 
 /// # Get the group privacy types
@@ -281,5 +281,42 @@ async fn my_groups(state: &State<PostgresState>, api_user: ApiKey) -> PulsarrRes
     match pulsarr_group::get_my_groups(&user_id).fetch_all(&state.pool).await {
         Ok(groups) => Ok(Json(groups.iter().map(|group| group_dto::to_dto(group, None, None)).collect::<Vec<GroupDTO>>())),
         Err(e) => Err(PulsarrError::validation_error(e))
+    }
+}
+
+/// # Get all public groups (no auth required)
+#[openapi(tag = "Group")]
+#[get("/public")]
+async fn get_public_groups_endpoint(
+    state: &State<PostgresState>,
+) -> PulsarrResult<Vec<GroupDTO>> {
+    match pulsarr_group::get_public_groups::<PulsarrGroup>()
+        .fetch_all(&state.pool)
+        .await
+    {
+        Ok(groups) => Ok(Json(
+            groups
+                .iter()
+                .map(|group| group_dto::to_dto(group, None, None))
+                .collect(),
+        )),
+        Err(e) => Err(PulsarrError::validation_error(e)),
+    }
+}
+
+/// # Get group preview by id (no auth required)
+#[openapi(tag = "Group")]
+#[get("/preview/<id>")]
+async fn get_group_preview_endpoint(
+    state: &State<PostgresState>,
+    id: i32,
+) -> PulsarrResult<GroupDTO> {
+    match pulsarr_group::get_group_preview::<PulsarrGroup>(id)
+        .fetch_optional(&state.pool)
+        .await
+    {
+        Ok(Some(pg)) => Ok(Json(group_dto::to_dto(&pg, None, None))),
+        Ok(None) => Err(PulsarrError::missing_data("Group".to_string())),
+        Err(e) => Err(PulsarrError::validation_error(e)),
     }
 }
