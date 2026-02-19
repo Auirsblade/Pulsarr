@@ -3,6 +3,7 @@
     import { Star, Disc, Music, MessageSquare } from "lucide-vue-next";
     import { Card } from "@/components/ui/card";
     import { formatDate, formatRatingValue } from "@/helpers/ratingFormatters";
+    import { RouterLink } from "vue-router";
 
     defineProps<{
         rating: Rating;
@@ -46,7 +47,7 @@
                         <p class="text-sm text-muted-foreground truncate">{{ rating.artist_name }}</p>
                     </div>
                     <div class="flex items-center gap-1.5 flex-shrink-0">
-                        <span v-if="groupName" class="px-1.5 py-0.5 bg-secondary rounded text-xs text-muted-foreground max-w-[100px] truncate">{{ groupName }}</span>
+                        <RouterLink v-if="groupName" :to="`/group/${rating.pulsarr_group_id}`" class="px-1.5 py-0.5 bg-secondary rounded text-xs text-muted-foreground max-w-[100px] truncate hover:bg-secondary/80 transition-colors" @click.stop>{{ groupName }}</RouterLink>
                         <div class="flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground rounded font-bold text-sm">
                             <Star class="w-3 h-3" />
                             {{ formatRatingValue(rating.rating_value) }}

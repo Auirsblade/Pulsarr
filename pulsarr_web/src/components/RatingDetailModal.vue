@@ -4,6 +4,7 @@
     import { Star, MessageSquare } from "lucide-vue-next";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler";
     import { formatDate, formatRatingValue } from "@/helpers/ratingFormatters";
+    import { RouterLink } from "vue-router";
     import { ref, watch } from "vue";
 
     const props = defineProps<{
@@ -67,8 +68,8 @@
                 </DialogTitle>
                 <DialogDescription>
                     {{ rating.artist_name }}
-                    <span v-if="rating.release_date"> · {{ rating.release_date }}</span>
-                    <span v-if="groupName" class="ml-1 px-1.5 py-0.5 bg-secondary rounded text-xs">{{ groupName }}</span>
+                    <span v-if="rating.release_date"> · {{ formatDate(rating.release_date) }}</span>
+                    <RouterLink v-if="groupName && rating" :to="`/group/${rating.pulsarr_group_id}`" class="ml-1 px-1.5 py-0.5 bg-secondary rounded text-xs hover:bg-secondary/80 transition-colors">{{ groupName }}</RouterLink>
                 </DialogDescription>
             </DialogHeader>
 
