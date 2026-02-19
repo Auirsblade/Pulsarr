@@ -11,7 +11,7 @@
     import type { RatingSystemDTO, RatingSystemParameterDTO } from "@/apiClient";
     import { storeToRefs } from "pinia";
     import { useContextStore } from "@/stores/context.ts";
-    import { ref, computed, watch } from "vue";
+    import { ref, computed, watch, type Ref } from "vue";
     import { Plus, Trash2 } from "lucide-vue-next";
 
     const { ratingTypes } = storeToRefs(useContextStore());
@@ -32,6 +32,7 @@
     }
 
     const parameters = ref<ParameterInput[]>([]);
+    const parameterErrors = ref<Record<number, string>>({});
 
     const addParameter = () => {
         parameters.value.push({ name: '', parameter_rating_max: '', weight: '1' });
@@ -134,7 +135,28 @@
         }
     });
 
+    const validateParameters = (): boolean => {
+        parameterErrors.value = {};
+        let valid = true;
+        parameters.value.forEach((p, i) => {
+            if (!p.name.trim()) {
+                parameterErrors.value[i] = 'name';
+                valid = false;
+            }
+            if (!p.parameter_rating_max) {
+                parameterErrors.value[i] = parameterErrors.value[i] ? 'both' : 'max';
+                valid = false;
+            }
+        });
+        return valid;
+    };
+
     const onSubmit = handleSubmit((values) => {
+        if (parameters.value.length > 0 && !validateParameters()) {
+            toast.error('Please fill in all parameter fields')
+            return
+        }
+
         const drh = new DataRequestHandler()
         drh.onSuccessCallback = (data) => {
             console.log('Rating System created:', data)
@@ -142,6 +164,7 @@
             closeDialog()
             resetForm()
             parameters.value = []
+            parameterErrors.value = {}
         }
         drh.onErrorCallback = (error) => {
             console.error('Failed to create rating system:', error)
@@ -157,7 +180,7 @@
                 rating_system_parameter_id: 0,
                 rating_system_id: 0,
                 name: p.name,
-                parameter_rating_max: p.parameter_rating_max || '10',
+                parameter_rating_max: p.parameter_rating_max,
                 weight: p.weight
             }))
         }
@@ -244,6 +267,7 @@
                                     :id="`param-name-${index}`"
                                     v-model="param.name"
                                     placeholder="e.g., Lyrics"
+                                    :class="{ 'border-red-500': parameterErrors[index] === 'name' || parameterErrors[index] === 'both' }"
                                 />
                             </div>
                             <div class="w-20 space-y-1">
@@ -253,6 +277,7 @@
                                     type="number"
                                     v-model="param.parameter_rating_max"
                                     placeholder="10"
+                                    :class="{ 'border-red-500': parameterErrors[index] === 'max' || parameterErrors[index] === 'both' }"
                                 />
                             </div>
                             <div class="w-20 space-y-1">
