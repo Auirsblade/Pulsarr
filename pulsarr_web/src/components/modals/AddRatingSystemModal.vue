@@ -157,7 +157,7 @@
                 rating_system_parameter_id: 0,
                 rating_system_id: 0,
                 name: p.name,
-                parameter_rating_max: p.parameter_rating_max,
+                parameter_rating_max: p.parameter_rating_max || '10',
                 weight: p.weight
             }))
         }

@@ -137,7 +137,7 @@
         <DialogTrigger asChild>
             <slot name="openModal"></slot>
         </DialogTrigger>
-        <DialogContent class="max-w-2xl max-h-[80vh] flex flex-col">
+        <DialogContent class="sm:max-w-2xl max-h-[80vh] flex flex-col">
             <DialogHeader>
                 <DialogTitle>Search Albums</DialogTitle>
                 <DialogDescription>

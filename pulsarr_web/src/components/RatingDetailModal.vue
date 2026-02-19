@@ -57,7 +57,7 @@
 
 <template>
     <Dialog :open="open" @update:open="$emit('update:open', $event)">
-        <DialogScrollContent v-if="rating" class="max-w-lg">
+        <DialogScrollContent v-if="rating">
             <DialogHeader>
                 <DialogTitle class="flex items-center gap-2">
                     {{ rating.media_title }}

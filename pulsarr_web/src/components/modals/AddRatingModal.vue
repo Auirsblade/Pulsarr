@@ -267,7 +267,7 @@
         <DialogTrigger asChild>
             <slot name="openModal"></slot>
         </DialogTrigger>
-        <DialogContent class="max-w-lg">
+        <DialogContent>
             <DialogHeader>
                 <DialogTitle>Add Rating</DialogTitle>
                 <DialogDescription>

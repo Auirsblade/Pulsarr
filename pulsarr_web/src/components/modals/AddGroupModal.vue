@@ -12,11 +12,67 @@
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
     import AddRatingSystemModal from "@/components/modals/AddRatingSystemModal.vue";
-    import { onMounted, type Ref, ref } from "vue";
+    import { computed, nextTick, onMounted, type Ref, ref } from "vue";
+    import { onClickOutside } from "@vueuse/core";
+    import { Search, ChevronDown, Check } from "lucide-vue-next";
 
     const { privacyTypes } = storeToRefs(useContextStore());
     const ratingSystems = ref<RatingSystemDTO[]>();
     const showAddRatingSystemModal = ref(false);
+
+    // Rating system searchable dropdown state
+    const rsSearchQuery = ref('');
+    const showAllSystems = ref(false);
+    const rsDropdownOpen = ref(false);
+    const rsDropdownRef = ref<HTMLElement | null>(null);
+    const rsSearchInputRef = ref<HTMLInputElement | null>(null);
+
+    const defaultSystems = computed(() =>
+        ratingSystems.value?.filter(s => s.rating_system_id < 0) ?? []
+    );
+
+    const userSystems = computed(() =>
+        ratingSystems.value?.filter(s => s.rating_system_id > 0) ?? []
+    );
+
+    const filteredSystems = computed(() => {
+        const query = rsSearchQuery.value.toLowerCase().trim();
+
+        if (query) {
+            return ratingSystems.value?.filter(s =>
+                s.name.toLowerCase().includes(query) ||
+                s.master_rating_type.toLowerCase().includes(query)
+            ) ?? [];
+        }
+
+        if (showAllSystems.value) {
+            return ratingSystems.value ?? [];
+        }
+
+        return defaultSystems.value;
+    });
+
+    const selectedSystem = computed(() =>
+        ratingSystems.value?.find(s => s.rating_system_id === ratingSystemId.value)
+    );
+
+    const selectSystem = (system: RatingSystemDTO) => {
+        ratingSystemId.value = system.rating_system_id;
+        rsDropdownOpen.value = false;
+        rsSearchQuery.value = '';
+    };
+
+    const toggleRsDropdown = () => {
+        rsDropdownOpen.value = !rsDropdownOpen.value;
+        if (rsDropdownOpen.value) {
+            nextTick(() => rsSearchInputRef.value?.focus());
+        }
+    };
+
+    onClickOutside(rsDropdownRef, () => {
+        rsDropdownOpen.value = false;
+        rsSearchQuery.value = '';
+    });
 
     defineProps({
         showDialog: {
@@ -99,7 +155,7 @@
         <DialogTrigger asChild>
             <slot name="openModal"></slot>
         </DialogTrigger>
-        <DialogContent class="min-w-fit">
+        <DialogContent>
             <DialogHeader>
                 <DialogTitle>Create New Group</DialogTitle>
                 <DialogDescription>
@@ -133,19 +189,79 @@
                 </div>
 
                 <div class="space-y-2">
-                    <Label for="rating_system">Rating System</Label>
-                    <div class="flex gap-2 ">
-                        <Select v-model="ratingSystemId" :disabled="!ratingSystems || ratingSystems.length === 0" class="flex-1">
-                            <SelectTrigger :class="{ 'border-red-500': errors.rating_system_id }" v-bind="ratingSystemProps" :aria-invalid="!!errors.rating_system_id" :aria-describedby="errors.rating_system_id ? 'rating-system-error' : undefined">
-                                <SelectValue
-                                    :placeholder="!ratingSystems || ratingSystems.length === 0 ? 'No rating systems available. Please create one first.' : 'Select a rating system'"/>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem v-for="system in ratingSystems" :key="system.rating_system_id" :value="system.rating_system_id">
-                                    {{ system.name }} ({{ system.master_rating_type }} - max: {{ system.rating_max }})
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
+                    <Label>Rating System</Label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1" ref="rsDropdownRef">
+                            <button
+                                type="button"
+                                @click="toggleRsDropdown"
+                                :class="[
+                                    'flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-start',
+                                    { 'border-red-500': errors.rating_system_id },
+                                    { 'text-muted-foreground': !selectedSystem }
+                                ]"
+                                :disabled="!ratingSystems || ratingSystems.length === 0"
+                                :aria-invalid="!!errors.rating_system_id"
+                                :aria-describedby="errors.rating_system_id ? 'rating-system-error' : undefined"
+                            >
+                                <span class="truncate">
+                                    {{ selectedSystem
+                                        ? `${selectedSystem.name} (${selectedSystem.master_rating_type} - max: ${selectedSystem.rating_max})`
+                                        : (!ratingSystems || ratingSystems.length === 0
+                                            ? 'No rating systems available'
+                                            : 'Select a rating system')
+                                    }}
+                                </span>
+                                <ChevronDown class="w-4 h-4 opacity-50 shrink-0 ml-2" />
+                            </button>
+
+                            <div
+                                v-if="rsDropdownOpen"
+                                class="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md"
+                            >
+                                <div class="p-2">
+                                    <div class="relative">
+                                        <Search class="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                        <input
+                                            ref="rsSearchInputRef"
+                                            v-model="rsSearchQuery"
+                                            placeholder="Search rating systems..."
+                                            class="flex h-8 w-full rounded-md border border-input bg-transparent pl-8 pr-3 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="max-h-48 overflow-y-auto p-1">
+                                    <div
+                                        v-for="system in filteredSystems"
+                                        :key="system.rating_system_id"
+                                        @click="selectSystem(system)"
+                                        class="flex w-full cursor-pointer items-center rounded-sm py-1.5 px-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                                    >
+                                        <Check
+                                            class="w-3.5 h-3.5 mr-2 shrink-0"
+                                            :class="ratingSystemId === system.rating_system_id ? 'opacity-100' : 'opacity-0'"
+                                        />
+                                        <span class="truncate">{{ system.name }} ({{ system.master_rating_type }} - max: {{ system.rating_max }})</span>
+                                    </div>
+
+                                    <div v-if="filteredSystems.length === 0" class="py-2 text-center text-sm text-muted-foreground">
+                                        No rating systems found
+                                    </div>
+
+                                    <template v-if="!rsSearchQuery && !showAllSystems && userSystems.length > 0">
+                                        <div class="border-t my-1"></div>
+                                        <button
+                                            type="button"
+                                            @click.stop="showAllSystems = true"
+                                            class="flex w-full py-1.5 px-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-sm text-left"
+                                        >
+                                            Show all ({{ userSystems.length }} more)
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
                         <AddRatingSystemModal :show-dialog="showAddRatingSystemModal" @update:showDialog="(value) => { showAddRatingSystemModal = value; getRatingSystems(); }">
                             <template #openModal>
                                 <Button variant="outline" class="whitespace-nowrap" @click="showAddRatingSystemModal = true">
