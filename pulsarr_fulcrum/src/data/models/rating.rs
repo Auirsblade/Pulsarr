@@ -66,7 +66,11 @@ impl Model for Rating {
         query_as("SELECT * FROM rating WHERE rating_id = $1").bind(id)
     }
 
-    fn get_all<T: Model>(take_size: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
-        query_as("SELECT * FROM rating LIMIT $1").bind(take_size)
+    fn get_all<T: Model>(take_size: Option<i32>, offset: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
+        match (take_size, offset) {
+            (Some(size), Some(off)) => query_as("SELECT * FROM rating ORDER BY rating_date DESC LIMIT $1 OFFSET $2").bind(size).bind(off),
+            (Some(size), None) => query_as("SELECT * FROM rating ORDER BY rating_date DESC LIMIT $1").bind(size),
+            _ => query_as("SELECT * FROM rating ORDER BY rating_date DESC")
+        }
     }
 }

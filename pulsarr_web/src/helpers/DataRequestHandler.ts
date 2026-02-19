@@ -55,6 +55,13 @@ export class DataRequestHandler {
         });
     }
 
+    async delete(url: RequestInfo | URL) {
+        return this.handleResponse(url, {
+            method: 'DELETE',
+            headers: this.getHeaders()
+        });
+    }
+
     private async handleResponse(url: RequestInfo | URL, opts: RequestInit | undefined) {
         let response: Response | null = null;
         try {

@@ -1,36 +1,25 @@
 <script setup lang="ts">
-    import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+    import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
     import { Button } from "@/components/ui/button";
-    import { onMounted, ref, computed } from "vue";
+    import { Dialog, DialogScrollContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+    import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+    import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+    import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+    import { Input } from "@/components/ui/input";
+    import { Label } from "@/components/ui/label";
+    import { onMounted, onUnmounted, ref, computed, watch } from "vue";
     import { useRoute, useRouter } from "vue-router";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
-    import type { GroupDTO } from "@/apiClient";
+    import { toast } from 'vue-sonner';
+    import type { GroupDTO, Rating } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
-    import { Copy, Check, LogOut, Plus, Users, Star, Disc, Music, MessageSquare, ChevronDown } from "lucide-vue-next";
+    import { Copy, Check, LogOut, Plus, Users, Star, Settings, MoreHorizontal, Shield, UserMinus, Crown } from "lucide-vue-next";
     import AddRatingModal from "@/components/modals/AddRatingModal.vue";
-
-    interface Rating {
-        rating_id: number;
-        pulsarr_user_id: number;
-        pulsarr_group_id: number;
-        rating_system_id: number;
-        comments: string;
-        rating_value: string;
-        media_type: string;
-        media_title: string;
-        musicbrainz_id: string;
-        artist_name: string;
-        rating_date: string;
-        release_date: string;
-    }
-
-    interface RatingDetail {
-        rating_detail_id: number;
-        rating_id: number;
-        rating_system_parameter_id: number;
-        rating_value: string;
-    }
+    import RatingCard from "@/components/RatingCard.vue";
+    import RatingDetailModal from "@/components/RatingDetailModal.vue";
+    import EmptyState from "@/components/EmptyState.vue";
+    import LoadingSpinner from "@/components/LoadingSpinner.vue";
 
     interface CoverArtInfo {
         front?: string;
@@ -38,9 +27,19 @@
         front_thumbnail_large?: string;
     }
 
+    const ROLE_LEVELS: Record<string, number> = {
+        'Owner': 4,
+        'Admin': 3,
+        'Member': 2,
+        'ViewOnly': 1,
+    };
+
     const route = useRoute();
     const router = useRouter();
-    const { user } = storeToRefs(useContextStore());
+    const contextStore = useContextStore();
+    const { user, privacyTypes } = storeToRefs(contextStore);
+
+    const PAGE_SIZE = 20;
 
     const group = ref<GroupDTO | null>(null);
     const ratings = ref<Rating[]>([]);
@@ -49,10 +48,35 @@
     const error = ref<string | null>(null);
     const copied = ref(false);
     const showAddRatingModal = ref(false);
+    const loadingMoreRatings = ref(false);
+    const hasMoreRatings = ref(true);
+    const ratingSentinel = ref<HTMLElement | null>(null);
+    let ratingsObserver: IntersectionObserver | null = null;
+    let fetchGeneration = 0;
 
-    // Expandable rating details
-    const expandedRatings = ref<Set<number>>(new Set());
-    const ratingDetails = ref<Record<number, RatingDetail[]>>({});
+    // Rating detail modal
+    const selectedRating = ref<Rating | null>(null);
+    const showRatingModal = ref(false);
+
+    // Settings state
+    const showSettingsDialog = ref(false);
+    const editName = ref('');
+    const editPrivacyType = ref('');
+    const settingsSaving = ref(false);
+
+    // Delete confirmation state
+    const showDeleteConfirm = ref(false);
+    const deleteConfirmText = ref('');
+
+    // Transfer ownership state
+    const showTransferDialog = ref(false);
+    const transferTargetId = ref<number | null>(null);
+    const transferTargetName = ref('');
+
+    const openRatingModal = (rating: Rating) => {
+        selectedRating.value = rating;
+        showRatingModal.value = true;
+    };
 
     const groupId = computed(() => Number(route.params.groupId));
 
@@ -61,16 +85,32 @@
         return `${window.location.origin}/join/${group.value.pulsarr_group_id}`;
     });
 
-    const isMember = computed(() => {
-        if (!group.value?.members || !user.value) return false;
-        return group.value.members.some(m => m.user?.pulsarr_user_id === user.value?.pulsarr_user_id);
+    const currentUserMembership = computed(() => {
+        if (!group.value?.members || !user.value) return null;
+        return group.value.members.find(m => m.user?.pulsarr_user_id === user.value?.pulsarr_user_id) ?? null;
     });
 
-    const isOwner = computed(() => {
-        if (!group.value?.members || !user.value) return false;
-        const membership = group.value.members.find(m => m.user?.pulsarr_user_id === user.value?.pulsarr_user_id);
-        return membership?.group_role === 'OWNER';
-    });
+    const currentUserRole = computed(() => currentUserMembership.value?.group_role ?? '');
+
+    const isMember = computed(() => !!currentUserMembership.value);
+
+    const isOwner = computed(() => currentUserRole.value === 'Owner');
+
+    const isAdmin = computed(() => currentUserRole.value === 'Admin');
+
+    const isAdminOrOwner = computed(() => isOwner.value || isAdmin.value);
+
+    const canActOn = (memberRole: string): boolean => {
+        return (ROLE_LEVELS[currentUserRole.value] ?? 0) > (ROLE_LEVELS[memberRole] ?? 0);
+    };
+
+    const availableRolesForMember = (memberRole: string): string[] => {
+        if (!isAdminOrOwner.value) return [];
+        const myLevel = ROLE_LEVELS[currentUserRole.value] ?? 0;
+        return Object.entries(ROLE_LEVELS)
+            .filter(([role, level]) => level < myLevel && role !== memberRole && role !== 'Owner')
+            .map(([role]) => role);
+    };
 
     const getUserName = (userId: number): string => {
         const member = group.value?.members?.find(m => m.user?.pulsarr_user_id === userId);
@@ -79,18 +119,31 @@
 
     onMounted(() => {
         fetchGroup();
+        contextStore.loadPrivacyTypes();
+    });
+
+    watch(groupId, () => {
+        fetchGroup();
     });
 
     const fetchGroup = () => {
+        const gen = ++fetchGeneration;
         loading.value = true;
         error.value = null;
+        ratings.value = [];
+        hasMoreRatings.value = true;
+        loadingMoreRatings.value = false;
+        if (ratingsObserver) ratingsObserver.disconnect();
+
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
+            if (gen !== fetchGeneration) return;
             group.value = data as GroupDTO;
             loading.value = false;
-            fetchRatings();
+            fetchRatings(gen);
         };
         drh.onErrorCallback = (err) => {
+            if (gen !== fetchGeneration) return;
             error.value = 'Failed to load group';
             loading.value = false;
             console.error('Failed to fetch group:', err);
@@ -98,11 +151,14 @@
         drh.get(`/group/${groupId.value}`);
     };
 
-    const fetchRatings = () => {
+    const fetchRatings = (gen: number) => {
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
+            if (gen !== fetchGeneration) return;
             ratings.value = data as Rating[];
-            // Fetch cover art for albums (release groups)
+            if (ratings.value.length < PAGE_SIZE) {
+                hasMoreRatings.value = false;
+            }
             ratings.value.forEach(rating => {
                 if (rating.media_type === 'album' && rating.musicbrainz_id) {
                     fetchCoverArt(rating.musicbrainz_id);
@@ -110,9 +166,52 @@
             });
         };
         drh.onErrorCallback = (err) => {
+            if (gen !== fetchGeneration) return;
             console.error('Failed to fetch ratings:', err);
         };
-        drh.post('/rating/byGroups', [groupId.value]);
+        drh.post('/rating/byGroups', { group_ids: [groupId.value], take_size: PAGE_SIZE, offset: 0 });
+    };
+
+    const loadMoreRatings = () => {
+        if (loadingMoreRatings.value || !hasMoreRatings.value) return;
+        const gen = fetchGeneration;
+        loadingMoreRatings.value = true;
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = (data) => {
+            if (gen !== fetchGeneration) return;
+            const newRatings = data as Rating[];
+            ratings.value = [...ratings.value, ...newRatings];
+            if (newRatings.length < PAGE_SIZE) {
+                hasMoreRatings.value = false;
+            }
+            newRatings.forEach(rating => {
+                if (rating.media_type === 'album' && rating.musicbrainz_id) {
+                    fetchCoverArt(rating.musicbrainz_id);
+                }
+            });
+            loadingMoreRatings.value = false;
+        };
+        drh.onErrorCallback = (err) => {
+            if (gen !== fetchGeneration) return;
+            console.error('Failed to load more ratings:', err);
+            loadingMoreRatings.value = false;
+        };
+        drh.post('/rating/byGroups', { group_ids: [groupId.value], take_size: PAGE_SIZE, offset: ratings.value.length });
+    };
+
+    const setupRatingsObserver = () => {
+        if (ratingsObserver) ratingsObserver.disconnect();
+        const el = ratingSentinel.value;
+        if (!el) return;
+        ratingsObserver = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreRatings();
+                }
+            },
+            { rootMargin: '200px' }
+        );
+        ratingsObserver.observe(el);
     };
 
     const fetchCoverArt = (releaseId: string) => {
@@ -135,269 +234,420 @@
         try {
             await navigator.clipboard.writeText(shareLink.value);
             copied.value = true;
+            toast.success('Link copied to clipboard');
             setTimeout(() => {
                 copied.value = false;
             }, 2000);
         } catch (err) {
             console.error('Failed to copy:', err);
+            toast.error('Failed to copy link');
         }
     };
 
     const leaveGroup = () => {
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = () => {
+            toast.success('Left group');
             router.push('/');
         };
         drh.onErrorCallback = (err) => {
             console.error('Failed to leave group:', err);
+            toast.error('Failed to leave group');
         };
         drh.post(`/group/leave/${groupId.value}`, {});
     };
 
     const onRatingCreated = () => {
-        fetchRatings();
+        fetchRatings(fetchGeneration);
     };
 
-    const formatDate = (dateStr: string): string => {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    // --- Admin Actions ---
+
+    const openSettings = () => {
+        if (!group.value) return;
+        editName.value = group.value.name;
+        editPrivacyType.value = group.value.privacy_type;
+        showSettingsDialog.value = true;
     };
 
-    const formatRatingValue = (value: string): string => {
-        const num = parseFloat(value);
-        if (isNaN(num)) return value;
-        // parseFloat + toString automatically trims trailing zeros
-        return num.toString();
-    };
-
-    // Check if the rating system has parameters (for showing expand button)
-    const hasRatingParameters = computed(() => {
-        return (group.value?.rating_system?.parameters?.length ?? 0) > 0;
-    });
-
-    // Get parameter info by ID
-    const getParameterInfo = (parameterId: number) => {
-        const params = group.value?.rating_system?.parameters || [];
-        return params.find(p => p.rating_system_parameter_id === parameterId);
-    };
-
-    // Toggle rating expansion and fetch details if needed
-    const toggleRatingExpanded = async (ratingId: number) => {
-        if (expandedRatings.value.has(ratingId)) {
-            expandedRatings.value.delete(ratingId);
-        } else {
-            expandedRatings.value.add(ratingId);
-            // Fetch details if not already loaded
-            if (!ratingDetails.value[ratingId]) {
-                await fetchRatingDetails(ratingId);
-            }
-        }
-    };
-
-    // Fetch rating details for a specific rating
-    const fetchRatingDetails = async (ratingId: number) => {
+    const saveGroupSettings = () => {
+        if (!group.value) return;
+        settingsSaving.value = true;
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
-            ratingDetails.value[ratingId] = data as RatingDetail[];
+            const updated = data as GroupDTO;
+            group.value!.name = updated.name;
+            group.value!.privacy_type = updated.privacy_type;
+            showSettingsDialog.value = false;
+            settingsSaving.value = false;
+            toast.success('Settings saved');
         };
         drh.onErrorCallback = (err) => {
-            console.error('Failed to fetch rating details:', err);
+            console.error('Failed to update group:', err);
+            settingsSaving.value = false;
+            toast.error('Failed to save settings');
         };
-        drh.get(`/rating/rating_detail/by_rating/${ratingId}`);
+        drh.post('/group/update', {
+            ...group.value,
+            name: editName.value,
+            privacy_type: editPrivacyType.value,
+            members: undefined,
+            rating_system: undefined,
+        });
     };
+
+    const deleteGroup = () => {
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = () => {
+            toast.success('Group deleted');
+            router.push('/');
+        };
+        drh.onErrorCallback = (err) => {
+            console.error('Failed to delete group:', err);
+            toast.error('Failed to delete group');
+        };
+        drh.post(`/group/delete/${groupId.value}`, {});
+    };
+
+    const kickMember = (targetUserId: number) => {
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = () => {
+            toast.success('Member removed');
+            fetchGroup();
+        };
+        drh.onErrorCallback = (err) => {
+            console.error('Failed to kick member:', err);
+            toast.error('Failed to remove member');
+        };
+        drh.post(`/group/kick/${groupId.value}/${targetUserId}`, {});
+    };
+
+    const changeRole = (targetUserId: number, newRole: string) => {
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = () => {
+            toast.success('Role updated');
+            fetchGroup();
+        };
+        drh.onErrorCallback = (err) => {
+            console.error('Failed to change role:', err);
+            toast.error('Failed to change role');
+        };
+        drh.post(`/group/changeRole/${groupId.value}/${targetUserId}/${newRole}`, {});
+    };
+
+    const openTransferDialog = (targetUserId: number, targetName: string) => {
+        transferTargetId.value = targetUserId;
+        transferTargetName.value = targetName;
+        showTransferDialog.value = true;
+    };
+
+    const transferOwnership = () => {
+        if (!transferTargetId.value) return;
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = () => {
+            toast.success('Ownership transferred');
+            showTransferDialog.value = false;
+            transferTargetId.value = null;
+            fetchGroup();
+        };
+        drh.onErrorCallback = (err) => {
+            console.error('Failed to transfer ownership:', err);
+            toast.error('Failed to transfer ownership');
+        };
+        drh.post(`/group/transferOwnership/${groupId.value}/${transferTargetId.value}`, {});
+    };
+
+    const roleDisplayName = (role: string): string => {
+        if (role === 'ViewOnly') return 'View Only';
+        return role;
+    };
+
+    watch(ratingSentinel, () => {
+        setupRatingsObserver();
+    });
+
+    onUnmounted(() => {
+        if (ratingsObserver) ratingsObserver.disconnect();
+    });
 </script>
 
 <template>
     <div class="p-4 max-w-4xl mx-auto">
-        <div v-if="loading" class="flex justify-center py-8">
-            <span class="text-muted-foreground">Loading group...</span>
-        </div>
+        <LoadingSpinner v-if="loading" text="Loading group..." />
 
         <div v-else-if="error" class="flex justify-center py-8">
             <span class="text-destructive">{{ error }}</span>
         </div>
 
-        <div v-else-if="group" class="space-y-4">
-            <!-- Main Group Card -->
-            <Card>
-                <CardHeader>
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <CardTitle class="text-2xl">{{ group.name }}</CardTitle>
-                            <CardDescription class="flex items-center gap-2 mt-1">
-                                <span class="px-2 py-0.5 bg-secondary rounded text-xs">{{ group.privacy_type }}</span>
-                            </CardDescription>
+        <div v-else-if="group" class="space-y-6">
+            <!-- Page Header -->
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold flex items-center gap-2">
+                        <Users class="w-6 h-6" />
+                        {{ group.name }}
+                    </h1>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="px-2 py-0.5 bg-secondary rounded text-xs">{{ group.privacy_type }}</span>
+                        <span class="text-sm text-muted-foreground">{{ group.members?.length ?? 0 }} members</span>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <Button v-if="isAdminOrOwner" variant="outline" size="icon" aria-label="Group settings" @click="openSettings">
+                        <Settings class="w-4 h-4" />
+                    </Button>
+                    <Button v-if="isMember && !isOwner" variant="outline" @click="leaveGroup">
+                        <LogOut class="w-4 h-4 mr-1" />
+                        Leave
+                    </Button>
+                </div>
+            </div>
+
+            <!-- Share Link -->
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-muted-foreground">Share link:</span>
+                <code class="flex-1 px-2 py-1 bg-muted rounded text-sm truncate">{{ shareLink }}</code>
+                <Button variant="outline" size="icon" :aria-label="copied ? 'Link copied' : 'Copy share link'" @click="copyShareLink">
+                    <Check v-if="copied" class="w-4 h-4 text-green-500" />
+                    <Copy v-else class="w-4 h-4" />
+                </Button>
+            </div>
+
+            <!-- Info Cards -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Rating System Card -->
+                <Card v-if="group.rating_system">
+                    <CardHeader class="pb-2">
+                        <CardTitle class="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <Star class="w-4 h-4" />
+                            Rating System
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="text-lg font-bold">{{ group.rating_system.name }}</div>
+                        <div class="text-sm text-muted-foreground mt-1">
+                            {{ group.rating_system.master_rating_type }} · max {{ group.rating_system.rating_max }}
                         </div>
-                        <div class="flex gap-2">
-                            <AddRatingModal
-                                v-if="isMember && group.rating_system"
-                                :show-dialog="showAddRatingModal"
-                                :group="group"
-                                @update:showDialog="showAddRatingModal = $event"
-                                @created="onRatingCreated"
+                        <div v-if="group.rating_system.parameters && group.rating_system.parameters.length > 0" class="mt-3 flex flex-wrap gap-1.5">
+                            <span
+                                v-for="param in group.rating_system.parameters"
+                                :key="param.rating_system_parameter_id"
+                                class="px-2 py-0.5 bg-secondary rounded text-xs"
                             >
-                                <template #openModal>
-                                    <Button @click="showAddRatingModal = true">
-                                        <Plus class="w-4 h-4 mr-1" />
-                                        Add Rating
-                                    </Button>
-                                </template>
-                            </AddRatingModal>
-                            <Button v-if="isMember && !isOwner" variant="outline" @click="leaveGroup">
-                                <LogOut class="w-4 h-4 mr-1" />
-                                Leave
+                                {{ param.name }}
+                            </span>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Members Card -->
+                <Card>
+                    <CardHeader class="pb-2">
+                        <CardTitle class="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <Users class="w-4 h-4" />
+                            Members ({{ group.members?.length ?? 0 }})
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ul v-if="group.members && group.members.length > 0" class="space-y-2">
+                            <li
+                                v-for="member in group.members"
+                                :key="member.user?.pulsarr_user_id"
+                                class="text-sm flex items-center justify-between gap-2"
+                            >
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="w-2 h-2 rounded-full bg-primary flex-shrink-0"></span>
+                                    <span class="truncate font-medium">{{ member.user?.name }}</span>
+                                    <span v-if="member.group_role === 'Owner'" class="text-xs text-muted-foreground flex-shrink-0">
+                                        <Crown class="w-3 h-3 inline" /> Owner
+                                    </span>
+                                    <span v-else-if="member.group_role === 'Admin'" class="text-xs text-muted-foreground flex-shrink-0">
+                                        <Shield class="w-3 h-3 inline" /> Admin
+                                    </span>
+                                    <span v-else-if="member.group_role === 'ViewOnly'" class="text-xs text-muted-foreground flex-shrink-0">
+                                        View Only
+                                    </span>
+                                </div>
+
+                                <!-- Member action dropdown -->
+                                <DropdownMenu v-if="isAdminOrOwner && canActOn(member.group_role ?? '') && member.user?.pulsarr_user_id !== user?.pulsarr_user_id">
+                                    <DropdownMenuTrigger as-child>
+                                        <Button variant="ghost" size="icon" class="h-8 w-8" :aria-label="'Actions for ' + member.user?.name">
+                                            <MoreHorizontal class="w-3.5 h-3.5" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                            v-for="role in availableRolesForMember(member.group_role ?? '')"
+                                            :key="role"
+                                            @click="changeRole(member.user!.pulsarr_user_id!, role)"
+                                        >
+                                            <Shield class="w-4 h-4 mr-2" />
+                                            Set to {{ roleDisplayName(role) }}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            v-if="isOwner"
+                                            @click="openTransferDialog(member.user!.pulsarr_user_id!, member.user?.name ?? '')"
+                                        >
+                                            <Crown class="w-4 h-4 mr-2" />
+                                            Transfer Ownership
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            class="text-destructive"
+                                            @click="kickMember(member.user!.pulsarr_user_id!)"
+                                        >
+                                            <UserMinus class="w-4 h-4 mr-2" />
+                                            Kick
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </li>
+                        </ul>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <!-- Settings Dialog -->
+            <Dialog :open="showSettingsDialog" @update:open="showSettingsDialog = $event">
+                <DialogScrollContent class="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Group Settings</DialogTitle>
+                        <DialogDescription>Update your group's name and privacy settings.</DialogDescription>
+                    </DialogHeader>
+                    <div class="space-y-4 py-2">
+                        <div class="space-y-2">
+                            <Label for="group-name">Group Name</Label>
+                            <Input id="group-name" v-model="editName" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="privacy-type">Privacy Type</Label>
+                            <Select v-model="editPrivacyType">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select privacy type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem v-for="pt in privacyTypes" :key="pt" :value="pt">
+                                        {{ pt }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div class="flex justify-between items-center pt-2">
+                            <Button
+                                v-if="isOwner"
+                                variant="destructive"
+                                size="sm"
+                                @click="showSettingsDialog = false; deleteConfirmText = ''; showDeleteConfirm = true;"
+                            >
+                                Delete Group
                             </Button>
+                            <div class="flex gap-2 ml-auto">
+                                <Button variant="outline" @click="showSettingsDialog = false">Cancel</Button>
+                                <Button @click="saveGroupSettings" :disabled="settingsSaving || !editName.trim()">
+                                    {{ settingsSaving ? 'Saving...' : 'Save' }}
+                                </Button>
+                            </div>
                         </div>
                     </div>
-                </CardHeader>
-                <CardContent class="space-y-4">
-                    <!-- Share Link -->
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-muted-foreground">Share link:</span>
-                        <code class="flex-1 px-2 py-1 bg-muted rounded text-sm truncate">{{ shareLink }}</code>
-                        <Button variant="outline" size="icon" @click="copyShareLink">
-                            <Check v-if="copied" class="w-4 h-4 text-green-500" />
-                            <Copy v-else class="w-4 h-4" />
-                        </Button>
-                    </div>
+                </DialogScrollContent>
+            </Dialog>
 
-                    <!-- Rating System and Members - Side by side on large screens -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <!-- Rating System Info -->
-                        <div v-if="group.rating_system" class="p-3 bg-muted/50 rounded-lg">
-                            <div class="flex items-center gap-2 text-sm font-semibold mb-2">
-                                <Star class="w-4 h-4" />
-                                Rating System
-                            </div>
-                            <div class="text-sm">
-                                <span class="font-medium">{{ group.rating_system.name }}</span>
-                                <span class="text-muted-foreground ml-2">
-                                    {{ group.rating_system.master_rating_type }} · max {{ group.rating_system.rating_max }}
-                                </span>
-                            </div>
-                            <div v-if="group.rating_system.parameters && group.rating_system.parameters.length > 0" class="mt-2 flex flex-wrap gap-1">
-                                <span
-                                    v-for="param in group.rating_system.parameters"
-                                    :key="param.rating_system_parameter_id"
-                                    class="px-2 py-0.5 bg-secondary rounded text-xs"
-                                >
-                                    {{ param.name }}
-                                </span>
-                            </div>
-                        </div>
+            <!-- Delete Group Confirmation -->
+            <AlertDialog :open="showDeleteConfirm" @update:open="showDeleteConfirm = $event">
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Group</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the group
+                            <strong>{{ group.name }}</strong> and all associated data.
+                            <br /><br />
+                            Type the group name to confirm:
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <Input v-model="deleteConfirmText" :placeholder="group.name" />
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            :disabled="deleteConfirmText !== group.name"
+                            @click="deleteGroup"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
-                        <!-- Members -->
-                        <div class="p-3 bg-muted/50 rounded-lg">
-                            <div class="flex items-center gap-2 text-sm font-semibold mb-2">
-                                <Users class="w-4 h-4" />
-                                Members ({{ group.members?.length ?? 0 }})
-                            </div>
-                            <ul v-if="group.members && group.members.length > 0" class="space-y-1">
-                                <li
-                                    v-for="member in group.members"
-                                    :key="member.user?.pulsarr_user_id"
-                                    class="text-sm flex items-center gap-2"
-                                >
-                                    <span class="w-2 h-2 rounded-full bg-primary"></span>
-                                    {{ member.user?.name }}
-                                    <span v-if="member.group_role === 'OWNER'" class="text-xs text-muted-foreground">(owner)</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+            <!-- Transfer Ownership Confirmation -->
+            <AlertDialog :open="showTransferDialog" @update:open="showTransferDialog = $event">
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Transfer Ownership</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to transfer ownership of <strong>{{ group.name }}</strong>
+                            to <strong>{{ transferTargetName }}</strong>?
+                            <br /><br />
+                            You will be demoted to Admin.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction @click="transferOwnership">Transfer</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <!-- Ratings Section -->
             <div class="space-y-3">
-                <h2 class="text-lg font-semibold flex items-center gap-2">
-                    <Star class="w-5 h-5" />
-                    Ratings ({{ ratings.length }})
-                </h2>
-
-                <div v-if="ratings.length === 0" class="text-center py-8 text-muted-foreground">
-                    No ratings yet. Be the first to add one!
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold flex items-center gap-2">
+                        <Star class="w-5 h-5" />
+                        Ratings ({{ ratings.length }})
+                    </h2>
+                    <AddRatingModal
+                        v-if="isMember && group.rating_system"
+                        :show-dialog="showAddRatingModal"
+                        :group="group"
+                        @update:showDialog="showAddRatingModal = $event"
+                        @created="onRatingCreated"
+                    >
+                        <template #openModal>
+                            <Button @click="showAddRatingModal = true">
+                                <Plus class="w-4 h-4 mr-1" />
+                                Add Rating
+                            </Button>
+                        </template>
+                    </AddRatingModal>
                 </div>
 
-                <Card v-for="rating in ratings" :key="rating.rating_id">
-                    <div class="flex px-3 gap-3">
-                        <!-- Album Art -->
-                        <div class="w-20 h-20 flex-shrink-0 bg-muted rounded-md flex items-center justify-center overflow-hidden">
-                            <img
-                                v-if="coverArtCache[rating.musicbrainz_id]"
-                                :src="coverArtCache[rating.musicbrainz_id]"
-                                class="w-full h-full object-cover"
-                                alt=""
-                            />
-                            <Disc v-else-if="rating.media_type === 'album'" class="w-8 h-8 text-muted-foreground" />
-                            <Music v-else class="w-8 h-8 text-muted-foreground" />
-                        </div>
+                <EmptyState
+                    v-if="ratings.length === 0"
+                    :icon="Star"
+                    title="No ratings yet"
+                    description="Be the first to rate an album in this group"
+                />
 
-                        <!-- Rating Content -->
-                        <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-start gap-2">
-                                <div class="min-w-0">
-                                    <h3 class="font-semibold truncate">{{ rating.media_title }}</h3>
-                                    <p class="text-sm text-muted-foreground truncate">{{ rating.artist_name }}</p>
-                                </div>
-                                <div class="flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground rounded font-bold text-sm flex-shrink-0">
-                                    <Star class="w-3 h-3" />
-                                    {{ formatRatingValue(rating.rating_value) }}
-                                </div>
-                            </div>
+                <RatingCard
+                    v-for="rating in ratings"
+                    :key="rating.rating_id"
+                    :rating="rating"
+                    :cover-art-url="coverArtCache[rating.musicbrainz_id]"
+                    :user-name="getUserName(rating.pulsarr_user_id)"
+                    @click="openRatingModal(rating)"
+                />
 
-                            <p v-if="rating.comments" class="mt-2 text-sm text-muted-foreground line-clamp-2">
-                                <MessageSquare class="inline w-3 h-3 mr-1" />
-                                {{ rating.comments }}
-                            </p>
+                <div ref="ratingSentinel" v-if="hasMoreRatings && ratings.length > 0" />
+                <LoadingSpinner v-if="loadingMoreRatings" text="Loading more ratings..." />
 
-                            <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                                <span>by {{ getUserName(rating.pulsarr_user_id) }}</span>
-                                <span>{{ formatDate(rating.rating_date) }}</span>
-                            </div>
-
-                            <!-- Expand button for parameter breakdown -->
-                            <Button
-                                v-if="hasRatingParameters"
-                                variant="ghost"
-                                size="sm"
-                                class="mt-2 h-7 px-2 text-xs"
-                                @click="toggleRatingExpanded(rating.rating_id)"
-                            >
-                                <ChevronDown
-                                    :class="['w-3 h-3 mr-1 transition-transform', { 'rotate-180': expandedRatings.has(rating.rating_id) }]"
-                                />
-                                {{ expandedRatings.has(rating.rating_id) ? 'Hide' : 'Show' }} breakdown
-                            </Button>
-
-                            <!-- Expanded rating details -->
-                            <div
-                                v-if="expandedRatings.has(rating.rating_id) && ratingDetails[rating.rating_id]"
-                                class="mt-2 p-2 bg-muted/50 rounded-md space-y-1"
-                            >
-                                <div
-                                    v-for="detail in ratingDetails[rating.rating_id]"
-                                    :key="detail.rating_detail_id"
-                                    class="flex justify-between text-sm"
-                                >
-                                    <span class="text-muted-foreground">
-                                        {{ getParameterInfo(detail.rating_system_parameter_id)?.name || 'Unknown' }}
-                                        <span v-if="parseFloat(getParameterInfo(detail.rating_system_parameter_id)?.weight || '1') !== 1" class="text-xs">
-                                            ({{ getParameterInfo(detail.rating_system_parameter_id)?.weight }}x)
-                                        </span>
-                                    </span>
-                                    <span class="font-mono">
-                                        {{ formatRatingValue(detail.rating_value) }}
-                                        <span class="text-muted-foreground">/ {{ getParameterInfo(detail.rating_system_parameter_id)?.parameter_rating_max }}</span>
-                                    </span>
-                                </div>
-                                <div v-if="ratingDetails[rating.rating_id].length === 0" class="text-sm text-muted-foreground">
-                                    No parameter ratings recorded
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </Card>
+                <RatingDetailModal
+                    :rating="selectedRating"
+                    :open="showRatingModal"
+                    :cover-art-url="selectedRating ? coverArtCache[selectedRating.musicbrainz_id] : undefined"
+                    :user-name="selectedRating ? getUserName(selectedRating.pulsarr_user_id) : ''"
+                    :rating-system="group?.rating_system"
+                    @update:open="showRatingModal = $event"
+                />
             </div>
         </div>
     </div>

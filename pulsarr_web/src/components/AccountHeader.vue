@@ -3,7 +3,7 @@
     import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
     import { Input } from "@/components/ui/input";
     import { Label } from "@/components/ui/label";
-    import { onMounted, ref, watch } from "vue";
+    import { ref, watch } from "vue";
     import type { SignInRequest, SignInResponse, UserDTO } from "@/apiClient";
     import { useForm } from 'vee-validate';
     import * as yup from 'yup';
@@ -11,14 +11,16 @@
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
     import { CookieManager } from "@/helpers/CookieManager.ts";
-    import { LogOut, User } from "lucide-vue-next";
+    import { LogOut, User, Settings } from "lucide-vue-next";
+    import {
+        DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+        DropdownMenuSeparator, DropdownMenuTrigger
+    } from "@/components/ui/dropdown-menu";
+    import { useRouter } from "vue-router";
 
+    const router = useRouter();
     const contextStore = useContextStore();
     const { user, isLoggedIn, showSignInDialog } = storeToRefs(contextStore);
-
-    onMounted(async () => {
-        await contextStore.getSession();
-    })
 
     const { values, errors, defineField } = useForm({
         validationSchema: yup.object({
@@ -95,14 +97,26 @@
 <template>
     <div>
         <!-- Logged in state -->
-        <div v-if="isLoggedIn" class="flex items-center gap-2">
-            <div class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary">
-                <User class="w-4 h-4" />
-                <span class="text-sm font-medium">{{ user?.name }}</span>
-            </div>
-            <Button variant="ghost" size="icon" @click="signOut" title="Sign Out">
-                <LogOut class="w-4 h-4" />
-            </Button>
+        <div v-if="isLoggedIn">
+            <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                    <button class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 transition-colors cursor-pointer max-w-[160px]">
+                        <User class="w-4 h-4 flex-shrink-0" />
+                        <span class="text-sm font-medium truncate">{{ user?.name }}</span>
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem @click="router.push('/profile')">
+                        <Settings class="w-4 h-4 mr-2" />
+                        Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem @click="signOut">
+                        <LogOut class="w-4 h-4 mr-2" />
+                        Sign Out
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
 
         <!-- Logged out state -->

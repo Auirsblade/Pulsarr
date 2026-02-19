@@ -23,7 +23,7 @@
     "clsx": "^2.1.1",
     "lucide-vue-next": "^0.509.0",
     "pinia": "^3.0.1",
-    "reka-ui": "^2.5.1",
+    "reka-ui": "^2.8.0",
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.0.6",
     "tailwindcss-animate": "^1.0.7",
@@ -31,6 +31,7 @@
     "vee-validate": "^4.15.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
+    "vue-sonner": "^2.0.9",
     "yup": "^1.6.1"
   },
   "devDependencies": {

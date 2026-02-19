@@ -50,7 +50,7 @@ impl Model for RatingSystemParameter {
         query_as("SELECT * FROM rating_system_parameter WHERE rating_system_parameter_id = $1").bind(id)
     }
 
-    fn get_all<T: Model>(take_size: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
+    fn get_all<T: Model>(take_size: Option<i32>, _offset: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
         query_as("SELECT * FROM rating_system_parameter")
     }
 }

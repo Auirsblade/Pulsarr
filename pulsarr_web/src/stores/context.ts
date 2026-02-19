@@ -52,9 +52,9 @@ export const useContextStore = defineStore('context', () => {
         CookieManager.removeApiKey();
     }
 
-    const loadPrivacyTypes = async () => {
-        if (privacyTypes.value.length > 0) return; // Already loaded
-        
+    const loadPrivacyTypes = () => {
+        if (privacyTypes.value.length > 0) return;
+
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
             privacyTypes.value = data as string[];
@@ -62,12 +62,12 @@ export const useContextStore = defineStore('context', () => {
         drh.onErrorCallback = (error) => {
             console.error('Failed to fetch privacy types:', error);
         };
-        await drh.get("/group/privacyTypes");
+        drh.get("/group/privacyTypes");
     }
 
-    const loadRatingTypes = async () => {
-        if (ratingTypes.value.length > 0) return; // Already loaded
-        
+    const loadRatingTypes = () => {
+        if (ratingTypes.value.length > 0) return;
+
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
             ratingTypes.value = data as string[];
@@ -75,7 +75,7 @@ export const useContextStore = defineStore('context', () => {
         drh.onErrorCallback = (error) => {
             console.error('Failed to fetch rating types:', error);
         };
-        await drh.get("/rating-system/ratingTypes");
+        drh.get("/rating-system/ratingTypes");
     }
 
     return {

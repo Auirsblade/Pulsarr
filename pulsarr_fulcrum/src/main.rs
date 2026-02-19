@@ -61,7 +61,7 @@ fn create_server() -> Rocket<Build> {
     let cors = CorsOptions::default()
         .allowed_origins(AllowedOrigins::all())
         .allowed_methods(
-            vec![Method::Get, Method::Post, Method::Patch].into_iter().map(From::from).collect()
+            vec![Method::Get, Method::Post, Method::Patch, Method::Delete].into_iter().map(From::from).collect()
         )
         .allow_credentials(true);
 

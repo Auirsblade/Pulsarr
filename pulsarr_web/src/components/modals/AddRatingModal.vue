@@ -5,6 +5,7 @@
     import { Input } from "@/components/ui/input";
     import { ref, computed } from "vue";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
+    import { toast } from 'vue-sonner';
     import type { GroupDTO } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
@@ -152,7 +153,7 @@
         }
     };
 
-    const submit = async () => {
+    const submit = () => {
         if (!selectedMusic.value || !user.value) return;
 
         // For non-Absolute types with parameters, validate all parameters are filled
@@ -213,45 +214,51 @@
         };
 
         const drh = new DataRequestHandler();
-        drh.onSuccessCallback = async (data: any) => {
+        drh.onSuccessCallback = (data: any) => {
             const createdRatingId = data.rating_id;
 
             // Create rating details for each parameter
-            if (parameterRatings.value.length > 0) {
-                const detailPromises = parameterRatings.value
-                    .filter(p => p.value)
-                    .map(p => {
-                        return new Promise<void>((resolve, reject) => {
-                            const detailDrh = new DataRequestHandler();
-                            detailDrh.onSuccessCallback = () => resolve();
-                            detailDrh.onErrorCallback = () => reject();
-                            detailDrh.post('/rating/rating_detail/add', {
-                                rating_detail_id: 0,
-                                rating_id: createdRatingId,
-                                rating_system_parameter_id: p.rating_system_parameter_id,
-                                rating_value: p.value
-                            });
-                        });
+            const details = parameterRatings.value.filter(p => p.value);
+            if (details.length > 0) {
+                let remaining = details.length;
+                const onDetailDone = () => {
+                    remaining--;
+                    if (remaining === 0) {
+                        submitting.value = false;
+                        toast.success('Rating submitted');
+                        emit('created');
+                        closeDialog();
+                    }
+                };
+                for (const p of details) {
+                    const detailDrh = new DataRequestHandler();
+                    detailDrh.onSuccessCallback = () => onDetailDone();
+                    detailDrh.onErrorCallback = () => {
+                        console.error('Failed to create rating detail');
+                        onDetailDone();
+                    };
+                    detailDrh.post('/rating/rating_detail/add', {
+                        rating_detail_id: 0,
+                        rating_id: createdRatingId,
+                        rating_system_parameter_id: p.rating_system_parameter_id,
+                        rating_value: p.value
                     });
-
-                try {
-                    await Promise.all(detailPromises);
-                } catch (e) {
-                    console.error('Failed to create some rating details:', e);
                 }
+            } else {
+                submitting.value = false;
+                toast.success('Rating submitted');
+                emit('created');
+                closeDialog();
             }
-
-            submitting.value = false;
-            emit('created');
-            closeDialog();
         };
         drh.onErrorCallback = (err) => {
             error.value = 'Failed to create rating';
             submitting.value = false;
+            toast.error('Failed to submit rating');
             console.error('Failed to create rating:', err);
         };
 
-        await drh.post('/rating/add', ratingPayload);
+        drh.post('/rating/add', ratingPayload);
     };
 </script>
 
@@ -293,7 +300,7 @@
                                 v-if="selectedMusic.cover_art_url"
                                 :src="selectedMusic.cover_art_url"
                                 class="w-full h-full object-cover"
-                                alt=""
+                                :alt="'Album cover for ' + selectedMusic.media_title"
                             />
                             <component :is="getMusicIcon()" v-else class="w-6 h-6 text-muted-foreground" />
                         </div>
@@ -302,7 +309,7 @@
                             <div class="text-sm text-muted-foreground truncate">{{ selectedMusic.artist_name }}</div>
                             <div class="text-xs text-muted-foreground capitalize">{{ selectedMusic.media_type }}</div>
                         </div>
-                        <Button variant="ghost" size="icon" @click="clearSelection">
+                        <Button variant="ghost" size="icon" aria-label="Clear music selection" @click="clearSelection">
                             <X class="w-4 h-4" />
                         </Button>
                     </div>
@@ -380,7 +387,7 @@
                 </div>
 
                 <!-- Error -->
-                <div v-if="error" class="text-sm text-destructive">
+                <div v-if="error" class="text-sm text-destructive" role="alert">
                     {{ error }}
                 </div>
             </div>

@@ -7,6 +7,7 @@
     import { useForm } from "vee-validate";
     import * as yup from "yup";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
+    import { toast } from 'vue-sonner';
     import type { GroupDTO, RatingSystemDTO } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
@@ -68,15 +69,17 @@
     const [ratingSystemId, ratingSystemProps] = defineField('rating_system_id');
     const [privacyType, privacyTypeProps] = defineField('privacy_type');
 
-    const onSubmit = handleSubmit(async (values) => {
+    const onSubmit = handleSubmit((values) => {
         const drh = new DataRequestHandler()
         drh.onSuccessCallback = (data) => {
             console.log('Group created:', data)
+            toast.success('Group created')
             closeDialog()
             resetForm()
         }
         drh.onErrorCallback = (error) => {
             console.error('Failed to create group:', error)
+            toast.error('Failed to create group')
         }
 
         const groupPayload: GroupDTO = {
@@ -86,7 +89,7 @@
             privacy_type: values.privacy_type,
         }
 
-        await drh.post('/group/create', groupPayload)
+        drh.post('/group/create', groupPayload)
     })
 
 </script>
@@ -106,8 +109,8 @@
             <form @submit.prevent="onSubmit" class="space-y-4">
                 <div class="space-y-2">
                     <Label for="name">Name</Label>
-                    <Input id="name" v-model="name" :class="{ 'border-red-500': errors.name }" v-bind="nameProps"/>
-                    <span v-if="errors.name" class="text-red-500 text-sm">
+                    <Input id="name" v-model="name" :class="{ 'border-red-500': errors.name }" v-bind="nameProps" :aria-invalid="!!errors.name" :aria-describedby="errors.name ? 'group-name-error' : undefined"/>
+                    <span v-if="errors.name" id="group-name-error" role="alert" class="text-red-500 text-sm">
                         {{ errors.name }}
                     </span>
                 </div>
@@ -115,7 +118,7 @@
                 <div class="space-y-2">
                     <Label for="privacy_type">Privacy</Label>
                     <Select v-model="privacyType">
-                        <SelectTrigger :class="{ 'border-red-500': errors.privacy_type }" v-bind="privacyTypeProps">
+                        <SelectTrigger :class="{ 'border-red-500': errors.privacy_type }" v-bind="privacyTypeProps" :aria-invalid="!!errors.privacy_type" :aria-describedby="errors.privacy_type ? 'privacy-type-error' : undefined">
                             <SelectValue placeholder="Select privacy type"/>
                         </SelectTrigger>
                         <SelectContent>
@@ -124,7 +127,7 @@
                             </SelectItem>
                         </SelectContent>
                     </Select>
-                    <span v-if="errors.privacy_type" class="text-red-500 text-sm">
+                    <span v-if="errors.privacy_type" id="privacy-type-error" role="alert" class="text-red-500 text-sm">
                         {{ errors.privacy_type }}
                     </span>
                 </div>
@@ -133,7 +136,7 @@
                     <Label for="rating_system">Rating System</Label>
                     <div class="flex gap-2 ">
                         <Select v-model="ratingSystemId" :disabled="!ratingSystems || ratingSystems.length === 0" class="flex-1">
-                            <SelectTrigger :class="{ 'border-red-500': errors.rating_system_id }" v-bind="ratingSystemProps">
+                            <SelectTrigger :class="{ 'border-red-500': errors.rating_system_id }" v-bind="ratingSystemProps" :aria-invalid="!!errors.rating_system_id" :aria-describedby="errors.rating_system_id ? 'rating-system-error' : undefined">
                                 <SelectValue
                                     :placeholder="!ratingSystems || ratingSystems.length === 0 ? 'No rating systems available. Please create one first.' : 'Select a rating system'"/>
                             </SelectTrigger>
@@ -151,7 +154,7 @@
                             </template>
                         </AddRatingSystemModal>
                     </div>
-                    <span v-if="errors.rating_system_id" class="text-red-500 text-sm">
+                    <span v-if="errors.rating_system_id" id="rating-system-error" role="alert" class="text-red-500 text-sm">
                         {{ errors.rating_system_id }}
                     </span>
                 </div>

@@ -4,6 +4,7 @@
     import { ref, watch } from "vue";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import { Search, Disc, Loader2 } from "lucide-vue-next";
+    import EmptyState from "@/components/EmptyState.vue";
 
     interface ArtistCredit {
         name?: string;
@@ -154,33 +155,43 @@
                     />
                 </div>
 
-                <div class="overflow-y-auto max-h-[400px] space-y-2">
+                <div class="overflow-y-auto flex-1 min-h-0 space-y-2">
                     <div v-if="searching" class="flex justify-center py-8">
                         <Loader2 class="w-6 h-6 animate-spin text-muted-foreground" />
                     </div>
 
-                    <div v-else-if="results.length === 0 && searchQuery.length >= 2" class="text-center py-8 text-muted-foreground">
-                        No results found
-                    </div>
+                    <EmptyState
+                        v-else-if="results.length === 0 && searchQuery.length >= 2"
+                        :icon="Search"
+                        title="No results found"
+                        description="Try a different search term or check the spelling"
+                    />
 
-                    <div v-else-if="results.length === 0" class="text-center py-8 text-muted-foreground">
-                        Type to search...
-                    </div>
+                    <EmptyState
+                        v-else-if="results.length === 0"
+                        :icon="Search"
+                        title="Search for music"
+                        description="Type an artist or album name to get started"
+                    />
 
                     <!-- Release Group Results -->
                     <template v-else>
                         <div
                             v-for="releaseGroup in results"
                             :key="releaseGroup.id"
-                            class="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
+                            class="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            tabindex="0"
+                            role="button"
                             @click="selectItem(releaseGroup)"
+                            @keydown.enter="selectItem(releaseGroup)"
+                            @keydown.space.prevent="selectItem(releaseGroup)"
                         >
                             <div class="w-12 h-12 bg-muted rounded flex items-center justify-center overflow-hidden">
                                 <img
                                     v-if="coverArtCache[releaseGroup.id]"
                                     :src="coverArtCache[releaseGroup.id]"
                                     class="w-full h-full object-cover"
-                                    alt=""
+                                    :alt="'Cover art for ' + releaseGroup.title"
                                 />
                                 <Disc v-else class="w-6 h-6 text-muted-foreground" />
                             </div>

@@ -7,6 +7,7 @@
     import { useForm } from "vee-validate";
     import * as yup from "yup";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
+    import { toast } from 'vue-sonner';
     import type { RatingSystemDTO, RatingSystemParameterDTO } from "@/apiClient";
     import { storeToRefs } from "pinia";
     import { useContextStore } from "@/stores/context.ts";
@@ -133,15 +134,18 @@
         }
     });
 
-    const onSubmit = handleSubmit(async (values) => {
+    const onSubmit = handleSubmit((values) => {
         const drh = new DataRequestHandler()
         drh.onSuccessCallback = (data) => {
             console.log('Rating System created:', data)
+            toast.success('Rating system created')
             closeDialog()
             resetForm()
+            parameters.value = []
         }
         drh.onErrorCallback = (error) => {
             console.error('Failed to create rating system:', error)
+            toast.error('Failed to create rating system')
         }
 
         const ratingSystemPayload: RatingSystemDTO = {
@@ -158,8 +162,7 @@
             }))
         }
 
-        await drh.post('/rating-system/add', ratingSystemPayload)
-        parameters.value = []
+        drh.post('/rating-system/add', ratingSystemPayload)
     })
 
 </script>
@@ -179,8 +182,8 @@
             <form @submit.prevent="onSubmit" class="space-y-4">
                 <div class="space-y-2">
                     <Label for="name">Rating System Name</Label>
-                    <Input id="name" v-model="name" :class="{ 'border-red-500': errors.name }" v-bind="nameProps"/>
-                    <span v-if="errors.name" class="text-red-500 text-sm">
+                    <Input id="name" v-model="name" :class="{ 'border-red-500': errors.name }" v-bind="nameProps" :aria-invalid="!!errors.name" :aria-describedby="errors.name ? 'rs-name-error' : undefined"/>
+                    <span v-if="errors.name" id="rs-name-error" role="alert" class="text-red-500 text-sm">
                         {{ errors.name }}
                     </span>
                 </div>
@@ -188,7 +191,7 @@
                 <div class="space-y-2">
                     <Label for="master_rating_type">Rating Type</Label>
                     <Select v-model="masterRatingType">
-                        <SelectTrigger :class="{ 'border-red-500': errors.master_rating_type }" v-bind="masterRatingTypeProps">
+                        <SelectTrigger :class="{ 'border-red-500': errors.master_rating_type }" v-bind="masterRatingTypeProps" :aria-invalid="!!errors.master_rating_type" :aria-describedby="errors.master_rating_type ? 'rating-type-error' : undefined">
                             <SelectValue placeholder="Select rating type"/>
                         </SelectTrigger>
                         <SelectContent>
@@ -197,7 +200,7 @@
                             </SelectItem>
                         </SelectContent>
                     </Select>
-                    <span v-if="errors.master_rating_type" class="text-red-500 text-sm">
+                    <span v-if="errors.master_rating_type" id="rating-type-error" role="alert" class="text-red-500 text-sm">
                         {{ errors.master_rating_type }}
                     </span>
                 </div>
@@ -211,11 +214,13 @@
                         :disabled="!isManualRatingMax"
                         :class="{ 'border-red-500': errors.rating_max }"
                         v-bind="ratingMaxProps"
+                        :aria-invalid="!!errors.rating_max"
+                        :aria-describedby="errors.rating_max ? 'rating-max-error' : undefined"
                     />
                     <p v-if="!isManualRatingMax" class="text-xs text-muted-foreground">
                         Automatically calculated from parameters.
                     </p>
-                    <span v-if="errors.rating_max" class="text-red-500 text-sm">
+                    <span v-if="errors.rating_max" id="rating-max-error" role="alert" class="text-red-500 text-sm">
                         {{ errors.rating_max }}
                     </span>
                 </div>
@@ -272,6 +277,7 @@
                                 variant="ghost"
                                 size="icon"
                                 class="text-destructive hover:text-destructive"
+                                :aria-label="'Delete parameter ' + (param.name || index + 1)"
                                 @click="removeParameter(index)"
                             >
                                 <Trash2 class="w-4 h-4" />

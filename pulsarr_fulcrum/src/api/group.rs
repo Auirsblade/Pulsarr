@@ -4,7 +4,8 @@ use crate::api::dtos::{
     group_dto, group_member_dto, rating_system_dto, rating_system_parameter_dto,
 };
 use crate::api::guards::api_key::ApiKey;
-use crate::constants::{MEMBERSHIP_TYPE, MEMBER_ROLE, OWNER_ROLE, PRIVACY_TYPE};
+use crate::api::guards::authorization;
+use crate::constants::{ADMIN_ROLE, MEMBERSHIP_TYPE, MEMBER_ROLE, OWNER_ROLE, PRIVATE_PRIVACY_TYPE, PRIVACY_TYPE};
 use crate::data::data_wrangler;
 use crate::data::models::pulsarr_group;
 use crate::data::models::pulsarr_group::PulsarrGroup;
@@ -16,7 +17,7 @@ use crate::data::models::{pulsarr_user, rating_system_parameter};
 use crate::error::PulsarrError;
 use crate::{PostgresState, PulsarrResult};
 use rocket::serde::json::Json;
-use rocket::{delete, get, post, State};
+use rocket::{get, post, State};
 use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec};
@@ -25,7 +26,8 @@ use rocket_okapi::{openapi, openapi_get_routes_spec};
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![settings: update_group, delete_group, get_pulsarr_group,
         get_all_groups, get_privacy_types, create_group, get_membership_types, join_group, leave_group,
-        search_groups, my_groups, get_public_groups_endpoint, get_group_preview_endpoint]
+        search_groups, my_groups, get_public_groups_endpoint, get_group_preview_endpoint,
+        kick_member, change_role, transfer_ownership]
 }
 
 /// # Get the group privacy types
@@ -41,28 +43,32 @@ async fn get_privacy_types() -> PulsarrResult<Vec<String>> {
     Ok(Json(privacy_types))
 }
 
-/// # Update group
+/// # Update group (requires Admin+ role)
 #[openapi(tag = "Group")]
 #[post("/update", format = "application/json", data = "<group>")]
 async fn update_group(
     state: &State<PostgresState>,
     group: Json<GroupDTO>,
-    _api_user: ApiKey,
+    api_user: ApiKey,
 ) -> PulsarrResult<GroupDTO> {
+    let ApiKey(user_id) = api_user;
+    authorization::require_role(&state.pool, group.pulsarr_group_id, user_id, ADMIN_ROLE).await?;
     match data_wrangler::update(group_dto::to_model(&group), &state.pool).await {
         Ok(r) => Ok(Json(group_dto::to_dto(&r, None, None))),
         Err(e) => Err(e),
     }
 }
 
-/// # Delete group
+/// # Delete group (requires Owner role)
 #[openapi(tag = "Group")]
-#[delete("/delete/<id>")]
+#[post("/delete/<id>")]
 async fn delete_group(
     state: &State<PostgresState>,
     id: i32,
-    _api_user: ApiKey,
+    api_user: ApiKey,
 ) -> PulsarrResult<bool> {
+    let ApiKey(user_id) = api_user;
+    authorization::require_role(&state.pool, id, user_id, OWNER_ROLE).await?;
     match data_wrangler::delete::<PulsarrGroup>(id, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e),
@@ -75,12 +81,20 @@ async fn delete_group(
 async fn get_pulsarr_group(
     state: &State<PostgresState>,
     id: i32,
-    _api_user: ApiKey,
+    api_user: ApiKey,
 ) -> PulsarrResult<GroupDTO> {
+    let ApiKey(user_id) = api_user;
     let pg = match data_wrangler::get_by_id::<PulsarrGroup>(id, &state.pool).await {
         Ok(pg) => pg,
         Err(e) => return Err(e),
     };
+
+    // If group is private, verify membership
+    if pg.privacy_type == PRIVATE_PRIVACY_TYPE {
+        if authorization::get_membership(&state.pool, id, user_id).await.is_none() {
+            return Err(PulsarrError::forbidden("This group is private"));
+        }
+    }
 
     let rs = match data_wrangler::get_by_id::<RatingSystem>(pg.rating_system_id, &state.pool).await
     {
@@ -141,7 +155,8 @@ async fn get_all_groups(
     get_request: Json<GetRequest>,
     _api_user: ApiKey,
 ) -> PulsarrResult<Vec<GroupDTO>> {
-    match data_wrangler::get_all::<PulsarrGroup>(&state.pool, get_request.into_inner().take_size)
+    let req = get_request.into_inner();
+    match data_wrangler::get_all::<PulsarrGroup>(&state.pool, req.take_size, req.offset)
         .await
     {
         Ok(groups) => Ok(Json(
@@ -236,7 +251,7 @@ async fn join_group(
     join(state, group_id, user_id, MEMBER_ROLE.to_string()).await
 }
 
-/// # Leave group
+/// # Leave group (Owner cannot leave — must transfer ownership first)
 #[openapi(tag = "Group")]
 #[post("/leave/<group_id>")]
 async fn leave_group(
@@ -245,6 +260,14 @@ async fn leave_group(
     api_user: ApiKey,
 ) -> PulsarrResult<bool> {
     let ApiKey(user_id) = api_user;
+
+    // Prevent Owner from leaving
+    if let Some(membership) = authorization::get_membership(&state.pool, group_id, user_id).await {
+        if membership.group_role == OWNER_ROLE {
+            return Err(PulsarrError::forbidden("Owner cannot leave the group. Transfer ownership first."));
+        }
+    }
+
     match user_group::leave(group_id, user_id)
         .fetch_optional(&state.pool)
         .await
@@ -317,6 +340,116 @@ async fn get_group_preview_endpoint(
     {
         Ok(Some(pg)) => Ok(Json(group_dto::to_dto(&pg, None, None))),
         Ok(None) => Err(PulsarrError::missing_data("Group".to_string())),
+        Err(e) => Err(PulsarrError::validation_error(e)),
+    }
+}
+
+/// # Kick a member from a group (requires Admin+ role, actor must outrank target)
+#[openapi(tag = "Group")]
+#[post("/kick/<group_id>/<target_user_id>")]
+async fn kick_member(
+    state: &State<PostgresState>,
+    group_id: i32,
+    target_user_id: i32,
+    api_user: ApiKey,
+) -> PulsarrResult<bool> {
+    let ApiKey(user_id) = api_user;
+    let actor = authorization::require_role(&state.pool, group_id, user_id, ADMIN_ROLE).await?;
+
+    let target = match authorization::get_membership(&state.pool, group_id, target_user_id).await {
+        Some(t) => t,
+        None => return Err(PulsarrError::validation_error("Target user is not a member of this group")),
+    };
+
+    if !authorization::can_act_on(&actor.group_role, &target.group_role) {
+        return Err(PulsarrError::forbidden("You cannot kick a member with equal or higher role"));
+    }
+
+    match user_group::remove_member(group_id, target_user_id)
+        .fetch_optional(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(true)),
+        Err(e) => Err(PulsarrError::validation_error(e)),
+    }
+}
+
+/// # Change a member's role (requires Admin+ role, cannot set to Owner)
+#[openapi(tag = "Group")]
+#[post("/changeRole/<group_id>/<target_user_id>/<new_role>")]
+async fn change_role(
+    state: &State<PostgresState>,
+    group_id: i32,
+    target_user_id: i32,
+    new_role: &str,
+    api_user: ApiKey,
+) -> PulsarrResult<bool> {
+    let ApiKey(user_id) = api_user;
+    let actor = authorization::require_role(&state.pool, group_id, user_id, ADMIN_ROLE).await?;
+
+    if new_role == OWNER_ROLE {
+        return Err(PulsarrError::forbidden("Cannot assign Owner role. Use transfer ownership instead."));
+    }
+
+    // Validate the new role is a known role
+    if !MEMBERSHIP_TYPE.contains(&new_role) {
+        return Err(PulsarrError::validation_error("Invalid role"));
+    }
+
+    let target = match authorization::get_membership(&state.pool, group_id, target_user_id).await {
+        Some(t) => t,
+        None => return Err(PulsarrError::validation_error("Target user is not a member of this group")),
+    };
+
+    if !authorization::can_act_on(&actor.group_role, &target.group_role) {
+        return Err(PulsarrError::forbidden("You cannot change the role of a member with equal or higher role"));
+    }
+
+    // Admins can only set roles below their own level
+    if authorization::role_level(new_role) >= authorization::role_level(&actor.group_role) {
+        return Err(PulsarrError::forbidden("You cannot assign a role equal to or above your own"));
+    }
+
+    match user_group::update_role(group_id, target_user_id, new_role.to_string())
+        .fetch_one(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(true)),
+        Err(e) => Err(PulsarrError::validation_error(e)),
+    }
+}
+
+/// # Transfer group ownership (requires Owner role)
+#[openapi(tag = "Group")]
+#[post("/transferOwnership/<group_id>/<new_owner_id>")]
+async fn transfer_ownership(
+    state: &State<PostgresState>,
+    group_id: i32,
+    new_owner_id: i32,
+    api_user: ApiKey,
+) -> PulsarrResult<bool> {
+    let ApiKey(user_id) = api_user;
+    authorization::require_role(&state.pool, group_id, user_id, OWNER_ROLE).await?;
+
+    // Verify target is a member
+    if authorization::get_membership(&state.pool, group_id, new_owner_id).await.is_none() {
+        return Err(PulsarrError::validation_error("Target user is not a member of this group"));
+    }
+
+    // Promote new owner
+    if let Err(e) = user_group::update_role(group_id, new_owner_id, OWNER_ROLE.to_string())
+        .fetch_one(&state.pool)
+        .await
+    {
+        return Err(PulsarrError::validation_error(e));
+    }
+
+    // Demote current owner to Admin
+    match user_group::update_role(group_id, user_id, ADMIN_ROLE.to_string())
+        .fetch_one(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(true)),
         Err(e) => Err(PulsarrError::validation_error(e)),
     }
 }
