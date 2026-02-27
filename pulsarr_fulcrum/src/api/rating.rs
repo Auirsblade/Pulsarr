@@ -13,28 +13,59 @@ use crate::api::dtos::rating_dto::{CreateRatingDTO, create_rating_to_model};
 use crate::api::guards::api_key::ApiKey;
 use crate::error::PulsarrError;
 
+#[derive(Serialize, Deserialize, FromRow, JsonSchema)]
+pub struct RatingDetailResponse {
+    pub rating_detail_id: i32,
+    pub rating_id: i32,
+    pub rating_system_parameter_id: i32,
+    pub rating_value: Decimal,
+    pub parameter_name: String,
+}
+
 #[derive(Deserialize, Serialize, JsonSchema)]
 pub struct PaginatedGroupRatingsRequest {
     pub group_ids: Vec<i32>,
     pub take_size: Option<i32>,
     pub offset: Option<i32>,
+    pub current_only: Option<bool>,
 }
 
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![ settings:
         add_rating, update_rating, delete_rating, get_rating, get_all_ratings, get_ratings_by_group,
-        get_ratings_by_user, get_user_rating_stats,
+        get_ratings_by_user, get_user_rating_stats, get_existing_rating,
         add_rating_detail, update_rating_detail, delete_rating_detail, get_rating_detail, get_all_rating_details,
-        get_rating_details_by_rating ]
+        get_rating_details_by_rating, delete_rating_details_by_rating ]
 }
 
 
 /// # Add rating
 #[openapi(tag = "Rating")]
 #[post("/add", format = "application/json", data = "<rating>")]
-async fn add_rating(state: &State<PostgresState>, rating: Json<CreateRatingDTO>) -> PulsarrResult<Rating>{
-    let rating_model = create_rating_to_model(rating.into_inner());
+async fn add_rating(state: &State<PostgresState>, rating: Json<CreateRatingDTO>, api_user: ApiKey) -> PulsarrResult<Rating>{
+    let ApiKey(user_id) = api_user;
+    let dto = rating.into_inner();
+
+    if dto.pulsarr_user_id != user_id {
+        return Err(PulsarrError::forbidden("Cannot create ratings for another user"));
+    }
+
+    // Check for existing rating with same user/group/media combo
+    let existing = query_as::<_, Rating>(
+        "SELECT * FROM rating WHERE pulsarr_user_id = $1 AND pulsarr_group_id = $2 AND musicbrainz_id = $3"
+    )
+        .bind(user_id)
+        .bind(dto.pulsarr_group_id)
+        .bind(&dto.musicbrainz_id)
+        .fetch_optional(&state.pool)
+        .await;
+
+    if let Ok(Some(_)) = existing {
+        return Err(PulsarrError::validation_error("A rating already exists for this media in this group. Use update instead."));
+    }
+
+    let rating_model = create_rating_to_model(dto);
     match data_wrangler::add(rating_model, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
@@ -44,7 +75,14 @@ async fn add_rating(state: &State<PostgresState>, rating: Json<CreateRatingDTO>)
 /// # Update rating
 #[openapi(tag = "Rating")]
 #[post("/update", format = "application/json", data = "<rating>")]
-async fn update_rating(state: &State<PostgresState>, rating: Json<Rating>) -> PulsarrResult<Rating>{
+async fn update_rating(state: &State<PostgresState>, rating: Json<Rating>, api_user: ApiKey) -> PulsarrResult<Rating>{
+    let ApiKey(user_id) = api_user;
+
+    let original = data_wrangler::get_by_id::<Rating>(rating.rating_id, &state.pool).await?;
+    if original.pulsarr_user_id != user_id {
+        return Err(PulsarrError::forbidden("Cannot update another user's rating"));
+    }
+
     match data_wrangler::update(rating.into_inner(), &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
@@ -90,13 +128,30 @@ async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<Pagina
         return Ok(Json(Vec::new()));
     }
 
-    match query_as::<_, Rating>("SELECT * FROM rating WHERE pulsarr_group_id = ANY($1) ORDER BY rating_date DESC LIMIT $2 OFFSET $3")
-        .bind(&req.group_ids)
-        .bind(req.take_size)
-        .bind(req.offset.unwrap_or(0))
-        .fetch_all(&state.pool)
-        .await
-    {
+    let result = if req.current_only.unwrap_or(false) {
+        query_as::<_, Rating>(
+            "SELECT r.* FROM rating r \
+             JOIN pulsarr_group g ON g.pulsarr_group_id = r.pulsarr_group_id \
+             WHERE r.pulsarr_group_id = ANY($1) AND r.rating_system_id = g.rating_system_id \
+             ORDER BY r.rating_date DESC LIMIT $2 OFFSET $3"
+        )
+            .bind(&req.group_ids)
+            .bind(req.take_size)
+            .bind(req.offset.unwrap_or(0))
+            .fetch_all(&state.pool)
+            .await
+    } else {
+        query_as::<_, Rating>(
+            "SELECT * FROM rating WHERE pulsarr_group_id = ANY($1) ORDER BY rating_date DESC LIMIT $2 OFFSET $3"
+        )
+            .bind(&req.group_ids)
+            .bind(req.take_size)
+            .bind(req.offset.unwrap_or(0))
+            .fetch_all(&state.pool)
+            .await
+    };
+
+    match result {
         Ok(ratings) => Ok(Json(ratings)),
         Err(e) => Err(PulsarrError::validation_error(e))
     }
@@ -155,13 +210,40 @@ async fn get_all_rating_details(state: &State<PostgresState>) -> PulsarrResult<V
 /// # Get rating details by rating ID
 #[openapi(tag = "Rating")]
 #[get("/rating_detail/by_rating/<rating_id>")]
-async fn get_rating_details_by_rating(state: &State<PostgresState>, rating_id: i32) -> PulsarrResult<Vec<RatingDetail>> {
-    match query_as::<_, RatingDetail>("SELECT * FROM rating_detail WHERE rating_id = $1")
+async fn get_rating_details_by_rating(state: &State<PostgresState>, rating_id: i32) -> PulsarrResult<Vec<RatingDetailResponse>> {
+    match query_as::<_, RatingDetailResponse>(
+        "SELECT rd.rating_detail_id, rd.rating_id, rd.rating_system_parameter_id, rd.rating_value, \
+         rsp.name AS parameter_name \
+         FROM rating_detail rd \
+         JOIN rating_system_parameter rsp ON rsp.rating_system_parameter_id = rd.rating_system_parameter_id \
+         WHERE rd.rating_id = $1"
+    )
         .bind(rating_id)
         .fetch_all(&state.pool)
         .await
     {
         Ok(details) => Ok(Json(details)),
+        Err(e) => Err(PulsarrError::validation_error(e))
+    }
+}
+
+/// # Delete all rating details for a rating (ownership verified)
+#[openapi(tag = "Rating")]
+#[delete("/rating_detail/by_rating/<rating_id>")]
+async fn delete_rating_details_by_rating(state: &State<PostgresState>, rating_id: i32, api_user: ApiKey) -> PulsarrResult<bool> {
+    let ApiKey(user_id) = api_user;
+
+    let original = data_wrangler::get_by_id::<Rating>(rating_id, &state.pool).await?;
+    if original.pulsarr_user_id != user_id {
+        return Err(PulsarrError::forbidden("Cannot delete details for another user's rating"));
+    }
+
+    match sqlx::query("DELETE FROM rating_detail WHERE rating_id = $1")
+        .bind(rating_id)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(true)),
         Err(e) => Err(PulsarrError::validation_error(e))
     }
 }
@@ -257,4 +339,29 @@ async fn get_user_rating_stats(
             count: a.count,
         }).collect(),
     }))
+}
+
+/// # Get existing ratings for a specific media item in a group (for re-rating reference)
+#[openapi(tag = "Rating")]
+#[get("/existing/<group_id>/<musicbrainz_id>")]
+async fn get_existing_rating(
+    state: &State<PostgresState>,
+    group_id: i32,
+    musicbrainz_id: &str,
+    api_user: ApiKey,
+) -> PulsarrResult<Vec<Rating>> {
+    let ApiKey(user_id) = api_user;
+
+    match query_as::<_, Rating>(
+        "SELECT * FROM rating WHERE pulsarr_user_id = $1 AND pulsarr_group_id = $2 AND musicbrainz_id = $3 ORDER BY rating_date DESC"
+    )
+        .bind(user_id)
+        .bind(group_id)
+        .bind(musicbrainz_id)
+        .fetch_all(&state.pool)
+        .await
+    {
+        Ok(ratings) => Ok(Json(ratings)),
+        Err(e) => Err(PulsarrError::validation_error(e))
+    }
 }

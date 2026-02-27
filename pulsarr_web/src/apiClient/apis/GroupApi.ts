@@ -17,13 +17,29 @@ import * as runtime from '../runtime';
 import type {
   GetRequest,
   GroupDTO,
+  RatingSystemDTO,
 } from '../models/index';
 import {
     GetRequestFromJSON,
     GetRequestToJSON,
     GroupDTOFromJSON,
     GroupDTOToJSON,
+    RatingSystemDTOFromJSON,
+    RatingSystemDTOToJSON,
 } from '../models/index';
+
+export interface ChangeRatingSystemRequest {
+    groupId: number;
+    pulsarrApiKey: string;
+    ratingSystemDTO: RatingSystemDTO;
+}
+
+export interface ChangeRoleRequest {
+    groupId: number;
+    targetUserId: number;
+    newRole: string;
+    pulsarrApiKey: string;
+}
 
 export interface CreateGroupRequest {
     pulsarrApiKey: string;
@@ -40,6 +56,10 @@ export interface GetAllGroupsRequest {
     getRequest: GetRequest;
 }
 
+export interface GetGroupPreviewEndpointRequest {
+    id: number;
+}
+
 export interface GetPulsarrGroupRequest {
     id: number;
     pulsarrApiKey: string;
@@ -47,6 +67,12 @@ export interface GetPulsarrGroupRequest {
 
 export interface JoinGroupRequest {
     groupId: number;
+    pulsarrApiKey: string;
+}
+
+export interface KickMemberRequest {
+    groupId: number;
+    targetUserId: number;
     pulsarrApiKey: string;
 }
 
@@ -64,6 +90,12 @@ export interface SearchGroupsRequest {
     name?: string | null;
 }
 
+export interface TransferOwnershipRequest {
+    groupId: number;
+    newOwnerId: number;
+    pulsarrApiKey: string;
+}
+
 export interface UpdateGroupRequest {
     pulsarrApiKey: string;
     groupDTO: GroupDTO;
@@ -73,6 +105,124 @@ export interface UpdateGroupRequest {
  * 
  */
 export class GroupApi extends runtime.BaseAPI {
+
+    /**
+     * Creates a new rating system from the provided definition and assigns it to the group. Old ratings keep their previous rating_system_id, marking them as \"outdated\".
+     * Change a group\'s rating system (requires Admin+ role)
+     */
+    async changeRatingSystemRaw(requestParameters: ChangeRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GroupDTO>> {
+        if (requestParameters['groupId'] == null) {
+            throw new runtime.RequiredError(
+                'groupId',
+                'Required parameter "groupId" was null or undefined when calling changeRatingSystem().'
+            );
+        }
+
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling changeRatingSystem().'
+            );
+        }
+
+        if (requestParameters['ratingSystemDTO'] == null) {
+            throw new runtime.RequiredError(
+                'ratingSystemDTO',
+                'Required parameter "ratingSystemDTO" was null or undefined when calling changeRatingSystem().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/group/changeRatingSystem/{group_id}`.replace(`{${"group_id"}}`, encodeURIComponent(String(requestParameters['groupId']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: RatingSystemDTOToJSON(requestParameters['ratingSystemDTO']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GroupDTOFromJSON(jsonValue));
+    }
+
+    /**
+     * Creates a new rating system from the provided definition and assigns it to the group. Old ratings keep their previous rating_system_id, marking them as \"outdated\".
+     * Change a group\'s rating system (requires Admin+ role)
+     */
+    async changeRatingSystem(requestParameters: ChangeRatingSystemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GroupDTO> {
+        const response = await this.changeRatingSystemRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Change a member\'s role (requires Admin+ role, cannot set to Owner)
+     */
+    async changeRoleRaw(requestParameters: ChangeRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<boolean>> {
+        if (requestParameters['groupId'] == null) {
+            throw new runtime.RequiredError(
+                'groupId',
+                'Required parameter "groupId" was null or undefined when calling changeRole().'
+            );
+        }
+
+        if (requestParameters['targetUserId'] == null) {
+            throw new runtime.RequiredError(
+                'targetUserId',
+                'Required parameter "targetUserId" was null or undefined when calling changeRole().'
+            );
+        }
+
+        if (requestParameters['newRole'] == null) {
+            throw new runtime.RequiredError(
+                'newRole',
+                'Required parameter "newRole" was null or undefined when calling changeRole().'
+            );
+        }
+
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling changeRole().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/group/changeRole/{group_id}/{target_user_id}/{new_role}`.replace(`{${"group_id"}}`, encodeURIComponent(String(requestParameters['groupId']))).replace(`{${"target_user_id"}}`, encodeURIComponent(String(requestParameters['targetUserId']))).replace(`{${"new_role"}}`, encodeURIComponent(String(requestParameters['newRole']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<boolean>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     * Change a member\'s role (requires Admin+ role, cannot set to Owner)
+     */
+    async changeRole(requestParameters: ChangeRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<boolean> {
+        const response = await this.changeRoleRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Create Group
@@ -122,7 +272,7 @@ export class GroupApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete group
+     * Delete group (requires Owner role)
      */
     async deleteGroupRaw(requestParameters: DeleteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<boolean>> {
         if (requestParameters['id'] == null) {
@@ -149,7 +299,7 @@ export class GroupApi extends runtime.BaseAPI {
 
         const response = await this.request({
             path: `/group/delete/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
-            method: 'DELETE',
+            method: 'POST',
             headers: headerParameters,
             query: queryParameters,
         }, initOverrides);
@@ -162,7 +312,7 @@ export class GroupApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete group
+     * Delete group (requires Owner role)
      */
     async deleteGroup(requestParameters: DeleteGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<boolean> {
         const response = await this.deleteGroupRaw(requestParameters, initOverrides);
@@ -217,6 +367,39 @@ export class GroupApi extends runtime.BaseAPI {
     }
 
     /**
+     * Get group preview by id (no auth required)
+     */
+    async getGroupPreviewEndpointRaw(requestParameters: GetGroupPreviewEndpointRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GroupDTO>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling getGroupPreviewEndpoint().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/group/preview/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GroupDTOFromJSON(jsonValue));
+    }
+
+    /**
+     * Get group preview by id (no auth required)
+     */
+    async getGroupPreviewEndpoint(requestParameters: GetGroupPreviewEndpointRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GroupDTO> {
+        const response = await this.getGroupPreviewEndpointRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Get the group membership types
      */
     async getMembershipTypesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<string>>> {
@@ -265,6 +448,32 @@ export class GroupApi extends runtime.BaseAPI {
      */
     async getPrivacyTypes(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<string>> {
         const response = await this.getPrivacyTypesRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get all public groups (no auth required)
+     */
+    async getPublicGroupsEndpointRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<GroupDTO>>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/group/public`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(GroupDTOFromJSON));
+    }
+
+    /**
+     * Get all public groups (no auth required)
+     */
+    async getPublicGroupsEndpoint(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<GroupDTO>> {
+        const response = await this.getPublicGroupsEndpointRaw(initOverrides);
         return await response.value();
     }
 
@@ -361,7 +570,62 @@ export class GroupApi extends runtime.BaseAPI {
     }
 
     /**
-     * Leave group
+     * Kick a member from a group (requires Admin+ role, actor must outrank target)
+     */
+    async kickMemberRaw(requestParameters: KickMemberRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<boolean>> {
+        if (requestParameters['groupId'] == null) {
+            throw new runtime.RequiredError(
+                'groupId',
+                'Required parameter "groupId" was null or undefined when calling kickMember().'
+            );
+        }
+
+        if (requestParameters['targetUserId'] == null) {
+            throw new runtime.RequiredError(
+                'targetUserId',
+                'Required parameter "targetUserId" was null or undefined when calling kickMember().'
+            );
+        }
+
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling kickMember().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/group/kick/{group_id}/{target_user_id}`.replace(`{${"group_id"}}`, encodeURIComponent(String(requestParameters['groupId']))).replace(`{${"target_user_id"}}`, encodeURIComponent(String(requestParameters['targetUserId']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<boolean>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     * Kick a member from a group (requires Admin+ role, actor must outrank target)
+     */
+    async kickMember(requestParameters: KickMemberRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<boolean> {
+        const response = await this.kickMemberRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Leave group (Owner cannot leave — must transfer ownership first)
      */
     async leaveGroupRaw(requestParameters: LeaveGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<boolean>> {
         if (requestParameters['groupId'] == null) {
@@ -401,7 +665,7 @@ export class GroupApi extends runtime.BaseAPI {
     }
 
     /**
-     * Leave group
+     * Leave group (Owner cannot leave — must transfer ownership first)
      */
     async leaveGroup(requestParameters: LeaveGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<boolean> {
         const response = await this.leaveGroupRaw(requestParameters, initOverrides);
@@ -483,7 +747,62 @@ export class GroupApi extends runtime.BaseAPI {
     }
 
     /**
-     * Update group
+     * Transfer group ownership (requires Owner role)
+     */
+    async transferOwnershipRaw(requestParameters: TransferOwnershipRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<boolean>> {
+        if (requestParameters['groupId'] == null) {
+            throw new runtime.RequiredError(
+                'groupId',
+                'Required parameter "groupId" was null or undefined when calling transferOwnership().'
+            );
+        }
+
+        if (requestParameters['newOwnerId'] == null) {
+            throw new runtime.RequiredError(
+                'newOwnerId',
+                'Required parameter "newOwnerId" was null or undefined when calling transferOwnership().'
+            );
+        }
+
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling transferOwnership().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/group/transferOwnership/{group_id}/{new_owner_id}`.replace(`{${"group_id"}}`, encodeURIComponent(String(requestParameters['groupId']))).replace(`{${"new_owner_id"}}`, encodeURIComponent(String(requestParameters['newOwnerId']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<boolean>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     * Transfer group ownership (requires Owner role)
+     */
+    async transferOwnership(requestParameters: TransferOwnershipRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<boolean> {
+        const response = await this.transferOwnershipRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Update group (requires Admin+ role)
      */
     async updateGroupRaw(requestParameters: UpdateGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GroupDTO>> {
         if (requestParameters['pulsarrApiKey'] == null) {
@@ -522,7 +841,7 @@ export class GroupApi extends runtime.BaseAPI {
     }
 
     /**
-     * Update group
+     * Update group (requires Admin+ role)
      */
     async updateGroup(requestParameters: UpdateGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GroupDTO> {
         const response = await this.updateGroupRaw(requestParameters, initOverrides);

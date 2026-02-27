@@ -3,13 +3,14 @@
     import { Button } from "@/components/ui/button";
     import { Label } from "@/components/ui/label";
     import { Input } from "@/components/ui/input";
-    import { ref, computed } from "vue";
+    import { ref, computed, watch } from "vue";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import { toast } from 'vue-sonner';
-    import type { GroupDTO } from "@/apiClient";
+    import type { GroupDTO, Rating, RatingDetail } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
-    import { Music, X, Disc, User } from "lucide-vue-next";
+    import { Music, X, Disc, User, Clock, Info } from "lucide-vue-next";
+    import { formatDate, formatRatingValue } from "@/helpers/ratingFormatters";
     import MusicSearchModal, { type SelectedMusic } from "@/components/modals/MusicSearchModal.vue";
 
     interface ParameterRating {
@@ -23,11 +24,14 @@
     const props = defineProps<{
         showDialog: boolean;
         group: GroupDTO;
+        editRating?: Rating | null;
+        editCoverArtUrl?: string;
     }>();
 
     const emit = defineEmits<{
         'update:showDialog': [value: boolean];
         'created': [];
+        'updated': [];
     }>();
 
     const { user } = storeToRefs(useContextStore());
@@ -40,11 +44,22 @@
     const submitting = ref(false);
     const error = ref<string | null>(null);
 
+    // Edit mode state
+    const editingRatingId = ref<number | null>(null);
+    const editingRating = ref<Rating | null>(null);
+    const editingRatingDetails = ref<RatingDetail[]>([]);
+
+    const isEditMode = computed(() => editingRatingId.value !== null);
+    const isOutdatedEdit = computed(() => {
+        if (!isEditMode.value || !editingRating.value) return false;
+        return editingRating.value.rating_system_id !== props.group.rating_system_id;
+    });
+    const isEditFromProp = computed(() => props.editRating != null);
+
     const ratingMax = computed(() => {
         return props.group.rating_system?.rating_max || '10';
     });
 
-    // Rating type and calculation logic
     const ratingType = computed(() => {
         return props.group.rating_system?.master_rating_type || 'Absolute';
     });
@@ -68,7 +83,6 @@
         const ratings = parameterRatings.value;
 
         if (ratingType.value === 'Average') {
-            // Weighted average: (sum of value * weight) / (sum of weights)
             let weightedSum = 0;
             let totalWeight = 0;
             ratings.forEach(r => {
@@ -81,7 +95,6 @@
         }
 
         if (ratingType.value === 'Cumulative') {
-            // Weighted sum: sum of (value * weight)
             let sum = 0;
             ratings.forEach(r => {
                 const value = parseFloat(r.value) || 0;
@@ -97,7 +110,6 @@
     const calculatedMax = computed(() => {
         if (ratingType.value !== 'Cumulative' || !hasParameters.value) return null;
 
-        // Sum of (param_max * weight)
         let maxSum = 0;
         parameterRatings.value.forEach(p => {
             const max = parseFloat(p.max) || 0;
@@ -126,9 +138,68 @@
         }
     };
 
+    const prefillFromExisting = (rating: Rating, details: RatingDetail[]) => {
+        // Only pre-fill if same rating system (not outdated)
+        if (rating.rating_system_id === props.group.rating_system_id) {
+            ratingValue.value = rating.rating_value;
+            comments.value = rating.comments;
+            // Pre-fill parameter values from details
+            if (details.length > 0) {
+                for (const detail of details) {
+                    const param = parameterRatings.value.find(
+                        p => p.rating_system_parameter_id === detail.rating_system_parameter_id
+                    );
+                    if (param) {
+                        param.value = detail.rating_value;
+                    }
+                }
+            }
+        } else {
+            // Outdated: leave form empty for fresh re-rating with new system
+            comments.value = '';
+            ratingValue.value = '';
+        }
+    };
+
+    const fetchRatingDetails = (ratingId: number, callback: (details: RatingDetail[]) => void) => {
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = (data) => {
+            callback(data as RatingDetail[]);
+        };
+        drh.onErrorCallback = () => {
+            callback([]);
+        };
+        drh.get(`/rating/rating_detail/by_rating/${ratingId}`);
+    };
+
+    const enterEditModeFromExisting = (rating: Rating) => {
+        editingRatingId.value = rating.rating_id;
+        editingRating.value = rating;
+        initializeParameterRatings();
+        fetchRatingDetails(rating.rating_id, (details) => {
+            editingRatingDetails.value = details;
+            prefillFromExisting(rating, details);
+        });
+    };
+
+    const fetchExistingRatings = (musicbrainzId: string) => {
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = (data) => {
+            const existing = data as Rating[];
+            if (existing.length > 0) {
+                enterEditModeFromExisting(existing[0]);
+            }
+        };
+        drh.onErrorCallback = () => {
+            // No existing ratings, stay in add mode
+        };
+        drh.get(`/rating/existing/${props.group.pulsarr_group_id}/${musicbrainzId}`);
+    };
+
     const onMusicSelected = (music: SelectedMusic) => {
         selectedMusic.value = music;
         initializeParameterRatings();
+        fetchExistingRatings(music.musicbrainz_id);
     };
 
     const clearSelection = () => {
@@ -136,6 +207,9 @@
         ratingValue.value = '';
         comments.value = '';
         parameterRatings.value = [];
+        editingRatingId.value = null;
+        editingRating.value = null;
+        editingRatingDetails.value = [];
     };
 
     const closeDialog = () => {
@@ -151,6 +225,79 @@
             case 'artist': return User;
             default: return Music;
         }
+    };
+
+    // Watch for editRating prop to enter edit mode when opened from RatingDetailModal
+    watch(() => props.editRating, (newVal) => {
+        if (newVal && props.showDialog) {
+            setupEditFromProp(newVal);
+        }
+    });
+
+    watch(() => props.showDialog, (isOpen) => {
+        if (isOpen && props.editRating) {
+            setupEditFromProp(props.editRating);
+        }
+    });
+
+    const setupEditFromProp = (rating: Rating) => {
+        selectedMusic.value = {
+            musicbrainz_id: rating.musicbrainz_id,
+            media_title: rating.media_title,
+            artist_name: rating.artist_name,
+            media_type: rating.media_type,
+            release_date: rating.release_date,
+            cover_art_url: props.editCoverArtUrl || undefined,
+        };
+        editingRatingId.value = rating.rating_id;
+        editingRating.value = rating;
+        initializeParameterRatings();
+        fetchRatingDetails(rating.rating_id, (details) => {
+            editingRatingDetails.value = details;
+            prefillFromExisting(rating, details);
+        });
+    };
+
+
+    const createRatingDetails = (ratingId: number, onComplete: () => void) => {
+        const details = parameterRatings.value.filter(p => p.value);
+        if (details.length === 0) {
+            onComplete();
+            return;
+        }
+        let remaining = details.length;
+        const onDetailDone = () => {
+            remaining--;
+            if (remaining === 0) onComplete();
+        };
+        for (const p of details) {
+            const detailDrh = new DataRequestHandler();
+            detailDrh.onSuccessCallback = () => onDetailDone();
+            detailDrh.onErrorCallback = () => {
+                console.error('Failed to create rating detail');
+                onDetailDone();
+            };
+            detailDrh.post('/rating/rating_detail/add', {
+                rating_detail_id: 0,
+                rating_id: ratingId,
+                rating_system_parameter_id: p.rating_system_parameter_id,
+                rating_value: p.value
+            });
+        }
+    };
+
+    const replaceRatingDetails = (ratingId: number, onComplete: () => void) => {
+        // Delete old details, then create new ones
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = () => {
+            createRatingDetails(ratingId, onComplete);
+        };
+        drh.onErrorCallback = () => {
+            console.error('Failed to delete old rating details');
+            // Still try to create new ones
+            createRatingDetails(ratingId, onComplete);
+        };
+        drh.delete(`/rating/rating_detail/by_rating/${ratingId}`);
     };
 
     const submit = () => {
@@ -190,7 +337,52 @@
         submitting.value = true;
         error.value = null;
 
-        // Format date for NaiveDateTime (no timezone, format: YYYY-MM-DDTHH:MM:SS)
+        if (isEditMode.value) {
+            submitUpdate(finalRatingValue);
+        } else {
+            submitCreate(finalRatingValue);
+        }
+    };
+
+    const submitUpdate = (finalRatingValue: string) => {
+        if (!editingRating.value || !user.value) return;
+
+        const updatePayload: Rating = {
+            rating_id: editingRating.value.rating_id,
+            pulsarr_user_id: user.value.pulsarr_user_id,
+            pulsarr_group_id: props.group.pulsarr_group_id,
+            rating_system_id: props.group.rating_system_id,
+            comments: comments.value,
+            rating_value: finalRatingValue,
+            media_type: editingRating.value.media_type,
+            media_title: editingRating.value.media_title,
+            musicbrainz_id: editingRating.value.musicbrainz_id,
+            artist_name: editingRating.value.artist_name,
+            rating_date: editingRating.value.rating_date,
+            release_date: editingRating.value.release_date,
+        };
+
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = () => {
+            replaceRatingDetails(editingRating.value!.rating_id, () => {
+                submitting.value = false;
+                toast.success('Rating updated');
+                emit('updated');
+                closeDialog();
+            });
+        };
+        drh.onErrorCallback = (err) => {
+            error.value = 'Failed to update rating';
+            submitting.value = false;
+            toast.error('Failed to update rating');
+            console.error('Failed to update rating:', err);
+        };
+        drh.post('/rating/update', updatePayload);
+    };
+
+    const submitCreate = (finalRatingValue: string) => {
+        if (!selectedMusic.value || !user.value) return;
+
         const formatNaiveDateTime = (date: Date): string => {
             return date.toISOString().slice(0, 19);
         };
@@ -216,40 +408,12 @@
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data: any) => {
             const createdRatingId = data.rating_id;
-
-            // Create rating details for each parameter
-            const details = parameterRatings.value.filter(p => p.value);
-            if (details.length > 0) {
-                let remaining = details.length;
-                const onDetailDone = () => {
-                    remaining--;
-                    if (remaining === 0) {
-                        submitting.value = false;
-                        toast.success('Rating submitted');
-                        emit('created');
-                        closeDialog();
-                    }
-                };
-                for (const p of details) {
-                    const detailDrh = new DataRequestHandler();
-                    detailDrh.onSuccessCallback = () => onDetailDone();
-                    detailDrh.onErrorCallback = () => {
-                        console.error('Failed to create rating detail');
-                        onDetailDone();
-                    };
-                    detailDrh.post('/rating/rating_detail/add', {
-                        rating_detail_id: 0,
-                        rating_id: createdRatingId,
-                        rating_system_parameter_id: p.rating_system_parameter_id,
-                        rating_value: p.value
-                    });
-                }
-            } else {
+            createRatingDetails(createdRatingId, () => {
                 submitting.value = false;
                 toast.success('Rating submitted');
                 emit('created');
                 closeDialog();
-            }
+            });
         };
         drh.onErrorCallback = (err) => {
             error.value = 'Failed to create rating';
@@ -269,9 +433,9 @@
         </DialogTrigger>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Add Rating</DialogTitle>
+                <DialogTitle>{{ isEditMode ? 'Edit Rating' : 'Add Rating' }}</DialogTitle>
                 <DialogDescription>
-                    Rate music in {{ group.name }}
+                    {{ isEditMode ? 'Update your rating in' : 'Rate music in' }} {{ group.name }}
                 </DialogDescription>
             </DialogHeader>
 
@@ -309,10 +473,42 @@
                             <div class="text-sm text-muted-foreground truncate">{{ selectedMusic.artist_name }}</div>
                             <div class="text-xs text-muted-foreground capitalize">{{ selectedMusic.media_type }}</div>
                         </div>
-                        <Button variant="ghost" size="icon" aria-label="Clear music selection" @click="clearSelection">
+                        <Button v-if="!isEditFromProp" variant="ghost" size="icon" aria-label="Clear music selection" @click="clearSelection">
                             <X class="w-4 h-4" />
                         </Button>
                     </div>
+                </div>
+
+                <!-- Edit Mode: Outdated Previous Rating Reference -->
+                <div v-if="isEditMode && isOutdatedEdit && editingRating" class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md space-y-2">
+                    <div class="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                        <Clock class="w-3 h-3" />
+                        Previous Rating (Outdated System)
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-semibold">{{ formatRatingValue(editingRating.rating_value) }}</span>
+                        <span class="text-xs text-muted-foreground">{{ formatDate(editingRating.rating_date) }}</span>
+                    </div>
+                    <p v-if="editingRating.comments" class="text-xs text-muted-foreground line-clamp-3">
+                        {{ editingRating.comments }}
+                    </p>
+                    <!-- Show old parameter details if available -->
+                    <div v-if="editingRatingDetails.length > 0" class="space-y-1 pt-1 border-t border-amber-500/20">
+                        <div
+                            v-for="detail in editingRatingDetails"
+                            :key="detail.rating_detail_id"
+                            class="flex justify-between text-xs"
+                        >
+                            <span class="text-muted-foreground">{{ detail.parameter_name || 'Unknown' }}</span>
+                            <span class="font-mono">{{ formatRatingValue(detail.rating_value) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Mode: Same system info banner -->
+                <div v-if="isEditMode && !isOutdatedEdit" class="flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-md text-sm">
+                    <Info class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <span class="text-blue-700 dark:text-blue-400">Editing your existing rating. Your previous values have been pre-filled.</span>
                 </div>
 
                 <!-- Parameter Ratings (shown first for non-Absolute types) -->
@@ -398,7 +594,7 @@
                     :disabled="!selectedMusic || submitting || (isManualOverall ? !ratingValue : !calculatedRating)"
                     @click="submit"
                 >
-                    {{ submitting ? 'Submitting...' : 'Submit Rating' }}
+                    {{ submitting ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Rating' : 'Submit Rating') }}
                 </Button>
             </DialogFooter>
         </DialogContent>

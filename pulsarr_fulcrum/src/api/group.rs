@@ -1,5 +1,6 @@
 use crate::api::dtos::get_request::GetRequest;
 use crate::api::dtos::group_dto::GroupDTO;
+use crate::api::dtos::rating_system_dto::RatingSystemDTO;
 use crate::api::dtos::{
     group_dto, group_member_dto, rating_system_dto, rating_system_parameter_dto,
 };
@@ -11,13 +12,15 @@ use crate::data::models::pulsarr_group;
 use crate::data::models::pulsarr_group::PulsarrGroup;
 use crate::data::models::pulsarr_user::PulsarrUser;
 use crate::data::models::rating_system::RatingSystem;
+use crate::data::models::rating_system_template::RatingSystemTemplate;
 use crate::data::models::user_group;
 use crate::data::models::rating_system_parameter::RatingSystemParameter;
-use crate::data::models::{pulsarr_user, rating_system_parameter};
+use crate::data::models::{pulsarr_user, rating_system_parameter, rating_system_template_parameter};
 use crate::error::PulsarrError;
 use crate::{PostgresState, PulsarrResult};
 use rocket::serde::json::Json;
 use rocket::{get, post, State};
+use sqlx::types::Decimal;
 use rocket_okapi::okapi::openapi3::OpenApi;
 use rocket_okapi::settings::OpenApiSettings;
 use rocket_okapi::{openapi, openapi_get_routes_spec};
@@ -27,7 +30,7 @@ pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, O
     openapi_get_routes_spec![settings: update_group, delete_group, get_pulsarr_group,
         get_all_groups, get_privacy_types, create_group, get_membership_types, join_group, leave_group,
         search_groups, my_groups, get_public_groups_endpoint, get_group_preview_endpoint,
-        kick_member, change_role, transfer_ownership]
+        kick_member, change_role, transfer_ownership, change_rating_system]
 }
 
 /// # Get the group privacy types
@@ -180,7 +183,59 @@ async fn create_group(
     let mut group = group_dto.into_inner();
     let ApiKey(user_id) = _api_user;
     group.created_by_user_id = Some(user_id);
-    if group.rating_system_id == 0 {
+
+    // Check if a template_id is provided (clone from template)
+    let template_id_from_dto = group.rating_system.as_ref().and_then(|rs| rs.template_id);
+
+    if group.rating_system_id == 0 && template_id_from_dto.is_some() {
+        // Clone from template
+        let tid = template_id_from_dto.unwrap();
+        let template = match data_wrangler::get_by_id::<RatingSystemTemplate>(tid, &state.pool).await {
+            Ok(t) => t,
+            Err(e) => return Err(e),
+        };
+        let template_params = match rating_system_template_parameter::get_by_template_id(tid)
+            .fetch_all(&state.pool).await
+        {
+            Ok(p) => p,
+            Err(e) => return Err(PulsarrError::validation_error(e)),
+        };
+
+        let new_rs = RatingSystem {
+            rating_system_id: 0,
+            master_rating_type: template.master_rating_type,
+            rating_max: template.rating_max,
+            name: template.name,
+            template_id: Some(tid),
+        };
+        let created_rs = match data_wrangler::add(new_rs, &state.pool).await {
+            Ok(rs) => rs,
+            Err(e) => return Err(e),
+        };
+        group.rating_system_id = created_rs.rating_system_id;
+
+        for tp in &template_params {
+            let param = RatingSystemParameter {
+                rating_system_parameter_id: 0,
+                rating_system_id: created_rs.rating_system_id,
+                name: tp.name.clone(),
+                parameter_rating_max: tp.parameter_rating_max,
+                weight: tp.weight,
+            };
+            if let Err(e) = data_wrangler::add(param, &state.pool).await {
+                return Err(e);
+            }
+        }
+
+        let params = match rating_system_parameter::get_by_rating_system_id(created_rs.rating_system_id)
+            .fetch_all(&state.pool).await
+        {
+            Ok(p) => p,
+            Err(e) => return Err(PulsarrError::validation_error(e)),
+        };
+        group.rating_system = Some(rating_system_dto::to_dto(&created_rs, Some(params)));
+    } else if group.rating_system_id == 0 {
+        // Inline creation (no template)
         match group.rating_system {
             Some(rsd) => {
                 match data_wrangler::add(rating_system_dto::to_model(&rsd), &state.pool).await {
@@ -452,4 +507,101 @@ async fn transfer_ownership(
         Ok(_) => Ok(Json(true)),
         Err(e) => Err(PulsarrError::validation_error(e)),
     }
+}
+
+/// # Change a group's rating system (requires Admin+ role)
+///
+/// Creates a new rating system from the provided definition and assigns it to the group.
+/// Old ratings keep their previous rating_system_id, marking them as "outdated".
+#[openapi(tag = "Group")]
+#[post("/changeRatingSystem/<group_id>", format = "application/json", data = "<rating_system_dto>")]
+async fn change_rating_system(
+    state: &State<PostgresState>,
+    group_id: i32,
+    rating_system_dto: Json<RatingSystemDTO>,
+    api_user: ApiKey,
+) -> PulsarrResult<GroupDTO> {
+    let ApiKey(user_id) = api_user;
+    authorization::require_role(&state.pool, group_id, user_id, ADMIN_ROLE).await?;
+
+    let rs_dto = rating_system_dto.into_inner();
+
+    // If cloning from a template, fetch template data
+    let (new_rs, param_sources) = if let Some(tid) = rs_dto.template_id {
+        let template = match data_wrangler::get_by_id::<RatingSystemTemplate>(tid, &state.pool).await {
+            Ok(t) => t,
+            Err(e) => return Err(e),
+        };
+        let template_params = match rating_system_template_parameter::get_by_template_id(tid)
+            .fetch_all(&state.pool).await
+        {
+            Ok(p) => p,
+            Err(e) => return Err(PulsarrError::validation_error(e)),
+        };
+        let rs = RatingSystem {
+            rating_system_id: 0,
+            master_rating_type: template.master_rating_type,
+            rating_max: template.rating_max,
+            name: template.name,
+            template_id: Some(tid),
+        };
+        let params: Vec<(String, Decimal, Decimal)> = template_params.iter()
+            .map(|p| (p.name.clone(), p.parameter_rating_max, p.weight))
+            .collect();
+        (rs, params)
+    } else {
+        // Inline creation from the DTO
+        let rs = rating_system_dto::to_model(&rs_dto);
+        let params: Vec<(String, Decimal, Decimal)> = rs_dto.parameters
+            .as_ref()
+            .map(|p| p.iter().map(|param| {
+                (param.name.clone(), param.parameter_rating_max, param.weight)
+            }).collect())
+            .unwrap_or_default();
+        (rs, params)
+    };
+
+    // Create the new rating system
+    let created_rs = match data_wrangler::add(new_rs, &state.pool).await {
+        Ok(rs) => rs,
+        Err(e) => return Err(e),
+    };
+
+    // Create parameter rows
+    for (name, max, weight) in &param_sources {
+        let param = RatingSystemParameter {
+            rating_system_parameter_id: 0,
+            rating_system_id: created_rs.rating_system_id,
+            name: name.clone(),
+            parameter_rating_max: *max,
+            weight: *weight,
+        };
+        if let Err(e) = data_wrangler::add(param, &state.pool).await {
+            return Err(e);
+        }
+    }
+
+    // Update the group's rating_system_id (old ratings keep their old rating_system_id)
+    let pg = match data_wrangler::get_by_id::<PulsarrGroup>(group_id, &state.pool).await {
+        Ok(pg) => pg,
+        Err(e) => return Err(e),
+    };
+    let updated_group = PulsarrGroup {
+        rating_system_id: created_rs.rating_system_id,
+        ..pg
+    };
+    let saved_group = match data_wrangler::update(updated_group, &state.pool).await {
+        Ok(g) => g,
+        Err(e) => return Err(e),
+    };
+
+    // Build response with hydrated rating system
+    let params = match rating_system_parameter::get_by_rating_system_id(created_rs.rating_system_id)
+        .fetch_all(&state.pool).await
+    {
+        Ok(p) => p,
+        Err(e) => return Err(PulsarrError::validation_error(e)),
+    };
+
+    Ok(Json(group_dto::to_dto(&saved_group, Some(&created_rs), Some(params))))
 }

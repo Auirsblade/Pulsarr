@@ -43,6 +43,12 @@ export interface RatingSystem {
      * @memberof RatingSystem
      */
     name: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof RatingSystem
+     */
+    template_id?: number | null;
 }
 
 /**
@@ -70,6 +76,7 @@ export function RatingSystemFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'master_rating_type': json['master_rating_type'],
         'rating_max': json['rating_max'],
         'name': json['name'],
+        'template_id': json['template_id'] == null ? undefined : json['template_id'],
     };
 }
 
@@ -88,6 +95,7 @@ export function RatingSystemToJSONTyped(value?: RatingSystem | null, ignoreDiscr
         'master_rating_type': value['master_rating_type'],
         'rating_max': value['rating_max'],
         'name': value['name'],
+        'template_id': value['template_id'],
     };
 }
 

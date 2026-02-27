@@ -1,11 +1,14 @@
 <script setup lang="ts">
-    import type { Rating, RatingDetail, RatingSystemDTO } from "@/apiClient";
+    import type { Rating, RatingDetail, RatingSystemDTO, GroupDTO } from "@/apiClient";
     import { Dialog, DialogScrollContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-    import { Star, MessageSquare } from "lucide-vue-next";
+    import { Button } from "@/components/ui/button";
+    import { Star, MessageSquare, AlertTriangle, Pencil } from "lucide-vue-next";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler";
     import { formatDate, formatRatingValue } from "@/helpers/ratingFormatters";
+    import { useContextStore } from "@/stores/context";
+    import { storeToRefs } from "pinia";
     import { RouterLink } from "vue-router";
-    import { ref, watch } from "vue";
+    import { ref, computed, watch } from "vue";
 
     const props = defineProps<{
         rating: Rating | null;
@@ -14,11 +17,28 @@
         userName: string;
         groupName?: string;
         ratingSystem?: RatingSystemDTO | null;
+        outdated?: boolean;
+        group?: GroupDTO | null;
     }>();
 
-    defineEmits<{
+    const emit = defineEmits<{
         'update:open': [value: boolean];
+        'edit': [rating: Rating];
     }>();
+
+    const { user } = storeToRefs(useContextStore());
+
+    const isOwner = computed(() => {
+        if (!props.rating || !user.value) return false;
+        return props.rating.pulsarr_user_id === user.value.pulsarr_user_id;
+    });
+
+    const onEdit = () => {
+        if (props.rating) {
+            emit('edit', props.rating);
+            emit('update:open', false);
+        }
+    };
 
     const ratingDetails = ref<RatingDetail[]>([]);
     const detailsLoaded = ref(false);
@@ -74,6 +94,12 @@
             </DialogHeader>
 
             <div class="space-y-4">
+                <!-- Outdated Banner -->
+                <div v-if="outdated" class="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm">
+                    <AlertTriangle class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <span class="text-amber-700 dark:text-amber-400">This rating was made under a previous rating system.</span>
+                </div>
+
                 <!-- Album Art (larger in modal) -->
                 <div v-if="coverArtUrl" class="w-full max-w-[250px] mx-auto aspect-square bg-muted rounded-md overflow-hidden">
                     <img
@@ -84,7 +110,7 @@
                 </div>
 
                 <!-- Rating Breakdown -->
-                <div v-if="hasParameters() && ratingDetails.length > 0" class="space-y-2">
+                <div v-if="ratingDetails.length > 0" class="space-y-2">
                     <h4 class="text-sm font-semibold">Rating Breakdown</h4>
                     <div class="p-3 bg-muted/50 rounded-md space-y-2">
                         <div
@@ -93,14 +119,14 @@
                             class="flex justify-between text-sm"
                         >
                             <span class="text-muted-foreground">
-                                {{ getParameterInfo(detail.rating_system_parameter_id)?.name || 'Unknown' }}
+                                {{ getParameterInfo(detail.rating_system_parameter_id)?.name || detail.parameter_name || 'Unknown' }}
                                 <span v-if="parseFloat(getParameterInfo(detail.rating_system_parameter_id)?.weight || '1') !== 1" class="text-xs">
                                     ({{ getParameterInfo(detail.rating_system_parameter_id)?.weight }}x)
                                 </span>
                             </span>
                             <span class="font-mono">
                                 {{ formatRatingValue(detail.rating_value) }}
-                                <span class="text-muted-foreground">/ {{ getParameterInfo(detail.rating_system_parameter_id)?.parameter_rating_max }}</span>
+                                <span v-if="getParameterInfo(detail.rating_system_parameter_id)?.parameter_rating_max" class="text-muted-foreground">/ {{ getParameterInfo(detail.rating_system_parameter_id)?.parameter_rating_max }}</span>
                             </span>
                         </div>
                     </div>
@@ -120,6 +146,17 @@
                     <span>by {{ userName }}</span>
                     <span>{{ formatDate(rating.rating_date) }}</span>
                 </div>
+
+                <!-- Edit Button (owner only) -->
+                <Button
+                    v-if="isOwner && group"
+                    variant="outline"
+                    class="w-full"
+                    @click="onEdit"
+                >
+                    <Pencil class="w-4 h-4 mr-1" />
+                    Edit Rating
+                </Button>
             </div>
         </DialogScrollContent>
     </Dialog>

@@ -1,8 +1,10 @@
 /* tslint:disable */
 /* eslint-disable */
 export * from './Artist';
+export * from './ArtistCount';
 export * from './ArtistCredit';
 export * from './ArtistSearchResponse';
+export * from './ChangePasswordRequest';
 export * from './CoverArtArchive';
 export * from './CoverArtImage';
 export * from './CoverArtInfo';
@@ -15,12 +17,17 @@ export * from './Label';
 export * from './LabelInfo';
 export * from './LifeSpan';
 export * from './Media';
+export * from './PaginatedGroupRatingsRequest';
 export * from './Rating';
 export * from './RatingDetail';
+export * from './RatingDetailResponse';
 export * from './RatingSystem';
 export * from './RatingSystemDTO';
 export * from './RatingSystemParameter';
 export * from './RatingSystemParameterDTO';
+export * from './RatingSystemTemplate';
+export * from './RatingSystemTemplateDTO';
+export * from './RatingSystemTemplateParameterDTO';
 export * from './Recording';
 export * from './RecordingSearchResponse';
 export * from './Release';
@@ -31,4 +38,5 @@ export * from './SignInRequest';
 export * from './SignInResponse';
 export * from './Track';
 export * from './UserDTO';
+export * from './UserRatingStats';
 export * from './Work';

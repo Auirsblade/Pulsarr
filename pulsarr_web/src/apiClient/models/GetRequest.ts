@@ -25,6 +25,12 @@ export interface GetRequest {
      * @memberof GetRequest
      */
     take_size?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof GetRequest
+     */
+    offset?: number | null;
 }
 
 /**
@@ -45,6 +51,7 @@ export function GetRequestFromJSONTyped(json: any, ignoreDiscriminator: boolean)
     return {
         
         'take_size': json['take_size'] == null ? undefined : json['take_size'],
+        'offset': json['offset'] == null ? undefined : json['offset'],
     };
 }
 
@@ -60,6 +67,7 @@ export function GetRequestToJSONTyped(value?: GetRequest | null, ignoreDiscrimin
     return {
         
         'take_size': value['take_size'],
+        'offset': value['offset'],
     };
 }
 

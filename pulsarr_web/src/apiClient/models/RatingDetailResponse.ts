@@ -16,57 +16,58 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface RatingDetail
+ * @interface RatingDetailResponse
  */
-export interface RatingDetail {
+export interface RatingDetailResponse {
     /**
      * 
      * @type {number}
-     * @memberof RatingDetail
+     * @memberof RatingDetailResponse
      */
     rating_detail_id: number;
     /**
      * 
      * @type {number}
-     * @memberof RatingDetail
+     * @memberof RatingDetailResponse
      */
     rating_id: number;
     /**
      * 
      * @type {number}
-     * @memberof RatingDetail
+     * @memberof RatingDetailResponse
      */
     rating_system_parameter_id: number;
     /**
      * 
      * @type {string}
-     * @memberof RatingDetail
+     * @memberof RatingDetailResponse
      */
     rating_value: string;
     /**
-     *
+     * 
      * @type {string}
-     * @memberof RatingDetail
+     * @memberof RatingDetailResponse
      */
-    parameter_name?: string;
+    parameter_name: string;
 }
 
 /**
- * Check if a given object implements the RatingDetail interface.
+ * Check if a given object implements the RatingDetailResponse interface.
  */
-export function instanceOfRatingDetail(value: object): value is RatingDetail {
+export function instanceOfRatingDetailResponse(value: object): value is RatingDetailResponse {
     if (!('rating_detail_id' in value) || value['rating_detail_id'] === undefined) return false;
     if (!('rating_id' in value) || value['rating_id'] === undefined) return false;
     if (!('rating_system_parameter_id' in value) || value['rating_system_parameter_id'] === undefined) return false;
     if (!('rating_value' in value) || value['rating_value'] === undefined) return false;
+    if (!('parameter_name' in value) || value['parameter_name'] === undefined) return false;
     return true;
 }
 
-export function RatingDetailFromJSON(json: any): RatingDetail {
-    return RatingDetailFromJSONTyped(json, false);
+export function RatingDetailResponseFromJSON(json: any): RatingDetailResponse {
+    return RatingDetailResponseFromJSONTyped(json, false);
 }
 
-export function RatingDetailFromJSONTyped(json: any, ignoreDiscriminator: boolean): RatingDetail {
+export function RatingDetailResponseFromJSONTyped(json: any, ignoreDiscriminator: boolean): RatingDetailResponse {
     if (json == null) {
         return json;
     }
@@ -80,11 +81,11 @@ export function RatingDetailFromJSONTyped(json: any, ignoreDiscriminator: boolea
     };
 }
 
-export function RatingDetailToJSON(json: any): RatingDetail {
-    return RatingDetailToJSONTyped(json, false);
+export function RatingDetailResponseToJSON(json: any): RatingDetailResponse {
+    return RatingDetailResponseToJSONTyped(json, false);
 }
 
-export function RatingDetailToJSONTyped(value?: RatingDetail | null, ignoreDiscriminator: boolean = false): any {
+export function RatingDetailResponseToJSONTyped(value?: RatingDetailResponse | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

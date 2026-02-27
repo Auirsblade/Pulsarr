@@ -53,6 +53,12 @@ export interface RatingSystemDTO {
     name: string;
     /**
      * 
+     * @type {number}
+     * @memberof RatingSystemDTO
+     */
+    template_id?: number | null;
+    /**
+     * 
      * @type {Array<RatingSystemParameterDTO>}
      * @memberof RatingSystemDTO
      */
@@ -84,6 +90,7 @@ export function RatingSystemDTOFromJSONTyped(json: any, ignoreDiscriminator: boo
         'master_rating_type': json['master_rating_type'],
         'rating_max': json['rating_max'],
         'name': json['name'],
+        'template_id': json['template_id'] == null ? undefined : json['template_id'],
         'parameters': json['parameters'] == null ? undefined : ((json['parameters'] as Array<any>).map(RatingSystemParameterDTOFromJSON)),
     };
 }
@@ -103,6 +110,7 @@ export function RatingSystemDTOToJSONTyped(value?: RatingSystemDTO | null, ignor
         'master_rating_type': value['master_rating_type'],
         'rating_max': value['rating_max'],
         'name': value['name'],
+        'template_id': value['template_id'],
         'parameters': value['parameters'] == null ? undefined : ((value['parameters'] as Array<any>).map(RatingSystemParameterDTOToJSON)),
     };
 }

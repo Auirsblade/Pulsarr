@@ -12,6 +12,8 @@ pub struct RatingSystemDTO {
     pub rating_max: Decimal,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub template_id: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parameters: Option<Vec<RatingSystemParameterDTO>>,
 }
 
@@ -21,8 +23,9 @@ pub fn to_dto(rating_system: &RatingSystem, parameters: Option<Vec<RatingSystemP
         master_rating_type: rating_system.master_rating_type.clone(),
         rating_max: rating_system.rating_max,
         name: rating_system.name.clone(),
+        template_id: rating_system.template_id,
         parameters: match parameters {
-            Some(rsps) => 
+            Some(rsps) =>
                 Some(rsps.iter().map(|rsp| rating_system_parameter_dto::to_dto(rsp))
                     .collect::<Vec<RatingSystemParameterDTO>>()),
             None => None
@@ -35,6 +38,7 @@ pub fn to_model(rating_system_dto: &RatingSystemDTO) -> RatingSystem {
         rating_system_id: rating_system_dto.rating_system_id,
         master_rating_type: rating_system_dto.master_rating_type.clone(),
         rating_max: rating_system_dto.rating_max,
-        name: rating_system_dto.name.clone()
+        name: rating_system_dto.name.clone(),
+        template_id: rating_system_dto.template_id,
     }
 }

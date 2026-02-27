@@ -8,9 +8,11 @@
     import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
     import RatingCard from "@/components/RatingCard.vue";
     import RatingDetailModal from "@/components/RatingDetailModal.vue";
+    import AddRatingModal from "@/components/modals/AddRatingModal.vue";
     import EmptyState from "@/components/EmptyState.vue";
     import LoadingSpinner from "@/components/LoadingSpinner.vue";
     import { formatRatingValue } from "@/helpers/ratingFormatters";
+    import type { GroupDTO } from "@/apiClient";
 
     interface CoverArtInfo {
         front?: string;
@@ -43,6 +45,30 @@
     const sentinel = ref<HTMLElement | null>(null);
     let observer: IntersectionObserver | null = null;
 
+    // Edit rating state
+    const editingRating = ref<Rating | null>(null);
+    const editGroup = ref<GroupDTO | null>(null);
+    const showEditModal = ref(false);
+
+    const onEditRating = (rating: Rating) => {
+        const group = feedStore.getGroupForRating(rating.pulsarr_group_id);
+        if (!group) {
+            console.error('Could not find group for rating');
+            return;
+        }
+        editingRating.value = rating;
+        editGroup.value = group;
+        showRatingModal.value = false;
+        showEditModal.value = true;
+    };
+
+    const onRatingUpdated = () => {
+        editingRating.value = null;
+        editGroup.value = null;
+        showEditModal.value = false;
+        fetchRatings(0);
+    };
+
     const PAGE_SIZE = 20;
 
     const fetchCoverArt = (releaseId: string) => {
@@ -64,6 +90,12 @@
                 fetchCoverArt(rating.musicbrainz_id);
             }
         });
+    };
+
+    const isRatingOutdated = (rating: Rating): boolean => {
+        const group = feedStore.getGroupForRating(rating.pulsarr_group_id);
+        if (!group) return false;
+        return rating.rating_system_id !== group.rating_system_id;
     };
 
     const openRatingModal = (rating: Rating) => {
@@ -231,6 +263,7 @@
                     :cover-art-url="coverArtCache[rating.musicbrainz_id]"
                     :user-name="feedStore.getUserName(rating.pulsarr_user_id)"
                     :group-name="feedStore.getGroupName(rating.pulsarr_group_id)"
+                    :outdated="isRatingOutdated(rating)"
                     @click="openRatingModal(rating)"
                 />
 
@@ -245,7 +278,20 @@
                 :user-name="selectedRating ? feedStore.getUserName(selectedRating.pulsarr_user_id) : ''"
                 :group-name="selectedRating ? feedStore.getGroupName(selectedRating.pulsarr_group_id) : undefined"
                 :rating-system="selectedRating ? feedStore.getGroupForRating(selectedRating.pulsarr_group_id)?.rating_system : null"
+                :outdated="selectedRating ? isRatingOutdated(selectedRating) : false"
+                :group="selectedRating ? feedStore.getGroupForRating(selectedRating.pulsarr_group_id) : null"
                 @update:open="showRatingModal = $event"
+                @edit="onEditRating"
+            />
+
+            <AddRatingModal
+                v-if="editGroup?.rating_system"
+                :show-dialog="showEditModal"
+                :group="editGroup!"
+                :edit-rating="editingRating"
+                :edit-cover-art-url="editingRating ? coverArtCache[editingRating.musicbrainz_id] : undefined"
+                @update:showDialog="(v) => { showEditModal = v; if (!v) { editingRating = null; editGroup = null; } }"
+                @updated="onRatingUpdated"
             />
         </template>
     </div>

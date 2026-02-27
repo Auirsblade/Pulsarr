@@ -6,13 +6,18 @@
     import { Input } from "@/components/ui/input";
     import { useForm } from "vee-validate";
     import * as yup from "yup";
-    import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import { toast } from 'vue-sonner';
-    import type { RatingSystemDTO, RatingSystemParameterDTO } from "@/apiClient";
     import { storeToRefs } from "pinia";
     import { useContextStore } from "@/stores/context.ts";
     import { ref, computed, watch, type Ref } from "vue";
     import { Plus, Trash2 } from "lucide-vue-next";
+
+    export interface CustomSystemData {
+        name: string;
+        master_rating_type: string;
+        rating_max: string;
+        parameters: { name: string; parameter_rating_max: string; weight: string }[];
+    }
 
     const { ratingTypes } = storeToRefs(useContextStore());
 
@@ -103,6 +108,7 @@
 
     const emit = defineEmits<{
         'update:showDialog': [value: boolean]
+        'created': [data: CustomSystemData]
     }>();
 
     const closeDialog = () => {
@@ -157,35 +163,20 @@
             return
         }
 
-        const drh = new DataRequestHandler()
-        drh.onSuccessCallback = (data) => {
-            console.log('Rating System created:', data)
-            toast.success('Rating system created')
-            closeDialog()
-            resetForm()
-            parameters.value = []
-            parameterErrors.value = {}
-        }
-        drh.onErrorCallback = (error) => {
-            console.error('Failed to create rating system:', error)
-            toast.error('Failed to create rating system')
-        }
-
-        const ratingSystemPayload: RatingSystemDTO = {
-            rating_system_id: 0, // Backend will assign real ID
+        emit('created', {
             name: values.name,
             master_rating_type: values.master_rating_type,
             rating_max: values.rating_max,
             parameters: parameters.value.map((p) => ({
-                rating_system_parameter_id: 0,
-                rating_system_id: 0,
                 name: p.name,
                 parameter_rating_max: p.parameter_rating_max,
                 weight: p.weight
             }))
-        }
-
-        drh.post('/rating-system/add', ratingSystemPayload)
+        });
+        closeDialog()
+        resetForm()
+        parameters.value = []
+        parameterErrors.value = {}
     })
 
 </script>

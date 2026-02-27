@@ -14,8 +14,9 @@
     import type { GroupDTO, Rating } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
-    import { Copy, Check, LogOut, Plus, Users, Star, Settings, MoreHorizontal, Shield, UserMinus, Crown } from "lucide-vue-next";
+    import { Copy, Check, LogOut, Plus, Users, Star, Settings, MoreHorizontal, Shield, UserMinus, Crown, RefreshCw } from "lucide-vue-next";
     import AddRatingModal from "@/components/modals/AddRatingModal.vue";
+    import ChangeRatingSystemModal from "@/components/modals/ChangeRatingSystemModal.vue";
     import RatingCard from "@/components/RatingCard.vue";
     import RatingDetailModal from "@/components/RatingDetailModal.vue";
     import EmptyState from "@/components/EmptyState.vue";
@@ -58,6 +59,9 @@
     const selectedRating = ref<Rating | null>(null);
     const showRatingModal = ref(false);
 
+    // Edit rating state
+    const editingRating = ref<Rating | null>(null);
+
     // Settings state
     const showSettingsDialog = ref(false);
     const editName = ref('');
@@ -67,6 +71,9 @@
     // Delete confirmation state
     const showDeleteConfirm = ref(false);
     const deleteConfirmText = ref('');
+
+    // Change rating system state
+    const showChangeRatingSystemModal = ref(false);
 
     // Transfer ownership state
     const showTransferDialog = ref(false);
@@ -257,7 +264,27 @@
         drh.post(`/group/leave/${groupId.value}`, {});
     };
 
+    const isRatingOutdated = (rating: Rating): boolean => {
+        if (!group.value) return false;
+        return rating.rating_system_id !== group.value.rating_system_id;
+    };
+
+    const onRatingSystemChanged = () => {
+        fetchGroup();
+    };
+
     const onRatingCreated = () => {
+        fetchRatings(fetchGeneration);
+    };
+
+    const onEditRating = (rating: Rating) => {
+        editingRating.value = rating;
+        showRatingModal.value = false;
+        showAddRatingModal.value = true;
+    };
+
+    const onRatingUpdated = () => {
+        editingRating.value = null;
         fetchRatings(fetchGeneration);
     };
 
@@ -533,6 +560,26 @@
                                 </SelectContent>
                             </Select>
                         </div>
+                        <!-- Rating System Section -->
+                        <div class="space-y-2">
+                            <Label>Rating System</Label>
+                            <div v-if="group?.rating_system" class="p-3 bg-muted/50 rounded-md">
+                                <div class="text-sm font-medium">{{ group.rating_system.name }}</div>
+                                <div class="text-xs text-muted-foreground mt-0.5">
+                                    {{ group.rating_system.master_rating_type }} · max {{ group.rating_system.rating_max }}
+                                </div>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                class="w-full"
+                                @click="showSettingsDialog = false; showChangeRatingSystemModal = true;"
+                            >
+                                <RefreshCw class="w-4 h-4 mr-1" />
+                                Change Rating System
+                            </Button>
+                        </div>
+
                         <div class="flex justify-between items-center pt-2">
                             <Button
                                 v-if="isOwner"
@@ -609,11 +656,14 @@
                         v-if="isMember && group.rating_system"
                         :show-dialog="showAddRatingModal"
                         :group="group"
-                        @update:showDialog="showAddRatingModal = $event"
+                        :edit-rating="editingRating"
+                        :edit-cover-art-url="editingRating ? coverArtCache[editingRating.musicbrainz_id] : undefined"
+                        @update:showDialog="(v) => { showAddRatingModal = v; if (!v) editingRating = null; }"
                         @created="onRatingCreated"
+                        @updated="onRatingUpdated"
                     >
                         <template #openModal>
-                            <Button @click="showAddRatingModal = true">
+                            <Button @click="editingRating = null; showAddRatingModal = true;">
                                 <Plus class="w-4 h-4 mr-1" />
                                 Add Rating
                             </Button>
@@ -634,6 +684,7 @@
                     :rating="rating"
                     :cover-art-url="coverArtCache[rating.musicbrainz_id]"
                     :user-name="getUserName(rating.pulsarr_user_id)"
+                    :outdated="isRatingOutdated(rating)"
                     @click="openRatingModal(rating)"
                 />
 
@@ -646,7 +697,19 @@
                     :cover-art-url="selectedRating ? coverArtCache[selectedRating.musicbrainz_id] : undefined"
                     :user-name="selectedRating ? getUserName(selectedRating.pulsarr_user_id) : ''"
                     :rating-system="group?.rating_system"
+                    :outdated="selectedRating ? isRatingOutdated(selectedRating) : false"
+                    :group="group"
                     @update:open="showRatingModal = $event"
+                    @edit="onEditRating"
+                />
+
+                <!-- Change Rating System Modal -->
+                <ChangeRatingSystemModal
+                    v-if="group"
+                    :open="showChangeRatingSystemModal"
+                    :group-id="group.pulsarr_group_id"
+                    @update:open="showChangeRatingSystemModal = $event"
+                    @changed="onRatingSystemChanged"
                 />
             </div>
         </div>

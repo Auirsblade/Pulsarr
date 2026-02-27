@@ -8,58 +8,64 @@
     import * as yup from "yup";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import { toast } from 'vue-sonner';
-    import type { GroupDTO, RatingSystemDTO } from "@/apiClient";
+
+    interface TemplateDTO {
+        template_id: number;
+        name: string;
+        master_rating_type: string;
+        rating_max: string;
+        parameters?: { template_parameter_id: number; template_id: number; name: string; parameter_rating_max: string; weight: string }[];
+    }
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
-    import AddRatingSystemModal from "@/components/modals/AddRatingSystemModal.vue";
-    import { computed, nextTick, onMounted, type Ref, ref } from "vue";
+    import AddRatingSystemModal, { type CustomSystemData } from "@/components/modals/AddRatingSystemModal.vue";
+    import { computed, nextTick, onMounted, ref } from "vue";
     import { onClickOutside } from "@vueuse/core";
-    import { Search, ChevronDown, Check } from "lucide-vue-next";
+    import { Search, ChevronDown, Check, X } from "lucide-vue-next";
 
     const { privacyTypes } = storeToRefs(useContextStore());
-    const ratingSystems = ref<RatingSystemDTO[]>();
+    const templates = ref<TemplateDTO[]>();
     const showAddRatingSystemModal = ref(false);
+    const customSystem = ref<CustomSystemData | null>(null);
 
     // Rating system searchable dropdown state
     const rsSearchQuery = ref('');
-    const showAllSystems = ref(false);
     const rsDropdownOpen = ref(false);
     const rsDropdownRef = ref<HTMLElement | null>(null);
     const rsSearchInputRef = ref<HTMLInputElement | null>(null);
 
-    const defaultSystems = computed(() =>
-        ratingSystems.value?.filter(s => s.rating_system_id < 0) ?? []
-    );
-
-    const userSystems = computed(() =>
-        ratingSystems.value?.filter(s => s.rating_system_id > 0) ?? []
-    );
-
     const filteredSystems = computed(() => {
         const query = rsSearchQuery.value.toLowerCase().trim();
-
         if (query) {
-            return ratingSystems.value?.filter(s =>
-                s.name.toLowerCase().includes(query) ||
-                s.master_rating_type.toLowerCase().includes(query)
+            return templates.value?.filter(t =>
+                t.name.toLowerCase().includes(query) ||
+                t.master_rating_type.toLowerCase().includes(query)
             ) ?? [];
         }
-
-        if (showAllSystems.value) {
-            return ratingSystems.value ?? [];
-        }
-
-        return defaultSystems.value;
+        return templates.value ?? [];
     });
 
     const selectedSystem = computed(() =>
-        ratingSystems.value?.find(s => s.rating_system_id === ratingSystemId.value)
+        templates.value?.find(t => t.template_id === ratingSystemId.value)
     );
 
-    const selectSystem = (system: RatingSystemDTO) => {
-        ratingSystemId.value = system.rating_system_id;
+    const hasRatingSystem = computed(() =>
+        customSystem.value !== null || (ratingSystemId.value && ratingSystemId.value !== 0)
+    );
+
+    const selectSystem = (template: TemplateDTO) => {
+        ratingSystemId.value = template.template_id;
         rsDropdownOpen.value = false;
         rsSearchQuery.value = '';
+    };
+
+    const onCustomSystemCreated = (data: CustomSystemData) => {
+        customSystem.value = data;
+        ratingSystemId.value = 0;
+    };
+
+    const clearCustomSystem = () => {
+        customSystem.value = null;
     };
 
     const toggleRsDropdown = () => {
@@ -86,19 +92,18 @@
     }>()
 
     onMounted(() => {
-        getRatingSystems()
+        getTemplates()
     })
 
-    const getRatingSystems = () => {
+    const getTemplates = () => {
         const drh = new DataRequestHandler()
         drh.onSuccessCallback = (data) => {
-            console.log('Rating systems:', data)
-            ratingSystems.value = data as RatingSystemDTO[]
+            templates.value = data as TemplateDTO[]
         }
         drh.onErrorCallback = (error) => {
-            console.error('Failed to fetch rating systems:', error)
+            console.error('Failed to fetch templates:', error)
         }
-        drh.get("/rating-system/")
+        drh.get("/rating-system-template/")
     }
 
     const closeDialog = () => {
@@ -107,7 +112,6 @@
 
     const schema = yup.object({
         name: yup.string().required().min(3).max(50),
-        rating_system_id: yup.number().required().integer().notOneOf([0], 'Please select a rating system'),
         privacy_type: yup.string().required(),
     });
 
@@ -122,27 +126,69 @@
 
     // Add defineField for each form field
     const [name, nameProps] = defineField('name');
-    const [ratingSystemId, ratingSystemProps] = defineField('rating_system_id');
+    const [ratingSystemId] = defineField('rating_system_id');
     const [privacyType, privacyTypeProps] = defineField('privacy_type');
 
+    const ratingSystemError = ref('');
+
     const onSubmit = handleSubmit((values) => {
+        if (!hasRatingSystem.value) {
+            ratingSystemError.value = 'Please select a rating system or create a custom one';
+            return;
+        }
+        ratingSystemError.value = '';
+
         const drh = new DataRequestHandler()
         drh.onSuccessCallback = (data) => {
             console.log('Group created:', data)
             toast.success('Group created')
             closeDialog()
             resetForm()
+            customSystem.value = null;
         }
         drh.onErrorCallback = (error) => {
             console.error('Failed to create group:', error)
             toast.error('Failed to create group')
         }
 
-        const groupPayload: GroupDTO = {
-            pulsarr_group_id: 0, // Backend will assign real ID
-            name: values.name,
-            rating_system_id: values.rating_system_id!,
-            privacy_type: values.privacy_type,
+        let groupPayload;
+
+        if (customSystem.value) {
+            // Inline creation — backend creates the rating system from the DTO
+            groupPayload = {
+                pulsarr_group_id: 0,
+                name: values.name,
+                rating_system_id: 0,
+                privacy_type: values.privacy_type,
+                rating_system: {
+                    rating_system_id: 0,
+                    name: customSystem.value.name,
+                    master_rating_type: customSystem.value.master_rating_type,
+                    rating_max: customSystem.value.rating_max,
+                    parameters: customSystem.value.parameters.map(p => ({
+                        rating_system_parameter_id: 0,
+                        rating_system_id: 0,
+                        name: p.name,
+                        parameter_rating_max: p.parameter_rating_max,
+                        weight: p.weight,
+                    })),
+                },
+            }
+        } else {
+            // Clone from template
+            groupPayload = {
+                pulsarr_group_id: 0,
+                name: values.name,
+                rating_system_id: 0,
+                privacy_type: values.privacy_type,
+                rating_system: {
+                    rating_system_id: 0,
+                    name: '',
+                    master_rating_type: '',
+                    rating_max: '0',
+                    template_id: ratingSystemId.value,
+                },
+            }
         }
 
         drh.post('/group/create', groupPayload)
@@ -190,25 +236,47 @@
 
                 <div class="space-y-2">
                     <Label>Rating System</Label>
-                    <div class="flex gap-2">
+
+                    <!-- Custom system display -->
+                    <div v-if="customSystem" class="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium truncate">{{ customSystem.name }}</div>
+                            <div class="text-sm text-muted-foreground">
+                                {{ customSystem.master_rating_type }} · max {{ customSystem.rating_max }}
+                            </div>
+                            <div v-if="customSystem.parameters.length > 0" class="flex flex-wrap gap-1 mt-1">
+                                <span
+                                    v-for="(param, i) in customSystem.parameters"
+                                    :key="i"
+                                    class="px-1.5 py-0.5 bg-secondary rounded text-xs"
+                                >
+                                    {{ param.name }}
+                                </span>
+                            </div>
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" aria-label="Remove custom system" @click="clearCustomSystem">
+                            <X class="w-4 h-4" />
+                        </Button>
+                    </div>
+
+                    <!-- Template picker -->
+                    <div v-else class="flex gap-2">
                         <div class="relative flex-1" ref="rsDropdownRef">
                             <button
                                 type="button"
                                 @click="toggleRsDropdown"
                                 :class="[
                                     'flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-start',
-                                    { 'border-red-500': errors.rating_system_id },
+                                    { 'border-red-500': ratingSystemError },
                                     { 'text-muted-foreground': !selectedSystem }
                                 ]"
-                                :disabled="!ratingSystems || ratingSystems.length === 0"
-                                :aria-invalid="!!errors.rating_system_id"
-                                :aria-describedby="errors.rating_system_id ? 'rating-system-error' : undefined"
+                                :disabled="!templates || templates.length === 0"
                             >
                                 <span class="truncate">
                                     {{ selectedSystem
                                         ? `${selectedSystem.name} (${selectedSystem.master_rating_type} - max: ${selectedSystem.rating_max})`
-                                        : (!ratingSystems || ratingSystems.length === 0
-                                            ? 'No rating systems available'
+                                        : (!templates || templates.length === 0
+                                            ? 'No templates available'
                                             : 'Select a rating system')
                                     }}
                                 </span>
@@ -225,53 +293,42 @@
                                         <input
                                             ref="rsSearchInputRef"
                                             v-model="rsSearchQuery"
-                                            placeholder="Search rating systems..."
+                                            placeholder="Search templates..."
                                             class="flex h-8 w-full rounded-md border border-input bg-transparent pl-8 pr-3 py-1 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                                         />
                                     </div>
                                 </div>
                                 <div class="max-h-48 overflow-y-auto p-1">
                                     <div
-                                        v-for="system in filteredSystems"
-                                        :key="system.rating_system_id"
-                                        @click="selectSystem(system)"
+                                        v-for="template in filteredSystems"
+                                        :key="template.template_id"
+                                        @click="selectSystem(template)"
                                         class="flex w-full cursor-pointer items-center rounded-sm py-1.5 px-2 text-sm hover:bg-accent hover:text-accent-foreground"
                                     >
                                         <Check
                                             class="w-3.5 h-3.5 mr-2 shrink-0"
-                                            :class="ratingSystemId === system.rating_system_id ? 'opacity-100' : 'opacity-0'"
+                                            :class="ratingSystemId === template.template_id ? 'opacity-100' : 'opacity-0'"
                                         />
-                                        <span class="truncate">{{ system.name }} ({{ system.master_rating_type }} - max: {{ system.rating_max }})</span>
+                                        <span class="truncate">{{ template.name }} ({{ template.master_rating_type }} - max: {{ template.rating_max }})</span>
                                     </div>
 
                                     <div v-if="filteredSystems.length === 0" class="py-2 text-center text-sm text-muted-foreground">
-                                        No rating systems found
+                                        No templates found
                                     </div>
-
-                                    <template v-if="!rsSearchQuery && !showAllSystems && userSystems.length > 0">
-                                        <div class="border-t my-1"></div>
-                                        <button
-                                            type="button"
-                                            @click.stop="showAllSystems = true"
-                                            class="flex w-full py-1.5 px-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-sm text-left"
-                                        >
-                                            Show all ({{ userSystems.length }} more)
-                                        </button>
-                                    </template>
                                 </div>
                             </div>
                         </div>
 
-                        <AddRatingSystemModal :show-dialog="showAddRatingSystemModal" @update:showDialog="(value) => { showAddRatingSystemModal = value; getRatingSystems(); }">
+                        <AddRatingSystemModal :show-dialog="showAddRatingSystemModal" @update:showDialog="showAddRatingSystemModal = $event" @created="onCustomSystemCreated">
                             <template #openModal>
-                                <Button variant="outline" class="whitespace-nowrap" @click="showAddRatingSystemModal = true">
-                                    Add Rating System
+                                <Button type="button" variant="outline" class="whitespace-nowrap" @click="showAddRatingSystemModal = true">
+                                    Create Custom
                                 </Button>
                             </template>
                         </AddRatingSystemModal>
                     </div>
-                    <span v-if="errors.rating_system_id" id="rating-system-error" role="alert" class="text-red-500 text-sm">
-                        {{ errors.rating_system_id }}
+                    <span v-if="ratingSystemError" role="alert" class="text-red-500 text-sm">
+                        {{ ratingSystemError }}
                     </span>
                 </div>
                 <DialogFooter>

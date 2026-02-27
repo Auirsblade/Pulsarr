@@ -15,15 +15,23 @@
 
 import * as runtime from '../runtime';
 import type {
+  ChangePasswordRequest,
   UserDTO,
 } from '../models/index';
 import {
+    ChangePasswordRequestFromJSON,
+    ChangePasswordRequestToJSON,
     UserDTOFromJSON,
     UserDTOToJSON,
 } from '../models/index';
 
 export interface AddUserRequest {
     userDTO: UserDTO;
+}
+
+export interface ChangePasswordOperationRequest {
+    pulsarrApiKey: string;
+    changePasswordRequest: ChangePasswordRequest;
 }
 
 export interface DeleteUserRequest {
@@ -84,6 +92,57 @@ export class UserApi extends runtime.BaseAPI {
      */
     async addUser(requestParameters: AddUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserDTO> {
         const response = await this.addUserRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Change password
+     */
+    async changePasswordRaw(requestParameters: ChangePasswordOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<boolean>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling changePassword().'
+            );
+        }
+
+        if (requestParameters['changePasswordRequest'] == null) {
+            throw new runtime.RequiredError(
+                'changePasswordRequest',
+                'Required parameter "changePasswordRequest" was null or undefined when calling changePassword().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/user/change-password`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ChangePasswordRequestToJSON(requestParameters['changePasswordRequest']),
+        }, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<boolean>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     * Change password
+     */
+    async changePassword(requestParameters: ChangePasswordOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<boolean> {
+        const response = await this.changePasswordRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
