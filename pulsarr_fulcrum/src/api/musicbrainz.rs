@@ -177,7 +177,19 @@ async fn search_release_groups(
     offset: Option<u32>,
 ) -> Result<Json<ReleaseGroupSearchResponse>, PulsarrError> {
     match state.client.search_release_groups(&query, limit, offset).await {
-        Ok(response) => Ok(Json(response)),
+        Ok(mut response) => {
+            response.release_groups.retain(|rg| {
+                let is_album_or_ep = matches!(
+                    rg.primary_type.as_deref(),
+                    Some("Album") | Some("EP")
+                );
+                let is_mixtape = rg.secondary_types.as_ref().is_some_and(|types| {
+                    types.iter().any(|t| t == "Mixtape/Street")
+                });
+                is_album_or_ep || is_mixtape
+            });
+            Ok(Json(response))
+        }
         Err(e) => Err(PulsarrError {
             err: "MusicBrainz API Error".to_string(),
             msg: Some(e.to_string()),
