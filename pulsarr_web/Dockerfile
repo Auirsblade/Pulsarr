@@ -9,8 +9,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copy source and build
+# Copy source and build with placeholder for runtime substitution
 COPY . .
+ENV VITE_API_URL=__VITE_API_URL_PLACEHOLDER__
 RUN npm run build
 
 ################################################################################
@@ -23,6 +24,10 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built assets from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Copy entrypoint that replaces env var placeholder at startup
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
 EXPOSE 80
 
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
