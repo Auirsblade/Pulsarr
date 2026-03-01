@@ -54,8 +54,9 @@
         contextStore.setSession(data as SignInResponse);
         showSignInDialog.value = false;
     };
-    signinDrh.onErrorCallback = (error) => {
-        const msg = error?.msg || error?.err || 'Something went wrong';
+    signinDrh.onErrorCallback = (data) => {
+        const body = data as Record<string, string> | null;
+        const msg = body?.msg || body?.err || 'Something went wrong';
         toast.error(msg);
     };
 
@@ -78,8 +79,9 @@
 
             await signinDrh.post('/auth/signin', signInPayload);
         };
-        signupDrh.onErrorCallback = (error) => {
-            const msg = error?.msg || error?.err || 'Something went wrong';
+        signupDrh.onErrorCallback = (data) => {
+            const body = data as Record<string, string> | null;
+            const msg = body?.msg || body?.err || 'Something went wrong';
             toast.error(msg);
         };
 
