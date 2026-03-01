@@ -1,5 +1,6 @@
 use crate::error::PulsarrError;
 use sqlx::types::Uuid;
+use sqlx::types::chrono::NaiveDateTime;
 use sqlx::{query_as, FromRow, PgPool, Postgres};
 
 #[derive(FromRow)]
@@ -7,23 +8,20 @@ pub struct UserSession {
     pub user_session_uid: Uuid,
     pub pulsarr_user_id: i32,
     pub hw_key: String,
+    pub created_at: NaiveDateTime,
 }
 
 pub async fn start_session(user_session_id: Uuid, user_id: &i32, hw_key: &str, pool: &PgPool) -> Result<UserSession, PulsarrError> {
-    
+
     match query_as::<Postgres, UserSession>("DELETE FROM user_session WHERE pulsarr_user_id = $1 AND hw_key = $2")
         .bind(user_id)
         .bind(hw_key)
-        .fetch_optional(pool).await 
+        .fetch_optional(pool).await
     {
         Ok(_) => (),
-        Err(error) => return Err(PulsarrError {
-            err: "Error clearing old user session".to_owned(),
-            msg: Some(error.to_string()),
-            http_status_code: 400,
-        }),   
+        Err(error) => return Err(PulsarrError::internal_error("Error clearing old user session", error)),
     }
-    
+
     match query_as::<Postgres, UserSession>("
             INSERT INTO user_session (user_session_uid, pulsarr_user_id, hw_key) \
                 VALUES ($1, $2, $3) \
@@ -32,13 +30,9 @@ pub async fn start_session(user_session_id: Uuid, user_id: &i32, hw_key: &str, p
         .bind(user_session_id)
         .bind(user_id)
         .bind(hw_key)
-        .fetch_one(pool).await 
+        .fetch_one(pool).await
     {
         Ok(result) => Ok(result),
-        Err(error) => Err(PulsarrError {
-            err: "Error creating user session".to_owned(),
-            msg: Some(error.to_string()),
-            http_status_code: 400,
-        }),
+        Err(error) => Err(PulsarrError::internal_error("Error creating user session", error)),
     }
 }

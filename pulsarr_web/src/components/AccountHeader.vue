@@ -4,7 +4,7 @@
     import { Input } from "@/components/ui/input";
     import { Label } from "@/components/ui/label";
     import { ref, watch } from "vue";
-    import type { SignInRequest, SignInResponse, UserDTO } from "@/apiClient";
+    import type { SignInRequest, SignInResponse } from "@/apiClient";
     import { useForm } from 'vee-validate';
     import * as yup from 'yup';
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
@@ -24,8 +24,9 @@
 
     const { values, errors, defineField } = useForm({
         validationSchema: yup.object({
-            usernameInput: yup.string().required(),
+            usernameInput: yup.string().required().min(3, 'Username must be at least 3 characters').max(30, 'Username must be at most 30 characters'),
             emailInput: yup.string().email().required(),
+            passwordInput: yup.string().required().min(8, 'Password must be at least 8 characters'),
         }),
     });
 
@@ -50,14 +51,11 @@
 
     const submitSignup = async () => {
 
-        const userPayload: UserDTO = {
-            pulsarr_user_id: 0,
+        const userPayload = {
             name: usernameInput.value,
             email: emailInput.value,
-            password: passwordInput.value
+            password: passwordInput.value,
         };
-
-        console.log(userPayload);
 
         const signupDrh = new DataRequestHandler();
         signupDrh.onSuccessCallback = async (data) => {
@@ -152,18 +150,25 @@
                             </Label>
                             <Input id="username" v-model="usernameInput" v-bind="usernameAttrs" class="col-span-3" />
                         </div>
+                        <p v-if="errors.usernameInput" class="text-sm text-destructive mt-1 text-right">{{ errors.usernameInput }}</p>
                     </div>
-                    <div v-if="signup" class="grid grid-cols-4 items-center gap-4">
-                        <Label for="email" class="text-right">
-                            Email
-                        </Label>
-                        <Input id="email" default-value="" v-model="emailInput" class="col-span-3" />
+                    <div v-if="signup">
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="email" class="text-right">
+                                Email
+                            </Label>
+                            <Input id="email" default-value="" v-model="emailInput" class="col-span-3" />
+                        </div>
+                        <p v-if="errors.emailInput" class="text-sm text-destructive mt-1 text-right">{{ errors.emailInput }}</p>
                     </div>
-                    <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="password" class="text-right">
-                            Password
-                        </Label>
-                        <Input id="password" v-model="passwordInput" type="password" class="col-span-3" />
+                    <div>
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="password" class="text-right">
+                                Password
+                            </Label>
+                            <Input id="password" v-model="passwordInput" type="password" class="col-span-3" />
+                        </div>
+                        <p v-if="errors.passwordInput" class="text-sm text-destructive mt-1 text-right">{{ errors.passwordInput }}</p>
                     </div>
                 </div>
                 <DialogFooter>

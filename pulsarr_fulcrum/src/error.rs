@@ -43,6 +43,15 @@ impl PulsarrError {
             http_status_code: 403,
         }
     }
+
+    pub fn internal_error<T: std::fmt::Display>(context: &str, error: T) -> Self {
+        eprintln!("[ERROR] {}: {}", context, error);
+        Self {
+            err: "internal error".to_string(),
+            msg: Some("An unexpected error occurred".to_string()),
+            http_status_code: 500,
+        }
+    }
 }
 
 

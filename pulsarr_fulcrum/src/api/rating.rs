@@ -92,7 +92,14 @@ async fn update_rating(state: &State<PostgresState>, rating: Json<Rating>, api_u
 /// # Delete rating
 #[openapi(tag = "Rating")]
 #[delete("/delete/<id>")]
-async fn delete_rating(state: &State<PostgresState>, id: i32) -> PulsarrResult<bool>{
+async fn delete_rating(state: &State<PostgresState>, id: i32, api_user: ApiKey) -> PulsarrResult<bool>{
+    let ApiKey(user_id) = api_user;
+
+    let original = data_wrangler::get_by_id::<Rating>(id, &state.pool).await?;
+    if original.pulsarr_user_id != user_id {
+        return Err(PulsarrError::forbidden("Cannot delete another user's rating"));
+    }
+
     match data_wrangler::delete::<Rating>(id, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
@@ -102,7 +109,7 @@ async fn delete_rating(state: &State<PostgresState>, id: i32) -> PulsarrResult<b
 /// # Get a rating by id
 #[openapi(tag = "Rating")]
 #[get("/<id>")]
-async fn get_rating(state: &State<PostgresState>, id: i32) -> PulsarrResult<Rating> {
+async fn get_rating(state: &State<PostgresState>, id: i32, _api_user: ApiKey) -> PulsarrResult<Rating> {
     match data_wrangler::get_by_id::<Rating>(id, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
@@ -112,7 +119,7 @@ async fn get_rating(state: &State<PostgresState>, id: i32) -> PulsarrResult<Rati
 /// # Get all ratings
 #[openapi(tag = "Rating")]
 #[get("/")]
-async fn get_all_ratings(state: &State<PostgresState>) -> PulsarrResult<Vec<Rating>> {
+async fn get_all_ratings(state: &State<PostgresState>, _api_user: ApiKey) -> PulsarrResult<Vec<Rating>> {
     match data_wrangler::get_all::<Rating>(&state.pool, None, None).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
@@ -122,11 +129,13 @@ async fn get_all_ratings(state: &State<PostgresState>) -> PulsarrResult<Vec<Rati
 /// # Get ratings by group IDs
 #[openapi(tag = "Rating")]
 #[post("/byGroups", format = "application/json", data = "<request>")]
-async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<PaginatedGroupRatingsRequest>) -> PulsarrResult<Vec<Rating>> {
+async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<PaginatedGroupRatingsRequest>, _api_user: ApiKey) -> PulsarrResult<Vec<Rating>> {
     let req = request.into_inner();
     if req.group_ids.is_empty() {
         return Ok(Json(Vec::new()));
     }
+
+    let limit = req.take_size.unwrap_or(20).min(100);
 
     let result = if req.current_only.unwrap_or(false) {
         query_as::<_, Rating>(
@@ -136,7 +145,7 @@ async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<Pagina
              ORDER BY r.rating_date DESC LIMIT $2 OFFSET $3"
         )
             .bind(&req.group_ids)
-            .bind(req.take_size)
+            .bind(limit)
             .bind(req.offset.unwrap_or(0))
             .fetch_all(&state.pool)
             .await
@@ -145,7 +154,7 @@ async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<Pagina
             "SELECT * FROM rating WHERE pulsarr_group_id = ANY($1) ORDER BY rating_date DESC LIMIT $2 OFFSET $3"
         )
             .bind(&req.group_ids)
-            .bind(req.take_size)
+            .bind(limit)
             .bind(req.offset.unwrap_or(0))
             .fetch_all(&state.pool)
             .await
@@ -153,15 +162,23 @@ async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<Pagina
 
     match result {
         Ok(ratings) => Ok(Json(ratings)),
-        Err(e) => Err(PulsarrError::validation_error(e))
+        Err(e) => Err(PulsarrError::internal_error("Failed to fetch ratings by group", e))
     }
 }
 
 /// # Add rating detail
 #[openapi(tag = "Rating")]
 #[post("/rating_detail/add", format = "application/json", data = "<rating_detail>")]
-async fn add_rating_detail(state: &State<PostgresState>, rating_detail: Json<RatingDetail>) -> PulsarrResult<RatingDetail>{
-    match data_wrangler::add(rating_detail.into_inner(), &state.pool).await {
+async fn add_rating_detail(state: &State<PostgresState>, rating_detail: Json<RatingDetail>, api_user: ApiKey) -> PulsarrResult<RatingDetail>{
+    let ApiKey(user_id) = api_user;
+    let detail = rating_detail.into_inner();
+
+    let parent = data_wrangler::get_by_id::<Rating>(detail.rating_id, &state.pool).await?;
+    if parent.pulsarr_user_id != user_id {
+        return Err(PulsarrError::forbidden("Cannot add details to another user's rating"));
+    }
+
+    match data_wrangler::add(detail, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
     }
@@ -170,17 +187,33 @@ async fn add_rating_detail(state: &State<PostgresState>, rating_detail: Json<Rat
 /// # Update rating detail
 #[openapi(tag = "Rating")]
 #[post("/rating_detail/update", format = "application/json", data = "<rating_detail>")]
-async fn update_rating_detail(state: &State<PostgresState>, rating_detail: Json<RatingDetail>) -> PulsarrResult<RatingDetail>{
-    match data_wrangler::update(rating_detail.into_inner(), &state.pool).await {
+async fn update_rating_detail(state: &State<PostgresState>, rating_detail: Json<RatingDetail>, api_user: ApiKey) -> PulsarrResult<RatingDetail>{
+    let ApiKey(user_id) = api_user;
+    let detail = rating_detail.into_inner();
+
+    let parent = data_wrangler::get_by_id::<Rating>(detail.rating_id, &state.pool).await?;
+    if parent.pulsarr_user_id != user_id {
+        return Err(PulsarrError::forbidden("Cannot update details on another user's rating"));
+    }
+
+    match data_wrangler::update(detail, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
     }
 }
 
-/// # Delete rating detail 
+/// # Delete rating detail
 #[openapi(tag = "Rating")]
 #[delete("/rating_detail/delete/<id>")]
-async fn delete_rating_detail(state: &State<PostgresState>, id: i32) -> PulsarrResult<bool>{
+async fn delete_rating_detail(state: &State<PostgresState>, id: i32, api_user: ApiKey) -> PulsarrResult<bool>{
+    let ApiKey(user_id) = api_user;
+
+    let detail = data_wrangler::get_by_id::<RatingDetail>(id, &state.pool).await?;
+    let parent = data_wrangler::get_by_id::<Rating>(detail.rating_id, &state.pool).await?;
+    if parent.pulsarr_user_id != user_id {
+        return Err(PulsarrError::forbidden("Cannot delete details on another user's rating"));
+    }
+
     match data_wrangler::delete::<RatingDetail>(id, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
@@ -190,7 +223,7 @@ async fn delete_rating_detail(state: &State<PostgresState>, id: i32) -> PulsarrR
 /// # Get a rating detail by id
 #[openapi(tag = "Rating")]
 #[get("/rating_detail/<id>")]
-async fn get_rating_detail(state: &State<PostgresState>, id: i32) -> PulsarrResult<RatingDetail> {
+async fn get_rating_detail(state: &State<PostgresState>, id: i32, _api_user: ApiKey) -> PulsarrResult<RatingDetail> {
     match data_wrangler::get_by_id::<RatingDetail>(id, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
@@ -200,7 +233,7 @@ async fn get_rating_detail(state: &State<PostgresState>, id: i32) -> PulsarrResu
 /// # Get all rating details
 #[openapi(tag = "Rating")]
 #[get("/rating_detail")]
-async fn get_all_rating_details(state: &State<PostgresState>) -> PulsarrResult<Vec<RatingDetail>> {
+async fn get_all_rating_details(state: &State<PostgresState>, _api_user: ApiKey) -> PulsarrResult<Vec<RatingDetail>> {
     match data_wrangler::get_all::<RatingDetail>(&state.pool, None, None).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
@@ -210,7 +243,7 @@ async fn get_all_rating_details(state: &State<PostgresState>) -> PulsarrResult<V
 /// # Get rating details by rating ID
 #[openapi(tag = "Rating")]
 #[get("/rating_detail/by_rating/<rating_id>")]
-async fn get_rating_details_by_rating(state: &State<PostgresState>, rating_id: i32) -> PulsarrResult<Vec<RatingDetailResponse>> {
+async fn get_rating_details_by_rating(state: &State<PostgresState>, rating_id: i32, _api_user: ApiKey) -> PulsarrResult<Vec<RatingDetailResponse>> {
     match query_as::<_, RatingDetailResponse>(
         "SELECT rd.rating_detail_id, rd.rating_id, rd.rating_system_parameter_id, rd.rating_value, \
          rsp.name AS parameter_name \
@@ -223,7 +256,7 @@ async fn get_rating_details_by_rating(state: &State<PostgresState>, rating_id: i
         .await
     {
         Ok(details) => Ok(Json(details)),
-        Err(e) => Err(PulsarrError::validation_error(e))
+        Err(e) => Err(PulsarrError::internal_error("Failed to fetch rating details", e))
     }
 }
 
@@ -244,7 +277,7 @@ async fn delete_rating_details_by_rating(state: &State<PostgresState>, rating_id
         .await
     {
         Ok(_) => Ok(Json(true)),
-        Err(e) => Err(PulsarrError::validation_error(e))
+        Err(e) => Err(PulsarrError::internal_error("Failed to delete rating details", e))
     }
 }
 
@@ -258,7 +291,7 @@ async fn get_ratings_by_user(
     offset: Option<i32>,
 ) -> PulsarrResult<Vec<Rating>> {
     let ApiKey(user_id) = api_user;
-    let limit = take_size.unwrap_or(20);
+    let limit = take_size.unwrap_or(20).min(100);
     let off = offset.unwrap_or(0);
 
     match query_as::<_, Rating>("SELECT * FROM rating WHERE pulsarr_user_id = $1 ORDER BY rating_date DESC LIMIT $2 OFFSET $3")
@@ -269,7 +302,7 @@ async fn get_ratings_by_user(
         .await
     {
         Ok(ratings) => Ok(Json(ratings)),
-        Err(e) => Err(PulsarrError::validation_error(e))
+        Err(e) => Err(PulsarrError::internal_error("Failed to fetch ratings by user", e))
     }
 }
 
@@ -315,13 +348,13 @@ async fn get_user_rating_stats(
         .bind(user_id)
         .fetch_one(&state.pool)
         .await
-        .map_err(PulsarrError::validation_error)?;
+        .map_err(|e| PulsarrError::internal_error("Failed to fetch rating count", e))?;
 
     let avg_row = query_as::<_, AvgRow>("SELECT AVG(rating_value) as avg FROM rating WHERE pulsarr_user_id = $1")
         .bind(user_id)
         .fetch_one(&state.pool)
         .await
-        .map_err(PulsarrError::validation_error)?;
+        .map_err(|e| PulsarrError::internal_error("Failed to fetch rating average", e))?;
 
     let top_artists = query_as::<_, ArtistCountRow>(
         "SELECT artist_name, COUNT(*) as count FROM rating WHERE pulsarr_user_id = $1 GROUP BY artist_name ORDER BY count DESC LIMIT 5"
@@ -329,7 +362,7 @@ async fn get_user_rating_stats(
         .bind(user_id)
         .fetch_all(&state.pool)
         .await
-        .map_err(PulsarrError::validation_error)?;
+        .map_err(|e| PulsarrError::internal_error("Failed to fetch top artists", e))?;
 
     Ok(Json(UserRatingStats {
         total_ratings: count_row.count,
@@ -362,6 +395,6 @@ async fn get_existing_rating(
         .await
     {
         Ok(ratings) => Ok(Json(ratings)),
-        Err(e) => Err(PulsarrError::validation_error(e))
+        Err(e) => Err(PulsarrError::internal_error("Failed to fetch existing rating", e))
     }
 }

@@ -22,39 +22,43 @@ pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, O
 #[openapi(tag = "Auth")]
 #[post("/signin", format = "application/json", data = "<request>")]
 async fn signin(state: &State<PostgresState>, request: Json<SignInRequest>) -> PulsarrResult<SignInResponse> {
-    match pulsarr_user::get_password_hash::<PulsarrUser>(&request.username).fetch_one(&state.pool).await    
+    if request.username.is_empty() || request.password.is_empty() {
+        return Err(PulsarrError::validation_error("Username and password are required"));
+    }
+
+    match pulsarr_user::get_password_hash::<PulsarrUser>(&request.username).fetch_one(&state.pool).await
     {
         Ok(user) => {
-            println!("getting password hash from db");
-            let parsed_hash = PasswordHash::new(&user.password).unwrap();
-            println!("verifying match");
+            let parsed_hash = match PasswordHash::new(&user.password) {
+                Ok(h) => h,
+                Err(_) => return Err(PulsarrError {
+                    err: "Invalid username or password".to_owned(),
+                    msg: None,
+                    http_status_code: 401,
+                }),
+            };
             match Scrypt.verify_password(request.password.as_ref(), &parsed_hash).is_ok() {
                 true => {
-                    println!("starting session");   
                     let session_id = Uuid::new_v4();
                     match user_session::start_session(session_id, &user.pulsarr_user_id, &request.into_inner().hw_key, &state.pool).await {
                         Ok(result) => Ok(Json(SignInResponse {
                             pulsarr_api_key: result.user_session_uid.to_string(),
                             user: to_dto(&user)
                         })),
-                        Err(error) => Err(PulsarrError {
-                            err: "Failed to start session".to_owned(),
-                            msg: Some(error.to_string()),
-                            http_status_code: 500,
-                        }),
+                        Err(e) => Err(PulsarrError::internal_error("Failed to start session", e)),
                     }
                 },
                 false => Err(PulsarrError {
-                    err: "Incorrect password".to_owned(),
+                    err: "Invalid username or password".to_owned(),
                     msg: None,
-                    http_status_code: 400,
-                })   
+                    http_status_code: 401,
+                })
             }
         },
-        Err(error) => Err(PulsarrError {
-            err: "User not found".to_owned(),
-            msg: Some(error.to_string()),
-            http_status_code: 404,
+        Err(_) => Err(PulsarrError {
+            err: "Invalid username or password".to_owned(),
+            msg: None,
+            http_status_code: 401,
         })
     }
 }
