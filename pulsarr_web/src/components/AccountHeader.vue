@@ -3,10 +3,11 @@
     import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
     import { Input } from "@/components/ui/input";
     import { Label } from "@/components/ui/label";
-    import { ref, watch } from "vue";
+    import { ref, computed, watch } from "vue";
     import type { SignInRequest, SignInResponse } from "@/apiClient";
     import { useForm } from 'vee-validate';
     import * as yup from 'yup';
+    import { toast } from 'vue-sonner';
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
@@ -22,22 +23,30 @@
     const contextStore = useContextStore();
     const { user, isLoggedIn, showSignInDialog } = storeToRefs(contextStore);
 
-    const { values, errors, defineField } = useForm({
-        validationSchema: yup.object({
-            usernameInput: yup.string().required().min(3, 'Username must be at least 3 characters').max(30, 'Username must be at most 30 characters'),
-            emailInput: yup.string().email().required(),
-            passwordInput: yup.string().required().min(8, 'Password must be at least 8 characters'),
-        }),
+    const signup = ref<boolean>(false);
+
+    const validationSchema = computed(() => {
+        const base: Record<string, yup.StringSchema> = {
+            usernameInput: yup.string().required('Username is required').min(3, 'Username must be at least 3 characters').max(30, 'Username must be at most 30 characters'),
+            passwordInput: yup.string().required('Password is required').min(8, 'Password must be at least 8 characters'),
+        };
+        if (signup.value) {
+            base.emailInput = yup.string().email('Please enter a valid email address').required('Email is required');
+            base.confirmPasswordInput = yup.string().required('Please confirm your password').oneOf([yup.ref('passwordInput')], 'Passwords do not match');
+        }
+        return yup.object(base);
     });
 
-    watch(errors, (errors) => {
-        console.log(errors)
-    })
+    const { errors, defineField, handleSubmit, resetForm } = useForm({
+        validationSchema,
+    });
 
-    const signup = ref<boolean>(false);
+    watch(signup, () => { resetForm(); });
+
     const [usernameInput, usernameAttrs] = defineField('usernameInput');
     const [emailInput] = defineField('emailInput');
     const [passwordInput] = defineField('passwordInput');
+    const [confirmPasswordInput] = defineField('confirmPasswordInput');
 
     const signinDrh = new DataRequestHandler();
     signinDrh.onSuccessCallback = (data) => {
@@ -45,12 +54,13 @@
         contextStore.setSession(data as SignInResponse);
         showSignInDialog.value = false;
     };
-    signinDrh.onErrorCallback = (error) => {
-        console.error('Signin failed:', error);
+    signinDrh.onErrorCallback = (data) => {
+        const body = data as Record<string, string> | null;
+        const msg = body?.msg || body?.err || 'Something went wrong';
+        toast.error(msg);
     };
 
-    const submitSignup = async () => {
-
+    const submitSignup = handleSubmit(async () => {
         const userPayload = {
             name: usernameInput.value,
             email: emailInput.value,
@@ -69,14 +79,16 @@
 
             await signinDrh.post('/auth/signin', signInPayload);
         };
-        signupDrh.onErrorCallback = (error) => {
-            console.error('Signup failed:', error);
+        signupDrh.onErrorCallback = (data) => {
+            const body = data as Record<string, string> | null;
+            const msg = body?.msg || body?.err || 'Something went wrong';
+            toast.error(msg);
         };
 
         await signupDrh.post('/user/add', userPayload);
-    }
-    const submitSignin = async () => {
+    });
 
+    const submitSignin = handleSubmit(async () => {
         const signInPayload = {
             username: usernameInput.value ?? "",
             password: passwordInput.value,
@@ -84,7 +96,7 @@
         } as SignInRequest;
 
         await signinDrh.post('/auth/signin', signInPayload);
-    }
+    });
 
     const signOut = () => {
         contextStore.clearSession();
@@ -169,6 +181,15 @@
                             <Input id="password" v-model="passwordInput" type="password" class="col-span-3" />
                         </div>
                         <p v-if="errors.passwordInput" class="text-sm text-destructive mt-1 text-right">{{ errors.passwordInput }}</p>
+                    </div>
+                    <div v-if="signup">
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="confirmPassword" class="text-right">
+                                Confirm Password
+                            </Label>
+                            <Input id="confirmPassword" v-model="confirmPasswordInput" type="password" class="col-span-3" />
+                        </div>
+                        <p v-if="errors.confirmPasswordInput" class="text-sm text-destructive mt-1 text-right">{{ errors.confirmPasswordInput }}</p>
                     </div>
                 </div>
                 <DialogFooter>
