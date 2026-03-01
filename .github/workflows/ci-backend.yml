@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches: [develop, main]
+    paths:
+      - 'pulsarr_fulcrum/**'
+      - 'db/**'
+      - '.github/workflows/ci-backend.yml'
   release:
     types: [published]
 

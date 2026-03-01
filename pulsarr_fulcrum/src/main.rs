@@ -50,10 +50,8 @@ async fn get_db_pool() -> Result<PgPool, Error> {
 
 fn create_server() -> Rocket<Build> {
 
-    let port = std::env::var("RUST_PORT").expect("RUST_PORT must be set").parse::<u16>().unwrap();
-
     let figment = rocket::Config::figment()
-        .merge(("port", port))
+        .merge(("port", 4004u16))
         .merge(("address", "0.0.0.0"));
     
     let cors = CorsOptions::default()

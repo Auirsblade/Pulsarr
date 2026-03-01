@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches: [develop, main]
+    paths:
+      - 'pulsarr_web/**'
+      - '.github/workflows/ci-frontend.yml'
   release:
     types: [published]
 
@@ -65,12 +68,25 @@ jobs:
             echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Determine app tag
+        id: app-tag
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            echo "value=beta - ${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "value=qual" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=dev" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: "{{defaultContext}}:pulsarr_web"
           push: true
           tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            VITE_APP_TAG=${{ steps.app-tag.outputs.value }}
 
   deploy:
     needs: build-and-push

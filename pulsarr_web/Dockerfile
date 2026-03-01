@@ -12,6 +12,8 @@ RUN npm ci
 # Copy source and build with placeholder for runtime substitution
 COPY . .
 ENV VITE_API_URL=__VITE_API_URL_PLACEHOLDER__
+ARG VITE_APP_TAG=local
+ENV VITE_APP_TAG=$VITE_APP_TAG
 RUN npm run build
 
 ################################################################################

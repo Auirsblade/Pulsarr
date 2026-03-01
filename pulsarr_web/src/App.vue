@@ -7,11 +7,16 @@
     import AppSidebar from "@/components/AppSidebar.vue";
     import { Toaster } from 'vue-sonner';
     import 'vue-sonner/style.css';
-    import { onMounted, ref } from "vue";
+    import { computed, onMounted, ref } from "vue";
     import { useContextStore } from "@/stores/context.ts";
     import { Menu } from "lucide-vue-next";
 
     const appContext = useContextStore();
+
+    const appTag = computed(() => {
+        const tag = import.meta.env.VITE_APP_TAG;
+        return tag ? tag : null;
+    });
 
     const sidebarOpen = ref(false);
 
@@ -30,6 +35,7 @@
                 <Menu class="w-5 h-5" />
             </Button>
             <h1 class="text-2xl sm:text-4xl font-bold truncate">Pulsarr Music</h1>
+            <span v-if="appTag" class="ml-2 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">{{ appTag }}</span>
             <AccountHeader class="ml-auto"/>
             <Button @click="mode = mode == 'light' ? 'dark' : 'light'" class="ml-2 shadow-none" variant="secondary" :aria-label="mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">
                 <Icon icon="radix-icons:moon" aria-hidden="true" class="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"/>
