@@ -1,9 +1,8 @@
-name: Frontend Docker Image Push
+name: Frontend Production Deploy
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [ "develop", "main" ]
+  release:
+    types: [ published ]
 
 env:
   REGISTRY: ghcr.io
@@ -30,34 +29,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
-        name: Determine tag
-        id: tag
-        run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          fi
-      -
         name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: "{{defaultContext}}:pulsarr_web"
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
-      -
-        name: Determine Dokploy app ID
-        id: dokploy
-        run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "app_id=${{ secrets.DOKPLOY_APP_ID_WEB_QUAL }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "app_id=${{ secrets.DOKPLOY_APP_ID_WEB_DEV }}" >> "$GITHUB_OUTPUT"
-          fi
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
       -
         name: Deploy to Dokploy
         run: |
           curl -s -X POST "${{ secrets.DOKPLOY_API_URL }}/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"applicationId": "${{ steps.dokploy.outputs.app_id }}"}'
+            -d '{"applicationId": "${{ secrets.DOKPLOY_APP_ID_WEB_PROD }}"}'
