@@ -3,22 +3,30 @@
     import { Dialog, DialogHeader, DialogFooter, DialogContent, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
     import { Input } from "@/components/ui/input";
     import { Label } from "@/components/ui/label";
-    import { onMounted, ref, watch } from "vue";
-    import type { SignInRequest, SignInResponse, UserDTO } from "@/apiClient";
+    import { ref, watch } from "vue";
+    import type { SignInRequest, SignInResponse } from "@/apiClient";
     import { useForm } from 'vee-validate';
     import * as yup from 'yup';
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import { useContextStore } from "@/stores/context.ts";
+    import { storeToRefs } from "pinia";
     import { CookieManager } from "@/helpers/CookieManager.ts";
+    import { LogOut, User, Settings } from "lucide-vue-next";
+    import {
+        DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+        DropdownMenuSeparator, DropdownMenuTrigger
+    } from "@/components/ui/dropdown-menu";
+    import { useRouter } from "vue-router";
 
-    onMounted(() => {
-        contextStore.getSession();
-    })
+    const router = useRouter();
+    const contextStore = useContextStore();
+    const { user, isLoggedIn, showSignInDialog } = storeToRefs(contextStore);
 
     const { values, errors, defineField } = useForm({
         validationSchema: yup.object({
-            usernameInput: yup.string().required(),
+            usernameInput: yup.string().required().min(3, 'Username must be at least 3 characters').max(30, 'Username must be at most 30 characters'),
             emailInput: yup.string().email().required(),
+            passwordInput: yup.string().required().min(8, 'Password must be at least 8 characters'),
         }),
     });
 
@@ -31,15 +39,11 @@
     const [emailInput] = defineField('emailInput');
     const [passwordInput] = defineField('passwordInput');
 
-    const signInOpen = ref(false);
-
-    const contextStore = useContextStore();
-
     const signinDrh = new DataRequestHandler();
     signinDrh.onSuccessCallback = (data) => {
         console.log('Signin successful:', data);
         contextStore.setSession(data as SignInResponse);
-        signInOpen.value = false;
+        showSignInDialog.value = false;
     };
     signinDrh.onErrorCallback = (error) => {
         console.error('Signin failed:', error);
@@ -47,14 +51,11 @@
 
     const submitSignup = async () => {
 
-        const userPayload: UserDTO = {
-            pulsarr_user_id: 0,
+        const userPayload = {
             name: usernameInput.value,
             email: emailInput.value,
-            password: passwordInput.value
+            password: passwordInput.value,
         };
-
-        console.log(userPayload);
 
         const signupDrh = new DataRequestHandler();
         signupDrh.onSuccessCallback = async (data) => {
@@ -85,11 +86,39 @@
         await signinDrh.post('/auth/signin', signInPayload);
     }
 
+    const signOut = () => {
+        contextStore.clearSession();
+    }
+
 </script>
 
 <template>
     <div>
-        <Dialog v-model:open="signInOpen">
+        <!-- Logged in state -->
+        <div v-if="isLoggedIn">
+            <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                    <button class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 transition-colors cursor-pointer max-w-[160px]">
+                        <User class="w-4 h-4 flex-shrink-0" />
+                        <span class="text-sm font-medium truncate">{{ user?.name }}</span>
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem @click="router.push('/profile')">
+                        <Settings class="w-4 h-4 mr-2" />
+                        Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem @click="signOut">
+                        <LogOut class="w-4 h-4 mr-2" />
+                        Sign Out
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+
+        <!-- Logged out state -->
+        <Dialog v-else v-model:open="showSignInDialog">
             <DialogTrigger as-child>
                 <Button variant="outline">
                     Sign In
@@ -121,18 +150,25 @@
                             </Label>
                             <Input id="username" v-model="usernameInput" v-bind="usernameAttrs" class="col-span-3" />
                         </div>
+                        <p v-if="errors.usernameInput" class="text-sm text-destructive mt-1 text-right">{{ errors.usernameInput }}</p>
                     </div>
-                    <div v-if="signup" class="grid grid-cols-4 items-center gap-4">
-                        <Label for="email" class="text-right">
-                            Email
-                        </Label>
-                        <Input id="email" default-value="" v-model="emailInput" class="col-span-3" />
+                    <div v-if="signup">
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="email" class="text-right">
+                                Email
+                            </Label>
+                            <Input id="email" default-value="" v-model="emailInput" class="col-span-3" />
+                        </div>
+                        <p v-if="errors.emailInput" class="text-sm text-destructive mt-1 text-right">{{ errors.emailInput }}</p>
                     </div>
-                    <div class="grid grid-cols-4 items-center gap-4">
-                        <Label for="password" class="text-right">
-                            Password
-                        </Label>
-                        <Input id="password" v-model="passwordInput" type="password" class="col-span-3" />
+                    <div>
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <Label for="password" class="text-right">
+                                Password
+                            </Label>
+                            <Input id="password" v-model="passwordInput" type="password" class="col-span-3" />
+                        </div>
+                        <p v-if="errors.passwordInput" class="text-sm text-destructive mt-1 text-right">{{ errors.passwordInput }}</p>
                     </div>
                 </div>
                 <DialogFooter>

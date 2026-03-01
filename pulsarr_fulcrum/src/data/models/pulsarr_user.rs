@@ -50,18 +50,24 @@ impl Model for PulsarrUser {
             .bind(id)
     }
 
-    fn get_all<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(take_size: Option<i32>) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+    fn get_all<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(take_size: Option<i32>, _offset: Option<i32>) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
         query_as("SELECT * FROM pulsarr_user")
     }
 }
 
-fn hash_password(password: String) -> String {
+pub fn hash_password(password: String) -> String {
     Scrypt.hash_password_customized(
         password.as_ref(), 
         None, None, 
         Params::new(8, 8, 1, 32).expect("Invalid password hashing parameters"), 
         &SaltString::generate(&mut OsRng)
     ).expect("Failed to hash password").to_string()
+}
+
+pub fn update_password<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(user_id: i32, password_hash: String) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
+    query_as("UPDATE pulsarr_user SET password = $2 WHERE pulsarr_user_id = $1 RETURNING *")
+        .bind(user_id)
+        .bind(password_hash)
 }
 
 pub fn get_by_email<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(email: &str) -> QueryAs<Postgres, PulsarrUser, PgArguments> {

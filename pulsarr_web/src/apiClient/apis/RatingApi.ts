@@ -15,18 +15,31 @@
 
 import * as runtime from '../runtime';
 import type {
+  CreateRatingDTO,
+  PaginatedGroupRatingsRequest,
   Rating,
   RatingDetail,
+  RatingDetailResponse,
+  UserRatingStats,
 } from '../models/index';
 import {
+    CreateRatingDTOFromJSON,
+    CreateRatingDTOToJSON,
+    PaginatedGroupRatingsRequestFromJSON,
+    PaginatedGroupRatingsRequestToJSON,
     RatingFromJSON,
     RatingToJSON,
     RatingDetailFromJSON,
     RatingDetailToJSON,
+    RatingDetailResponseFromJSON,
+    RatingDetailResponseToJSON,
+    UserRatingStatsFromJSON,
+    UserRatingStatsToJSON,
 } from '../models/index';
 
 export interface AddRatingRequest {
-    rating: Rating;
+    pulsarrApiKey: string;
+    createRatingDTO: CreateRatingDTO;
 }
 
 export interface AddRatingDetailRequest {
@@ -41,6 +54,17 @@ export interface DeleteRatingDetailRequest {
     id: number;
 }
 
+export interface DeleteRatingDetailsByRatingRequest {
+    ratingId: number;
+    pulsarrApiKey: string;
+}
+
+export interface GetExistingRatingRequest {
+    groupId: number;
+    musicbrainzId: string;
+    pulsarrApiKey: string;
+}
+
 export interface GetRatingRequest {
     id: number;
 }
@@ -49,7 +73,26 @@ export interface GetRatingDetailRequest {
     id: number;
 }
 
+export interface GetRatingDetailsByRatingRequest {
+    ratingId: number;
+}
+
+export interface GetRatingsByGroupRequest {
+    paginatedGroupRatingsRequest: PaginatedGroupRatingsRequest;
+}
+
+export interface GetRatingsByUserRequest {
+    pulsarrApiKey: string;
+    takeSize?: number | null;
+    offset?: number | null;
+}
+
+export interface GetUserRatingStatsRequest {
+    pulsarrApiKey: string;
+}
+
 export interface UpdateRatingRequest {
+    pulsarrApiKey: string;
     rating: Rating;
 }
 
@@ -66,10 +109,17 @@ export class RatingApi extends runtime.BaseAPI {
      * Add rating
      */
     async addRatingRaw(requestParameters: AddRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Rating>> {
-        if (requestParameters['rating'] == null) {
+        if (requestParameters['pulsarrApiKey'] == null) {
             throw new runtime.RequiredError(
-                'rating',
-                'Required parameter "rating" was null or undefined when calling addRating().'
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling addRating().'
+            );
+        }
+
+        if (requestParameters['createRatingDTO'] == null) {
+            throw new runtime.RequiredError(
+                'createRatingDTO',
+                'Required parameter "createRatingDTO" was null or undefined when calling addRating().'
             );
         }
 
@@ -79,12 +129,16 @@ export class RatingApi extends runtime.BaseAPI {
 
         headerParameters['Content-Type'] = 'application/json';
 
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
         const response = await this.request({
             path: `/rating/add`,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: RatingToJSON(requestParameters['rating']),
+            body: CreateRatingDTOToJSON(requestParameters['createRatingDTO']),
         }, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => RatingFromJSON(jsonValue));
@@ -209,6 +263,54 @@ export class RatingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Delete all rating details for a rating (ownership verified)
+     */
+    async deleteRatingDetailsByRatingRaw(requestParameters: DeleteRatingDetailsByRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<boolean>> {
+        if (requestParameters['ratingId'] == null) {
+            throw new runtime.RequiredError(
+                'ratingId',
+                'Required parameter "ratingId" was null or undefined when calling deleteRatingDetailsByRating().'
+            );
+        }
+
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling deleteRatingDetailsByRating().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/rating/rating_detail/by_rating/{rating_id}`.replace(`{${"rating_id"}}`, encodeURIComponent(String(requestParameters['ratingId']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<boolean>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     * Delete all rating details for a rating (ownership verified)
+     */
+    async deleteRatingDetailsByRating(requestParameters: DeleteRatingDetailsByRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<boolean> {
+        const response = await this.deleteRatingDetailsByRatingRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Get all rating details
      */
     async getAllRatingDetailsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RatingDetail>>> {
@@ -257,6 +359,57 @@ export class RatingApi extends runtime.BaseAPI {
      */
     async getAllRatings(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Rating>> {
         const response = await this.getAllRatingsRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get existing ratings for a specific media item in a group (for re-rating reference)
+     */
+    async getExistingRatingRaw(requestParameters: GetExistingRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Rating>>> {
+        if (requestParameters['groupId'] == null) {
+            throw new runtime.RequiredError(
+                'groupId',
+                'Required parameter "groupId" was null or undefined when calling getExistingRating().'
+            );
+        }
+
+        if (requestParameters['musicbrainzId'] == null) {
+            throw new runtime.RequiredError(
+                'musicbrainzId',
+                'Required parameter "musicbrainzId" was null or undefined when calling getExistingRating().'
+            );
+        }
+
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling getExistingRating().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/rating/existing/{group_id}/{musicbrainz_id}`.replace(`{${"group_id"}}`, encodeURIComponent(String(requestParameters['groupId']))).replace(`{${"musicbrainz_id"}}`, encodeURIComponent(String(requestParameters['musicbrainzId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RatingFromJSON));
+    }
+
+    /**
+     * Get existing ratings for a specific media item in a group (for re-rating reference)
+     */
+    async getExistingRating(requestParameters: GetExistingRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Rating>> {
+        const response = await this.getExistingRatingRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -327,9 +480,167 @@ export class RatingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Get rating details by rating ID
+     */
+    async getRatingDetailsByRatingRaw(requestParameters: GetRatingDetailsByRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RatingDetailResponse>>> {
+        if (requestParameters['ratingId'] == null) {
+            throw new runtime.RequiredError(
+                'ratingId',
+                'Required parameter "ratingId" was null or undefined when calling getRatingDetailsByRating().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/rating/rating_detail/by_rating/{rating_id}`.replace(`{${"rating_id"}}`, encodeURIComponent(String(requestParameters['ratingId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RatingDetailResponseFromJSON));
+    }
+
+    /**
+     * Get rating details by rating ID
+     */
+    async getRatingDetailsByRating(requestParameters: GetRatingDetailsByRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<RatingDetailResponse>> {
+        const response = await this.getRatingDetailsByRatingRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get ratings by group IDs
+     */
+    async getRatingsByGroupRaw(requestParameters: GetRatingsByGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Rating>>> {
+        if (requestParameters['paginatedGroupRatingsRequest'] == null) {
+            throw new runtime.RequiredError(
+                'paginatedGroupRatingsRequest',
+                'Required parameter "paginatedGroupRatingsRequest" was null or undefined when calling getRatingsByGroup().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/rating/byGroups`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PaginatedGroupRatingsRequestToJSON(requestParameters['paginatedGroupRatingsRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RatingFromJSON));
+    }
+
+    /**
+     * Get ratings by group IDs
+     */
+    async getRatingsByGroup(requestParameters: GetRatingsByGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Rating>> {
+        const response = await this.getRatingsByGroupRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get ratings by authenticated user
+     */
+    async getRatingsByUserRaw(requestParameters: GetRatingsByUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Rating>>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling getRatingsByUser().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['takeSize'] != null) {
+            queryParameters['take_size'] = requestParameters['takeSize'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/rating/byUser`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RatingFromJSON));
+    }
+
+    /**
+     * Get ratings by authenticated user
+     */
+    async getRatingsByUser(requestParameters: GetRatingsByUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Rating>> {
+        const response = await this.getRatingsByUserRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get rating stats for authenticated user
+     */
+    async getUserRatingStatsRaw(requestParameters: GetUserRatingStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserRatingStats>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling getUserRatingStats().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/rating/stats`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => UserRatingStatsFromJSON(jsonValue));
+    }
+
+    /**
+     * Get rating stats for authenticated user
+     */
+    async getUserRatingStats(requestParameters: GetUserRatingStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserRatingStats> {
+        const response = await this.getUserRatingStatsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Update rating
      */
     async updateRatingRaw(requestParameters: UpdateRatingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Rating>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling updateRating().'
+            );
+        }
+
         if (requestParameters['rating'] == null) {
             throw new runtime.RequiredError(
                 'rating',
@@ -342,6 +653,10 @@ export class RatingApi extends runtime.BaseAPI {
         const headerParameters: runtime.HTTPHeaders = {};
 
         headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
 
         const response = await this.request({
             path: `/rating/update`,

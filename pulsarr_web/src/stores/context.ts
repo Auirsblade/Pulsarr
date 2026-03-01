@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { SignInResponse, UserDTO } from "@/apiClient";
 import { CookieManager } from "@/helpers/CookieManager.ts";
@@ -9,6 +9,8 @@ export const useContextStore = defineStore('context', () => {
     const apiKey = ref();
     const privacyTypes = ref<Array<string>>([]);
     const ratingTypes = ref<Array<string>>([]);
+    const showSignInDialog = ref(false);
+    const isLoggedIn = computed(() => !!apiKey.value && !!user.value);
 
     const setSession = (signin: SignInResponse) => {
         user.value = signin.user;
@@ -16,10 +18,22 @@ export const useContextStore = defineStore('context', () => {
         setApiKey();
     }
 
-    const getSession = () => {
+    const getSession = async () => {
         const pulsarrApiKey = CookieManager.getApiKey();
         if (pulsarrApiKey) {
             apiKey.value = pulsarrApiKey;
+            // Fetch current user data
+            const drh = new DataRequestHandler();
+            drh.onSuccessCallback = (data) => {
+                user.value = data as UserDTO;
+            };
+            drh.onErrorCallback = (error) => {
+                console.error('Failed to fetch current user:', error);
+                // API key might be invalid, clear it
+                apiKey.value = undefined;
+                CookieManager.removeApiKey();
+            };
+            await drh.get("/user/currentUser");
         }
     }
 
@@ -31,9 +45,16 @@ export const useContextStore = defineStore('context', () => {
         }
     }
 
-    const loadPrivacyTypes = async () => {
-        if (privacyTypes.value.length > 0) return; // Already loaded
-        
+    const clearSession = () => {
+        user.value = undefined;
+        apiKey.value = undefined;
+        showSignInDialog.value = false;
+        CookieManager.removeApiKey();
+    }
+
+    const loadPrivacyTypes = () => {
+        if (privacyTypes.value.length > 0) return;
+
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
             privacyTypes.value = data as string[];
@@ -41,12 +62,12 @@ export const useContextStore = defineStore('context', () => {
         drh.onErrorCallback = (error) => {
             console.error('Failed to fetch privacy types:', error);
         };
-        await drh.get("/group/privacyTypes");
+        drh.get("/group/privacyTypes");
     }
 
-    const loadRatingTypes = async () => {
-        if (ratingTypes.value.length > 0) return; // Already loaded
-        
+    const loadRatingTypes = () => {
+        if (ratingTypes.value.length > 0) return;
+
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
             ratingTypes.value = data as string[];
@@ -54,16 +75,19 @@ export const useContextStore = defineStore('context', () => {
         drh.onErrorCallback = (error) => {
             console.error('Failed to fetch rating types:', error);
         };
-        await drh.get("/rating-system/ratingTypes");
+        drh.get("/rating-system/ratingTypes");
     }
 
-    return { 
-        user, 
-        apiKey, 
-        privacyTypes, 
+    return {
+        user,
+        apiKey,
+        privacyTypes,
         ratingTypes,
-        setSession, 
+        showSignInDialog,
+        isLoggedIn,
+        setSession,
         getSession,
+        clearSession,
         loadPrivacyTypes,
         loadRatingTypes
     }

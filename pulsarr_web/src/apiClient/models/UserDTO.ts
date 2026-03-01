@@ -42,7 +42,7 @@ export interface UserDTO {
      * @type {string}
      * @memberof UserDTO
      */
-    password: string;
+    password?: string | null;
     /**
      * 
      * @type {string}
@@ -58,7 +58,6 @@ export function instanceOfUserDTO(value: object): value is UserDTO {
     if (!('pulsarr_user_id' in value) || value['pulsarr_user_id'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
     if (!('email' in value) || value['email'] === undefined) return false;
-    if (!('password' in value) || value['password'] === undefined) return false;
     return true;
 }
 
@@ -75,7 +74,7 @@ export function UserDTOFromJSONTyped(json: any, ignoreDiscriminator: boolean): U
         'pulsarr_user_id': json['pulsarr_user_id'],
         'name': json['name'],
         'email': json['email'],
-        'password': json['password'],
+        'password': json['password'] == null ? undefined : json['password'],
         'join_date': json['join_date'] == null ? undefined : json['join_date'],
     };
 }

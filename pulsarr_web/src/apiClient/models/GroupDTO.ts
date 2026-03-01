@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { GroupMemberDTO } from './GroupMemberDTO';
+import {
+    GroupMemberDTOFromJSON,
+    GroupMemberDTOFromJSONTyped,
+    GroupMemberDTOToJSON,
+    GroupMemberDTOToJSONTyped,
+} from './GroupMemberDTO';
 import type { RatingSystemDTO } from './RatingSystemDTO';
 import {
     RatingSystemDTOFromJSON,
@@ -69,6 +76,12 @@ export interface GroupDTO {
      * @memberof GroupDTO
      */
     creation_date?: string | null;
+    /**
+     * 
+     * @type {Array<GroupMemberDTO>}
+     * @memberof GroupDTO
+     */
+    members?: Array<GroupMemberDTO> | null;
 }
 
 /**
@@ -99,6 +112,7 @@ export function GroupDTOFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
         'rating_system': json['rating_system'] == null ? undefined : RatingSystemDTOFromJSON(json['rating_system']),
         'created_by_user_id': json['created_by_user_id'] == null ? undefined : json['created_by_user_id'],
         'creation_date': json['creation_date'] == null ? undefined : json['creation_date'],
+        'members': json['members'] == null ? undefined : ((json['members'] as Array<any>).map(GroupMemberDTOFromJSON)),
     };
 }
 
@@ -120,6 +134,7 @@ export function GroupDTOToJSONTyped(value?: GroupDTO | null, ignoreDiscriminator
         'rating_system': RatingSystemDTOToJSON(value['rating_system']),
         'created_by_user_id': value['created_by_user_id'],
         'creation_date': value['creation_date'],
+        'members': value['members'] == null ? undefined : ((value['members'] as Array<any>).map(GroupMemberDTOToJSON)),
     };
 }
 

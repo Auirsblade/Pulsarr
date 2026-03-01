@@ -43,6 +43,12 @@ export interface RatingDetail {
      * @memberof RatingDetail
      */
     rating_value: string;
+    /**
+     *
+     * @type {string}
+     * @memberof RatingDetail
+     */
+    parameter_name?: string;
 }
 
 /**
@@ -70,6 +76,7 @@ export function RatingDetailFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'rating_id': json['rating_id'],
         'rating_system_parameter_id': json['rating_system_parameter_id'],
         'rating_value': json['rating_value'],
+        'parameter_name': json['parameter_name'],
     };
 }
 
@@ -88,6 +95,7 @@ export function RatingDetailToJSONTyped(value?: RatingDetail | null, ignoreDiscr
         'rating_id': value['rating_id'],
         'rating_system_parameter_id': value['rating_system_parameter_id'],
         'rating_value': value['rating_value'],
+        'parameter_name': value['parameter_name'],
     };
 }
 

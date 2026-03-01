@@ -43,6 +43,12 @@ export interface RatingSystemParameterDTO {
      * @memberof RatingSystemParameterDTO
      */
     name: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof RatingSystemParameterDTO
+     */
+    weight: string;
 }
 
 /**
@@ -53,6 +59,7 @@ export function instanceOfRatingSystemParameterDTO(value: object): value is Rati
     if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
     if (!('parameter_rating_max' in value) || value['parameter_rating_max'] === undefined) return false;
     if (!('name' in value) || value['name'] === undefined) return false;
+    if (!('weight' in value) || value['weight'] === undefined) return false;
     return true;
 }
 
@@ -70,6 +77,7 @@ export function RatingSystemParameterDTOFromJSONTyped(json: any, ignoreDiscrimin
         'rating_system_id': json['rating_system_id'],
         'parameter_rating_max': json['parameter_rating_max'],
         'name': json['name'],
+        'weight': json['weight'],
     };
 }
 
@@ -88,6 +96,7 @@ export function RatingSystemParameterDTOToJSONTyped(value?: RatingSystemParamete
         'rating_system_id': value['rating_system_id'],
         'parameter_rating_max': value['parameter_rating_max'],
         'name': value['name'],
+        'weight': value['weight'],
     };
 }
 

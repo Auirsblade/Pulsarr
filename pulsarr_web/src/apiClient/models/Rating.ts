@@ -55,6 +55,42 @@ export interface Rating {
      * @memberof Rating
      */
     rating_value: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Rating
+     */
+    media_type: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Rating
+     */
+    media_title: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Rating
+     */
+    musicbrainz_id: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Rating
+     */
+    artist_name: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Rating
+     */
+    rating_date: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Rating
+     */
+    release_date: string;
 }
 
 /**
@@ -67,6 +103,12 @@ export function instanceOfRating(value: object): value is Rating {
     if (!('rating_system_id' in value) || value['rating_system_id'] === undefined) return false;
     if (!('comments' in value) || value['comments'] === undefined) return false;
     if (!('rating_value' in value) || value['rating_value'] === undefined) return false;
+    if (!('media_type' in value) || value['media_type'] === undefined) return false;
+    if (!('media_title' in value) || value['media_title'] === undefined) return false;
+    if (!('musicbrainz_id' in value) || value['musicbrainz_id'] === undefined) return false;
+    if (!('artist_name' in value) || value['artist_name'] === undefined) return false;
+    if (!('rating_date' in value) || value['rating_date'] === undefined) return false;
+    if (!('release_date' in value) || value['release_date'] === undefined) return false;
     return true;
 }
 
@@ -86,6 +128,12 @@ export function RatingFromJSONTyped(json: any, ignoreDiscriminator: boolean): Ra
         'rating_system_id': json['rating_system_id'],
         'comments': json['comments'],
         'rating_value': json['rating_value'],
+        'media_type': json['media_type'],
+        'media_title': json['media_title'],
+        'musicbrainz_id': json['musicbrainz_id'],
+        'artist_name': json['artist_name'],
+        'rating_date': json['rating_date'],
+        'release_date': json['release_date'],
     };
 }
 
@@ -106,6 +154,12 @@ export function RatingToJSONTyped(value?: Rating | null, ignoreDiscriminator: bo
         'rating_system_id': value['rating_system_id'],
         'comments': value['comments'],
         'rating_value': value['rating_value'],
+        'media_type': value['media_type'],
+        'media_title': value['media_title'],
+        'musicbrainz_id': value['musicbrainz_id'],
+        'artist_name': value['artist_name'],
+        'rating_date': value['rating_date'],
+        'release_date': value['release_date'],
     };
 }
 

@@ -37,3 +37,22 @@ pub(crate) fn get_by_user_id(user_id: i32) -> QueryAs<'static, Postgres, UserGro
     query_as::<Postgres, UserGroup>("SELECT * FROM user_group WHERE pulsarr_user_id = $1")
         .bind(user_id)
 }
+
+pub(crate) fn get_by_group_and_user(group_id: i32, user_id: i32) -> QueryAs<'static, Postgres, UserGroup, PgArguments>{
+    query_as::<Postgres, UserGroup>("SELECT * FROM user_group WHERE pulsarr_group_id = $1 AND pulsarr_user_id = $2")
+        .bind(group_id)
+        .bind(user_id)
+}
+
+pub(crate) fn update_role(group_id: i32, user_id: i32, new_role: String) -> QueryAs<'static, Postgres, UserGroup, PgArguments>{
+    query_as::<Postgres, UserGroup>("UPDATE user_group SET group_role = $3 WHERE pulsarr_group_id = $1 AND pulsarr_user_id = $2 RETURNING *")
+        .bind(group_id)
+        .bind(user_id)
+        .bind(new_role)
+}
+
+pub(crate) fn remove_member(group_id: i32, user_id: i32) -> QueryAs<'static, Postgres, UserGroup, PgArguments>{
+    query_as::<Postgres, UserGroup>("DELETE FROM user_group WHERE pulsarr_group_id = $1 AND pulsarr_user_id = $2")
+        .bind(group_id)
+        .bind(user_id)
+}

@@ -27,17 +27,25 @@ async fn add_rating_system(state: &State<PostgresState>, request_dto: Json<Ratin
         Err(e) => return Err(e)
     };
 
+    // Map DTOs to models
+    let parameter_models: Vec<RatingSystemParameter> = request_dto.parameters
+        .as_ref()
+        .map(|params| {
+            params.iter().map(|p| {
+                let mut dto = p.clone();
+                dto.rating_system_id = rating_system.rating_system_id;
+                rating_system_parameter_dto::to_model(&dto)
+            }).collect()
+        })
+        .unwrap_or_default();
+
+    // Persist models
     let mut parameters = Vec::new();
-    match &request_dto.parameters {
-        Some(params) => {
-            for parameter in params {
-                match data_wrangler::add(rating_system_parameter_dto::to_model(&parameter), &state.pool).await {
-                    Ok(param) => parameters.push(param),
-                    Err(e) => return Err(e)
-                }
-            }
-        },
-        None => ()
+    for parameter in parameter_models {
+        match data_wrangler::add(parameter, &state.pool).await {
+            Ok(param) => parameters.push(param),
+            Err(e) => return Err(e)
+        }
     }
     
     match data_wrangler::get_by_id::<RatingSystem>(rating_system.rating_system_id, &state.pool).await {
@@ -84,7 +92,7 @@ async fn get_rating_system(state: &State<PostgresState>, id: i32) -> PulsarrResu
 #[openapi(tag = "Rating System")]
 #[get("/")]
 async fn get_all_rating_systems(state: &State<PostgresState>) -> PulsarrResult<Vec<RatingSystem>> {
-    match data_wrangler::get_all::<RatingSystem>(&state.pool, None).await {
+    match data_wrangler::get_all::<RatingSystem>(&state.pool, None, None).await {
         Ok(rating_systems) => Ok(Json(rating_systems)),
         Err(e) => Err(e)
     }
@@ -147,7 +155,7 @@ async fn get_rating_system_parameter(state: &State<PostgresState>, id: i32) -> P
 #[openapi(tag = "Rating System")]
 #[get("/parameter")]
 async fn get_all_rating_system_parameters(state: &State<PostgresState>) -> PulsarrResult<Vec<RatingSystemParameter>> {
-    match data_wrangler::get_all::<RatingSystemParameter>(&state.pool, None).await {
+    match data_wrangler::get_all::<RatingSystemParameter>(&state.pool, None, None).await {
         Ok(parameters) => Ok(Json(parameters)),
         Err(e) => Err(e)       
     }

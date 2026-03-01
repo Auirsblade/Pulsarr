@@ -35,6 +35,23 @@ impl PulsarrError {
             http_status_code: 400,
         }
     }
+
+    pub fn forbidden<T: ToString>(message: T) -> Self {
+        Self {
+            err: "forbidden".to_string(),
+            msg: Some(message.to_string()),
+            http_status_code: 403,
+        }
+    }
+
+    pub fn internal_error<T: std::fmt::Display>(context: &str, error: T) -> Self {
+        eprintln!("[ERROR] {}: {}", context, error);
+        Self {
+            err: "internal error".to_string(),
+            msg: Some("An unexpected error occurred".to_string()),
+            http_status_code: 500,
+        }
+    }
 }
 
 
@@ -60,6 +77,17 @@ impl OpenApiResponderInner for PulsarrError {
                 description: "\
                 # [404 Not Found](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404)\n\
                 This response is given when you request a page that does not exists.\
+                "
+                    .to_string(),
+                ..Default::default()
+            }),
+        );
+        responses.insert(
+            "403".to_string(),
+            RefOr::Object(OpenApiReponse {
+                description: "\
+                # [403 Forbidden](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403)\n\
+                You do not have permission to perform this action. \
                 "
                     .to_string(),
                 ..Default::default()
