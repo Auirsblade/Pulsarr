@@ -11,6 +11,7 @@ env:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
       packages: write
@@ -43,4 +44,4 @@ jobs:
           curl -s -X POST "${{ secrets.DOKPLOY_API_URL }}/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"applicationId": "${{ secrets.DOKPLOY_APP_ID_FULCRUM_PROD }}"}'
+            -d '{"applicationId": "${{ secrets.DOKPLOY_APP_ID_FULCRUM }}"}'
