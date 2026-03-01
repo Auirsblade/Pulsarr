@@ -35,13 +35,7 @@ services:
     environment:
       - POSTGRES_DB=pulsarrdb
       - POSTGRES_HOST_AUTH_METHOD=trust
-      - PGPORT=${POSTGRES_PORT}
 #      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
-    expose: 
-      - ${POSTGRES_PORT:-5432}
-    ports:
-      - ${POSTGRES_PORT:-5432}:${POSTGRES_PORT:-5432}
-    command: -p ${POSTGRES_PORT:-5432}
     healthcheck:
       test: [ "CMD", "pg_isready" ]
       interval: 10s
@@ -50,7 +44,7 @@ services:
     networks: 
       dokploy-network: 
         aliases: 
-          - ${ENV_NAME}-postgres
+          - ${ENV_NAME}-pulsarr-postgres
 volumes:
   db-data:
 networks:
