@@ -1,4 +1,4 @@
-name: Backend Docker Image Push
+name: Frontend Docker Image Push
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/pulsarr-fulcrum
+  IMAGE_NAME: ${{ github.repository_owner }}/pulsarr-web
 
 jobs:
   docker:
@@ -42,6 +42,6 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: "{{defaultContext}}:pulsarr_fulcrum"
+          context: "{{defaultContext}}:pulsarr_web"
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
