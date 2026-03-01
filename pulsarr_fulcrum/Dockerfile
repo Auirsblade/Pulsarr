@@ -20,10 +20,12 @@ RUN apk add --no-cache clang lld musl-dev git
 # Leverage a bind mount to the src directory to avoid having to copy the
 # source code into the container. Once built, copy the executable to an
 # output directory before the cache mounted /app/target is unmounted.
+# Create a dummy .env for dotenv! compile-time macros (real values injected at runtime)
+RUN printf 'ENV_NAME=build\nPOSTGRES_PORT=5432\nPOSTGRES_URL=postgres@localhost:5432/pulsarrdb\nRUST_PORT=4004\n' > .env
+
 RUN --mount=type=bind,source=src,target=src \
     --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
     --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
-    --mount=type=bind,source=.env,target=.env \
     --mount=type=cache,target=/app/target/ \
     --mount=type=cache,target=/usr/local/.cargo/git/db \
     --mount=type=cache,target=/usr/local/.cargo/registry/ \
