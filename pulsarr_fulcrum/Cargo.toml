@@ -17,6 +17,5 @@ chrono = { version = "0.4.41", features = ["serde"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 dotenv = "0.15.0"
-dotenv_codegen = "0.15.0"
 scrypt = "0.11.0"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

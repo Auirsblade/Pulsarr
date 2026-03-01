@@ -29,9 +29,6 @@ jobs:
         with:
           workspaces: pulsarr_fulcrum
 
-      - name: Create dummy .env for compile-time macros
-        run: printf 'ENV_NAME=build\nPOSTGRES_URL=postgres@localhost/pulsarrdb\nRUST_PORT=4004\n' > .env
-
       - name: cargo check
         run: cargo check --locked
 

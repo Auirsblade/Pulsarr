@@ -34,8 +34,8 @@ services:
       - db-data:/var/lib/postgresql
     environment:
       - POSTGRES_DB=pulsarrdb
-      - POSTGRES_HOST_AUTH_METHOD=trust
-#      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     healthcheck:
       test: [ "CMD", "pg_isready" ]
       interval: 10s

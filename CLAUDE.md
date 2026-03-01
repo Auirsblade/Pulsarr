@@ -68,7 +68,9 @@ VITE_API_URL=http://localhost:4004
 ### Backend (`pulsarr_fulcrum/.env`)
 ```
 ENV_NAME=local
-POSTGRES_URL=postgres@localhost/pulsarrdb
+POSTGRES_USER=pulsarr
+POSTGRES_PASSWORD=localdev
+POSTGRES_URL=pulsarr:localdev@localhost/pulsarrdb
 RUST_PORT=4004
 ```
 

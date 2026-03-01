@@ -15,9 +15,6 @@ use sqlx::postgres::PgPool;
 use sqlx::Error;
 use dotenv::dotenv;
 
-#[macro_use]
-extern crate dotenv_codegen;
-
 pub type PulsarrResult<T> = Result<Json<T>, error::PulsarrError>;
 
 struct PostgresState {
@@ -44,7 +41,8 @@ async fn main() {
 }
 
 async fn get_db_pool() -> Result<PgPool, Error> {
-    let db_url = "postgresql://".to_owned() + dotenv!("POSTGRES_URL");
+    let postgres_url = std::env::var("POSTGRES_URL").expect("POSTGRES_URL must be set");
+    let db_url = "postgresql://".to_owned() + &postgres_url;
     println!("connecting to db: {db_url}");
     let pool = PgPool::connect(&db_url).await;
     pool
@@ -52,7 +50,7 @@ async fn get_db_pool() -> Result<PgPool, Error> {
 
 fn create_server() -> Rocket<Build> {
 
-    let port = dotenv!("RUST_PORT").parse::<u16>().unwrap();
+    let port = std::env::var("RUST_PORT").expect("RUST_PORT must be set").parse::<u16>().unwrap();
 
     let figment = rocket::Config::figment()
         .merge(("port", port))
