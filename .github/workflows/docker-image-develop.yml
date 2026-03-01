@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/pulsarr-fulcrum
+  IMAGE_NAME: auirsblade/pulsarr-fulcrum
 
 jobs:
   docker:

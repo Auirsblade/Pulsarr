@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/pulsarr-web
+  IMAGE_NAME: auirsblade/pulsarr-web
 
 jobs:
   docker:
