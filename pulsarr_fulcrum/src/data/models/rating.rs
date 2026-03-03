@@ -20,6 +20,9 @@ pub(crate) struct Rating {
     pub artist_name: String,
     pub rating_date: NaiveDateTime,
     pub release_date: NaiveDateTime,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[sqlx(default)]
+    pub user_name: Option<String>,
 }
 
 impl Model for Rating {

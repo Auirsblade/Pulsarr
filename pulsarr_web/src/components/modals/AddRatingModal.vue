@@ -431,7 +431,7 @@
         <DialogTrigger asChild>
             <slot name="openModal"></slot>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent class="max-h-[85vh] flex flex-col">
             <DialogHeader>
                 <DialogTitle>{{ isEditMode ? 'Edit Rating' : 'Add Rating' }}</DialogTitle>
                 <DialogDescription>
@@ -439,7 +439,7 @@
                 </DialogDescription>
             </DialogHeader>
 
-            <div class="space-y-4">
+            <div class="overflow-y-auto flex-1 min-h-0 space-y-4 -mr-6 pr-6">
                 <!-- Music Selection -->
                 <div class="space-y-2">
                     <Label>Music</Label>
@@ -588,7 +588,7 @@
                 </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter class="pt-4">
                 <Button variant="outline" @click="closeDialog">Cancel</Button>
                 <Button
                     :disabled="!selectedMusic || submitting || (isManualOverall ? !ratingValue : !calculatedRating)"

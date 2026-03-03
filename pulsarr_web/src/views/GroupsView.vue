@@ -146,9 +146,9 @@
                             <CardTitle>{{ group.name }}</CardTitle>
                             <CardDescription class="flex items-center gap-2 mt-1">
                                 <span class="px-2 py-0.5 bg-secondary rounded text-xs">{{ group.privacy_type }}</span>
-                                <span v-if="group.members" class="text-muted-foreground text-xs">
+                                <span class="text-muted-foreground text-xs">
                                     <Users class="inline w-3 h-3 mr-1" />
-                                    {{ group.members.length }}
+                                    {{ group.member_count ?? group.members?.length ?? 0 }}
                                 </span>
                             </CardDescription>
                         </div>

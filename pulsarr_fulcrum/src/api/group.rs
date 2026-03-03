@@ -9,7 +9,7 @@ use crate::api::guards::authorization;
 use crate::constants::{ADMIN_ROLE, MEMBERSHIP_TYPE, MEMBER_ROLE, OWNER_ROLE, PRIVATE_PRIVACY_TYPE, PRIVACY_TYPE};
 use crate::data::data_wrangler;
 use crate::data::models::pulsarr_group;
-use crate::data::models::pulsarr_group::PulsarrGroup;
+use crate::data::models::pulsarr_group::{PulsarrGroup, PulsarrGroupWithCount};
 use crate::data::models::pulsarr_user::PulsarrUser;
 use crate::data::models::rating_system::RatingSystem;
 use crate::data::models::rating_system_template::RatingSystemTemplate;
@@ -142,33 +142,38 @@ async fn get_pulsarr_group(
         return group_member_dto::to_dto(id, m, user);
     });
 
+    let member_list: Vec<group_member_dto::GroupMemberDTO> = member_dtos.collect();
+    let member_count = member_list.len() as i64;
     let group = GroupDTO {
-        members: Some(member_dtos.collect::<Vec<group_member_dto::GroupMemberDTO>>()),
+        members: Some(member_list),
+        member_count: Some(member_count),
         ..group_dto::to_dto(&pg, Some(&rs), Some(parameters))
     };
 
     Ok(Json(group))
 }
 
-/// # Get all groups
+/// # Get all groups (filtered by visibility)
 #[openapi(tag = "Group")]
 #[post("/", format = "application/json", data = "<get_request>")]
 async fn get_all_groups(
     state: &State<PostgresState>,
     get_request: Json<GetRequest>,
-    _api_user: ApiKey,
+    api_user: ApiKey,
 ) -> PulsarrResult<Vec<GroupDTO>> {
+    let ApiKey(user_id) = api_user;
     let req = get_request.into_inner();
-    match data_wrangler::get_all::<PulsarrGroup>(&state.pool, req.take_size, req.offset)
+    match pulsarr_group::get_all_visible::<PulsarrGroupWithCount>(user_id, req.take_size, req.offset)
+        .fetch_all(&state.pool)
         .await
     {
         Ok(groups) => Ok(Json(
             groups
                 .iter()
-                .map(|group| group_dto::to_dto(group, None, None))
+                .map(|group| group_dto::to_dto_with_count(group))
                 .collect::<Vec<GroupDTO>>(),
         )),
-        Err(e) => Err(e),
+        Err(e) => Err(PulsarrError::validation_error(e)),
     }
 }
 
@@ -346,8 +351,8 @@ async fn join(state: &State<PostgresState>, group_id: i32, user_id: i32, role: S
 #[get("/search?<name>")]
 async fn search_groups(state: &State<PostgresState>, name: Option<&str>, api_user: ApiKey) -> PulsarrResult<Vec<GroupDTO>> {
     let ApiKey(user_id) = api_user;
-    match pulsarr_group::get_by_name(name, user_id).fetch_all(&state.pool).await {
-        Ok(groups) => Ok(Json(groups.iter().map(|group| group_dto::to_dto(group, None, None)).collect::<Vec<GroupDTO>>())),
+    match pulsarr_group::get_by_name_with_count::<PulsarrGroupWithCount>(name, user_id).fetch_all(&state.pool).await {
+        Ok(groups) => Ok(Json(groups.iter().map(|group| group_dto::to_dto_with_count(group)).collect::<Vec<GroupDTO>>())),
         Err(e) => Err(PulsarrError::validation_error(e))
     }
 }
@@ -368,14 +373,14 @@ async fn my_groups(state: &State<PostgresState>, api_user: ApiKey) -> PulsarrRes
 async fn get_public_groups_endpoint(
     state: &State<PostgresState>,
 ) -> PulsarrResult<Vec<GroupDTO>> {
-    match pulsarr_group::get_public_groups::<PulsarrGroup>()
+    match pulsarr_group::get_public_groups_with_count::<PulsarrGroupWithCount>()
         .fetch_all(&state.pool)
         .await
     {
         Ok(groups) => Ok(Json(
             groups
                 .iter()
-                .map(|group| group_dto::to_dto(group, None, None))
+                .map(|group| group_dto::to_dto_with_count(group))
                 .collect(),
         )),
         Err(e) => Err(PulsarrError::validation_error(e)),
@@ -389,11 +394,11 @@ async fn get_group_preview_endpoint(
     state: &State<PostgresState>,
     id: i32,
 ) -> PulsarrResult<GroupDTO> {
-    match pulsarr_group::get_group_preview::<PulsarrGroup>(id)
+    match pulsarr_group::get_group_preview_with_count::<PulsarrGroupWithCount>(id)
         .fetch_optional(&state.pool)
         .await
     {
-        Ok(Some(pg)) => Ok(Json(group_dto::to_dto(&pg, None, None))),
+        Ok(Some(pg)) => Ok(Json(group_dto::to_dto_with_count(&pg))),
         Ok(None) => Err(PulsarrError::missing_data("Group".to_string())),
         Err(e) => Err(PulsarrError::validation_error(e)),
     }

@@ -77,11 +77,17 @@ export interface GroupDTO {
      */
     creation_date?: string | null;
     /**
-     * 
+     *
      * @type {Array<GroupMemberDTO>}
      * @memberof GroupDTO
      */
     members?: Array<GroupMemberDTO> | null;
+    /**
+     *
+     * @type {number}
+     * @memberof GroupDTO
+     */
+    member_count?: number | null;
 }
 
 /**
@@ -113,6 +119,7 @@ export function GroupDTOFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
         'created_by_user_id': json['created_by_user_id'] == null ? undefined : json['created_by_user_id'],
         'creation_date': json['creation_date'] == null ? undefined : json['creation_date'],
         'members': json['members'] == null ? undefined : ((json['members'] as Array<any>).map(GroupMemberDTOFromJSON)),
+        'member_count': json['member_count'] == null ? undefined : json['member_count'],
     };
 }
 
@@ -135,6 +142,7 @@ export function GroupDTOToJSONTyped(value?: GroupDTO | null, ignoreDiscriminator
         'created_by_user_id': value['created_by_user_id'],
         'creation_date': value['creation_date'],
         'members': value['members'] == null ? undefined : ((value['members'] as Array<any>).map(GroupMemberDTOToJSON)),
+        'member_count': value['member_count'],
     };
 }
 

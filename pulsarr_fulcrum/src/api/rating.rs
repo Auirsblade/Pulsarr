@@ -139,8 +139,9 @@ async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<Pagina
 
     let result = if req.current_only.unwrap_or(false) {
         query_as::<_, Rating>(
-            "SELECT r.* FROM rating r \
+            "SELECT r.*, u.name AS user_name FROM rating r \
              JOIN pulsarr_group g ON g.pulsarr_group_id = r.pulsarr_group_id \
+             LEFT JOIN pulsarr_user u ON u.pulsarr_user_id = r.pulsarr_user_id \
              WHERE r.pulsarr_group_id = ANY($1) AND r.rating_system_id = g.rating_system_id \
              ORDER BY r.rating_date DESC LIMIT $2 OFFSET $3"
         )
@@ -151,7 +152,9 @@ async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<Pagina
             .await
     } else {
         query_as::<_, Rating>(
-            "SELECT * FROM rating WHERE pulsarr_group_id = ANY($1) ORDER BY rating_date DESC LIMIT $2 OFFSET $3"
+            "SELECT r.*, u.name AS user_name FROM rating r \
+             LEFT JOIN pulsarr_user u ON u.pulsarr_user_id = r.pulsarr_user_id \
+             WHERE r.pulsarr_group_id = ANY($1) ORDER BY r.rating_date DESC LIMIT $2 OFFSET $3"
         )
             .bind(&req.group_ids)
             .bind(limit)
@@ -294,7 +297,11 @@ async fn get_ratings_by_user(
     let limit = take_size.unwrap_or(20).min(100);
     let off = offset.unwrap_or(0);
 
-    match query_as::<_, Rating>("SELECT * FROM rating WHERE pulsarr_user_id = $1 ORDER BY rating_date DESC LIMIT $2 OFFSET $3")
+    match query_as::<_, Rating>(
+        "SELECT r.*, u.name AS user_name FROM rating r \
+         LEFT JOIN pulsarr_user u ON u.pulsarr_user_id = r.pulsarr_user_id \
+         WHERE r.pulsarr_user_id = $1 ORDER BY r.rating_date DESC LIMIT $2 OFFSET $3"
+    )
         .bind(user_id)
         .bind(limit)
         .bind(off)
@@ -386,7 +393,9 @@ async fn get_existing_rating(
     let ApiKey(user_id) = api_user;
 
     match query_as::<_, Rating>(
-        "SELECT * FROM rating WHERE pulsarr_user_id = $1 AND pulsarr_group_id = $2 AND musicbrainz_id = $3 ORDER BY rating_date DESC"
+        "SELECT r.*, u.name AS user_name FROM rating r \
+         LEFT JOIN pulsarr_user u ON u.pulsarr_user_id = r.pulsarr_user_id \
+         WHERE r.pulsarr_user_id = $1 AND r.pulsarr_group_id = $2 AND r.musicbrainz_id = $3 ORDER BY r.rating_date DESC"
     )
         .bind(user_id)
         .bind(group_id)

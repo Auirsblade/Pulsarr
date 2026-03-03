@@ -118,7 +118,11 @@
     const schema = yup.object({
         name: yup.string().required().min(3).max(50),
         master_rating_type: yup.string().required(),
-        rating_max: yup.string().required(),
+        rating_max: yup.string().when('master_rating_type', {
+            is: 'Absolute',
+            then: (schema) => schema.required('Maximum rating is required'),
+            otherwise: (schema) => schema.notRequired(),
+        }),
     });
 
     const { handleSubmit, resetForm, defineField, errors } = useForm({
@@ -158,6 +162,11 @@
     };
 
     const onSubmit = handleSubmit((values) => {
+        if (parametersRequired.value && parameters.value.length === 0) {
+            toast.error('At least one parameter is required for this rating type')
+            return
+        }
+
         if (parameters.value.length > 0 && !validateParameters()) {
             toast.error('Please fill in all parameter fields')
             return
@@ -186,14 +195,15 @@
         <DialogTrigger asChild>
             <slot name="openModal"></slot>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent class="max-h-[85vh] flex flex-col">
             <DialogHeader>
                 <DialogTitle>Create New Rating System</DialogTitle>
                 <DialogDescription>
                     Create a new rating system with a name, type, and maximum rating
                 </DialogDescription>
             </DialogHeader>
-            <form @submit.prevent="onSubmit" class="space-y-4">
+            <form @submit.prevent="onSubmit" class="flex flex-col flex-1 min-h-0">
+              <div class="overflow-y-auto flex-1 min-h-0 space-y-4 -mr-6 pr-6">
                 <div class="space-y-2">
                     <Label for="name">Rating System Name</Label>
                     <Input id="name" v-model="name" :class="{ 'border-red-500': errors.name }" v-bind="nameProps" :aria-invalid="!!errors.name" :aria-describedby="errors.name ? 'rs-name-error' : undefined"/>
@@ -302,7 +312,8 @@
                     </div>
                 </div>
 
-                <DialogFooter>
+              </div>
+                <DialogFooter class="pt-4">
                     <Button type="submit">Create Rating System</Button>
                 </DialogFooter>
             </form>

@@ -42,6 +42,7 @@ pub fn create_rating_to_model(dto: CreateRatingDTO) -> Rating {
         artist_name: dto.artist_name,
         rating_date: chrono::Utc::now().naive_utc(),
         release_date: dto.release_date,
+        user_name: None,
     }
 }
 

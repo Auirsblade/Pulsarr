@@ -52,7 +52,16 @@ async fn add_user(state: &State<PostgresState>, user: Json<CreateUserRequest>) -
     let pulsarr_user = create_request_to_model(req);
     match data_wrangler::add(pulsarr_user, &state.pool).await {
         Ok(pulsarr_user) => Ok(Json(to_dto(&pulsarr_user))),
-        Err(error) => Err(error),
+        Err(error) => {
+            let msg = error.msg.as_deref().unwrap_or("");
+            if msg.contains("pulsarr_user_name_unique") {
+                Err(PulsarrError::validation_error("An account with that username already exists"))
+            } else if msg.contains("pulsarr_user_email_unique") {
+                Err(PulsarrError::validation_error("An account with that email already exists"))
+            } else {
+                Err(error)
+            }
+        }
     }
 }
 
@@ -70,7 +79,16 @@ async fn update_user(state: &State<PostgresState>, user: Json<UserDTO>, api_user
     let pulsarr_user = to_model(dto);
     match data_wrangler::update(pulsarr_user, &state.pool).await {
         Ok(pulsarr_user) => Ok(Json(to_dto(&pulsarr_user))),
-        Err(error) => Err(error),
+        Err(error) => {
+            let msg = error.msg.as_deref().unwrap_or("");
+            if msg.contains("pulsarr_user_name_unique") {
+                Err(PulsarrError::validation_error("An account with that username already exists"))
+            } else if msg.contains("pulsarr_user_email_unique") {
+                Err(PulsarrError::validation_error("An account with that email already exists"))
+            } else {
+                Err(error)
+            }
+        }
     }
 }
 

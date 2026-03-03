@@ -119,7 +119,8 @@
             .map(([role]) => role);
     };
 
-    const getUserName = (userId: number): string => {
+    const getUserName = (userId: number, userName?: string | null): string => {
+        if (userName) return userName;
         const member = group.value?.members?.find(m => m.user?.pulsarr_user_id === userId);
         return member?.user?.name || 'Unknown User';
     };
@@ -683,7 +684,7 @@
                     :key="rating.rating_id"
                     :rating="rating"
                     :cover-art-url="coverArtCache[rating.musicbrainz_id]"
-                    :user-name="getUserName(rating.pulsarr_user_id)"
+                    :user-name="getUserName(rating.pulsarr_user_id, rating.user_name)"
                     :outdated="isRatingOutdated(rating)"
                     @click="openRatingModal(rating)"
                 />
@@ -695,7 +696,7 @@
                     :rating="selectedRating"
                     :open="showRatingModal"
                     :cover-art-url="selectedRating ? coverArtCache[selectedRating.musicbrainz_id] : undefined"
-                    :user-name="selectedRating ? getUserName(selectedRating.pulsarr_user_id) : ''"
+                    :user-name="selectedRating ? getUserName(selectedRating.pulsarr_user_id, selectedRating.user_name) : ''"
                     :rating-system="group?.rating_system"
                     :outdated="selectedRating ? isRatingOutdated(selectedRating) : false"
                     :group="group"
