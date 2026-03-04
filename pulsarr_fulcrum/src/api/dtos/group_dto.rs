@@ -1,7 +1,7 @@
 use crate::api::dtos::group_member_dto::GroupMemberDTO;
 use crate::api::dtos::rating_system_dto;
 use crate::api::dtos::rating_system_dto::RatingSystemDTO;
-use crate::data::models::pulsarr_group::PulsarrGroup;
+use crate::data::models::pulsarr_group::{PulsarrGroup, PulsarrGroupWithCount};
 use crate::data::models::rating_system::RatingSystem;
 use crate::data::models::rating_system_parameter::RatingSystemParameter;
 use chrono::NaiveDateTime;
@@ -22,6 +22,8 @@ pub struct GroupDTO {
     pub creation_date: Option<NaiveDateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub members: Option<Vec<GroupMemberDTO>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub member_count: Option<i64>,
 }
 
 pub fn to_dto(
@@ -40,7 +42,22 @@ pub fn to_dto(
         },
         created_by_user_id: pulsarr_group.created_by_user_id,
         creation_date: Some(pulsarr_group.creation_date),
-        members: Some(Vec::new()),
+        members: None,
+        member_count: None,
+    }
+}
+
+pub fn to_dto_with_count(group: &PulsarrGroupWithCount) -> GroupDTO {
+    GroupDTO {
+        pulsarr_group_id: group.pulsarr_group_id,
+        rating_system_id: group.rating_system_id,
+        name: group.name.clone(),
+        privacy_type: group.privacy_type.clone(),
+        rating_system: None,
+        created_by_user_id: group.created_by_user_id,
+        creation_date: Some(group.creation_date),
+        members: None,
+        member_count: Some(group.member_count),
     }
 }
 

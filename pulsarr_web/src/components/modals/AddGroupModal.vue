@@ -201,14 +201,15 @@
         <DialogTrigger asChild>
             <slot name="openModal"></slot>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent class="max-h-[85vh] flex flex-col">
             <DialogHeader>
                 <DialogTitle>Create New Group</DialogTitle>
                 <DialogDescription>
                     Create a new group with a rating system
                 </DialogDescription>
             </DialogHeader>
-            <form @submit.prevent="onSubmit" class="space-y-4">
+            <form @submit.prevent="onSubmit" class="flex flex-col flex-1 min-h-0">
+              <div class="overflow-y-auto flex-1 min-h-0 space-y-4 -mr-6 pr-6">
                 <div class="space-y-2">
                     <Label for="name">Name</Label>
                     <Input id="name" v-model="name" :class="{ 'border-red-500': errors.name }" v-bind="nameProps" :aria-invalid="!!errors.name" :aria-describedby="errors.name ? 'group-name-error' : undefined"/>
@@ -331,7 +332,8 @@
                         {{ ratingSystemError }}
                     </span>
                 </div>
-                <DialogFooter>
+              </div>
+                <DialogFooter class="pt-4">
                     <Button type="submit">Create Group</Button>
                 </DialogFooter>
             </form>

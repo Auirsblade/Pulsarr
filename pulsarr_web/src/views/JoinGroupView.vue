@@ -22,10 +22,7 @@
 
     const groupId = computed(() => Number(route.params.groupId));
 
-    const isAlreadyMember = computed(() => {
-        if (!group.value?.members || !user.value) return false;
-        return group.value.members.some(m => m.user?.pulsarr_user_id === user.value?.pulsarr_user_id);
-    });
+    const isAlreadyMember = ref(false);
 
     onMounted(() => {
         fetchGroup();
@@ -38,21 +35,37 @@
     const fetchGroup = () => {
         loading.value = true;
         error.value = null;
+        isAlreadyMember.value = false;
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
             group.value = data as GroupDTO;
             loading.value = false;
+            if (isLoggedIn.value) {
+                checkMembership();
+            }
         };
         drh.onErrorCallback = (err) => {
-            error.value = 'Failed to load group. It may not exist or you may not have access.';
+            error.value = 'Failed to load group. It may not exist.';
             loading.value = false;
             console.error('Failed to fetch group:', err);
         };
-        if (isLoggedIn.value) {
-            drh.get(`/group/${groupId.value}`);
-        } else {
-            drh.get(`/group/preview/${groupId.value}`);
-        }
+        drh.get(`/group/preview/${groupId.value}`);
+    };
+
+    const checkMembership = () => {
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = (data) => {
+            const fullGroup = data as GroupDTO;
+            if (fullGroup.members && user.value) {
+                isAlreadyMember.value = fullGroup.members.some(
+                    m => m.user?.pulsarr_user_id === user.value?.pulsarr_user_id
+                );
+            }
+        };
+        drh.onErrorCallback = () => {
+            // Swallow errors (e.g. 403 for private groups) — user can still join
+        };
+        drh.get(`/group/${groupId.value}`);
     };
 
     const joinGroup = () => {
@@ -107,7 +120,7 @@
                         <span class="px-2 py-0.5 bg-secondary rounded text-xs">{{ group.privacy_type }}</span>
                         <span class="text-muted-foreground text-sm">
                             <Users class="inline w-4 h-4 mr-1" />
-                            {{ group.members?.length ?? 0 }} members
+                            {{ group.member_count ?? group.members?.length ?? 0 }} members
                         </span>
                     </div>
                 </div>

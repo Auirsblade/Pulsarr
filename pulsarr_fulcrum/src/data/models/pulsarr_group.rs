@@ -14,6 +14,17 @@ pub struct PulsarrGroup {
     pub created_by_user_id: Option<i32>
 }
 
+#[derive(FromRow)]
+pub struct PulsarrGroupWithCount {
+    pub pulsarr_group_id: i32,
+    pub rating_system_id: i32,
+    pub name: String,
+    pub privacy_type: String,
+    pub creation_date: NaiveDateTime,
+    pub created_by_user_id: Option<i32>,
+    pub member_count: i64,
+}
+
 impl Model for PulsarrGroup {
     fn add<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrGroup, PgArguments> {
         query_as(
@@ -126,4 +137,91 @@ pub fn get_my_groups<PulsarrGroup: for<'r> sqlx::FromRow<'r, PgRow>>(user_id: &i
                 u.pulsarr_user_id = $1
         ")
         .bind(user_id)
+}
+
+pub fn get_all_visible<T: for<'r> sqlx::FromRow<'r, PgRow>>(user_id: i32, take_size: Option<i32>, offset: Option<i32>) -> QueryAs<'static, Postgres, T, PgArguments> {
+    match (take_size, offset) {
+        (Some(size), Some(off)) => query_as(
+            "SELECT g.*, \
+                (SELECT COUNT(*) FROM user_group ug WHERE ug.pulsarr_group_id = g.pulsarr_group_id) AS member_count \
+             FROM pulsarr_group g \
+             WHERE g.privacy_type = 'Public' \
+                OR (g.privacy_type = 'Private' AND EXISTS ( \
+                    SELECT 1 FROM user_group ug \
+                    WHERE ug.pulsarr_group_id = g.pulsarr_group_id AND ug.pulsarr_user_id = $1 \
+                )) \
+             ORDER BY g.creation_date DESC LIMIT $2 OFFSET $3"
+        ).bind(user_id).bind(size).bind(off),
+        (Some(size), None) => query_as(
+            "SELECT g.*, \
+                (SELECT COUNT(*) FROM user_group ug WHERE ug.pulsarr_group_id = g.pulsarr_group_id) AS member_count \
+             FROM pulsarr_group g \
+             WHERE g.privacy_type = 'Public' \
+                OR (g.privacy_type = 'Private' AND EXISTS ( \
+                    SELECT 1 FROM user_group ug \
+                    WHERE ug.pulsarr_group_id = g.pulsarr_group_id AND ug.pulsarr_user_id = $1 \
+                )) \
+             ORDER BY g.creation_date DESC LIMIT $2"
+        ).bind(user_id).bind(size),
+        _ => query_as(
+            "SELECT g.*, \
+                (SELECT COUNT(*) FROM user_group ug WHERE ug.pulsarr_group_id = g.pulsarr_group_id) AS member_count \
+             FROM pulsarr_group g \
+             WHERE g.privacy_type = 'Public' \
+                OR (g.privacy_type = 'Private' AND EXISTS ( \
+                    SELECT 1 FROM user_group ug \
+                    WHERE ug.pulsarr_group_id = g.pulsarr_group_id AND ug.pulsarr_user_id = $1 \
+                )) \
+             ORDER BY g.creation_date DESC"
+        ).bind(user_id),
+    }
+}
+
+pub fn get_public_groups_with_count<T: for<'r> sqlx::FromRow<'r, PgRow>>() -> QueryAs<'static, Postgres, T, PgArguments> {
+    query_as(
+        "SELECT g.*, \
+            (SELECT COUNT(*) FROM user_group ug WHERE ug.pulsarr_group_id = g.pulsarr_group_id) AS member_count \
+         FROM pulsarr_group g \
+         WHERE g.privacy_type = 'Public'"
+    )
+}
+
+pub fn get_by_name_with_count<T: for<'r> sqlx::FromRow<'r, PgRow>>(name: Option<&str>, user_id: i32) -> QueryAs<Postgres, T, PgArguments> {
+    match name {
+        None => {
+            query_as(
+                "SELECT g.*, \
+                    (SELECT COUNT(*) FROM user_group ug WHERE ug.pulsarr_group_id = g.pulsarr_group_id) AS member_count \
+                 FROM pulsarr_group g \
+                 WHERE g.privacy_type = 'Public' \
+                    OR (g.privacy_type = 'Private' AND EXISTS ( \
+                        SELECT 1 FROM user_group ug \
+                        WHERE ug.pulsarr_group_id = g.pulsarr_group_id AND ug.pulsarr_user_id = $1 \
+                    ))"
+            ).bind(user_id)
+        },
+        Some(name) => {
+            let pattern = format!("%{}%", name);
+            query_as(
+                "SELECT g.*, \
+                    (SELECT COUNT(*) FROM user_group ug WHERE ug.pulsarr_group_id = g.pulsarr_group_id) AS member_count \
+                 FROM pulsarr_group g \
+                 WHERE g.name ILIKE $1 \
+                    AND (g.privacy_type = 'Public' \
+                        OR (g.privacy_type = 'Private' AND EXISTS ( \
+                            SELECT 1 FROM user_group ug \
+                            WHERE ug.pulsarr_group_id = g.pulsarr_group_id AND ug.pulsarr_user_id = $2 \
+                        )))"
+            ).bind(pattern).bind(user_id)
+        }
+    }
+}
+
+pub fn get_group_preview_with_count<T: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+    query_as(
+        "SELECT g.*, \
+            (SELECT COUNT(*) FROM user_group ug WHERE ug.pulsarr_group_id = g.pulsarr_group_id) AS member_count \
+         FROM pulsarr_group g \
+         WHERE g.pulsarr_group_id = $1"
+    ).bind(id)
 }

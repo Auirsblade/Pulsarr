@@ -86,11 +86,17 @@ export interface Rating {
      */
     rating_date: string;
     /**
-     * 
+     *
      * @type {string}
      * @memberof Rating
      */
     release_date: string;
+    /**
+     *
+     * @type {string}
+     * @memberof Rating
+     */
+    user_name?: string | null;
 }
 
 /**
@@ -134,6 +140,7 @@ export function RatingFromJSONTyped(json: any, ignoreDiscriminator: boolean): Ra
         'artist_name': json['artist_name'],
         'rating_date': json['rating_date'],
         'release_date': json['release_date'],
+        'user_name': json['user_name'] == null ? undefined : json['user_name'],
     };
 }
 
@@ -160,6 +167,7 @@ export function RatingToJSONTyped(value?: Rating | null, ignoreDiscriminator: bo
         'artist_name': value['artist_name'],
         'rating_date': value['rating_date'],
         'release_date': value['release_date'],
+        'user_name': value['user_name'],
     };
 }
 

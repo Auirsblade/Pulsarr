@@ -15,7 +15,8 @@ export const useFeedStore = defineStore('feed', () => {
     const hasMore = ref(true);
     const error = ref<string | null>(null);
 
-    const getUserName = (userId: number): string => {
+    const getUserName = (userId: number, userName?: string | null): string => {
+        if (userName) return userName;
         for (const group of groupDetails.value.values()) {
             const member = group.members?.find(m => m.user?.pulsarr_user_id === userId);
             if (member?.user?.name) return member.user.name;
