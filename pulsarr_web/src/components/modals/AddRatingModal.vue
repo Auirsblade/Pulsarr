@@ -300,6 +300,26 @@
         drh.delete(`/rating/rating_detail/by_rating/${ratingId}`);
     };
 
+    const clampValue = (target: { value: string }, max: string) => {
+        const val = parseFloat(target.value);
+        const maxVal = parseFloat(max);
+        if (isNaN(val) || val < 0) {
+            target.value = '0';
+        } else if (val > maxVal) {
+            target.value = max;
+        }
+    };
+
+    const clampOverallRating = () => {
+        const val = parseFloat(ratingValue.value);
+        const maxVal = parseFloat(ratingMax.value);
+        if (isNaN(val) || val < 0) {
+            ratingValue.value = '0';
+        } else if (val > maxVal) {
+            ratingValue.value = ratingMax.value;
+        }
+    };
+
     const submit = () => {
         if (!selectedMusic.value || !user.value) return;
 
@@ -309,6 +329,18 @@
                 error.value = 'All parameter ratings are required';
                 return;
             }
+        }
+
+        // Validate each parameter value is in range
+        const invalidParam = parameterRatings.value.find(p => {
+            if (!p.value) return false;
+            const val = parseFloat(p.value);
+            const max = parseFloat(p.max);
+            return isNaN(val) || val < 0 || val > max;
+        });
+        if (invalidParam) {
+            error.value = `${invalidParam.name} must be between 0 and ${invalidParam.max}`;
+            return;
         }
 
         // Determine the final rating value
@@ -539,6 +571,7 @@
                                 step="0.1"
                                 class="w-24"
                                 placeholder="--"
+                                @blur="clampValue(param, param.max)"
                             />
                         </div>
                     </div>
@@ -558,6 +591,7 @@
                         :max="ratingMax"
                         step="0.1"
                         placeholder="Enter rating..."
+                        @blur="clampOverallRating"
                     />
 
                     <!-- Auto-calculated display for Average/Cumulative -->
@@ -582,10 +616,11 @@
                     />
                 </div>
 
-                <!-- Error -->
-                <div v-if="error" class="text-sm text-destructive" role="alert">
-                    {{ error }}
-                </div>
+            </div>
+
+            <!-- Error (outside scroll container so it's always visible) -->
+            <div v-if="error" class="text-sm text-destructive" role="alert">
+                {{ error }}
             </div>
 
             <DialogFooter class="pt-4">
