@@ -320,7 +320,7 @@ export class GroupApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get all groups
+     * Get all groups (filtered by visibility)
      */
     async getAllGroupsRaw(requestParameters: GetAllGroupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<GroupDTO>>> {
         if (requestParameters['pulsarrApiKey'] == null) {
@@ -359,7 +359,7 @@ export class GroupApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get all groups
+     * Get all groups (filtered by visibility)
      */
     async getAllGroups(requestParameters: GetAllGroupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<GroupDTO>> {
         const response = await this.getAllGroupsRaw(requestParameters, initOverrides);

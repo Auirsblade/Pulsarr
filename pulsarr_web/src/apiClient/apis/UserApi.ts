@@ -16,17 +16,20 @@
 import * as runtime from '../runtime';
 import type {
   ChangePasswordRequest,
+  CreateUserRequest,
   UserDTO,
 } from '../models/index';
 import {
     ChangePasswordRequestFromJSON,
     ChangePasswordRequestToJSON,
+    CreateUserRequestFromJSON,
+    CreateUserRequestToJSON,
     UserDTOFromJSON,
     UserDTOToJSON,
 } from '../models/index';
 
 export interface AddUserRequest {
-    userDTO: UserDTO;
+    createUserRequest: CreateUserRequest;
 }
 
 export interface ChangePasswordOperationRequest {
@@ -36,6 +39,7 @@ export interface ChangePasswordOperationRequest {
 
 export interface DeleteUserRequest {
     id: number;
+    pulsarrApiKey: string;
 }
 
 export interface GetAllUsersRequest {
@@ -48,9 +52,11 @@ export interface GetCurrentUserRequest {
 
 export interface GetPulsarrUserRequest {
     id: number;
+    pulsarrApiKey: string;
 }
 
 export interface UpdateUserRequest {
+    pulsarrApiKey: string;
     userDTO: UserDTO;
 }
 
@@ -63,10 +69,10 @@ export class UserApi extends runtime.BaseAPI {
      * Add user
      */
     async addUserRaw(requestParameters: AddUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserDTO>> {
-        if (requestParameters['userDTO'] == null) {
+        if (requestParameters['createUserRequest'] == null) {
             throw new runtime.RequiredError(
-                'userDTO',
-                'Required parameter "userDTO" was null or undefined when calling addUser().'
+                'createUserRequest',
+                'Required parameter "createUserRequest" was null or undefined when calling addUser().'
             );
         }
 
@@ -81,7 +87,7 @@ export class UserApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: UserDTOToJSON(requestParameters['userDTO']),
+            body: CreateUserRequestToJSON(requestParameters['createUserRequest']),
         }, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => UserDTOFromJSON(jsonValue));
@@ -157,9 +163,20 @@ export class UserApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling deleteUser().'
+            );
+        }
+
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
 
         const response = await this.request({
             path: `/user/delete/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
@@ -268,9 +285,20 @@ export class UserApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling getPulsarrUser().'
+            );
+        }
+
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
 
         const response = await this.request({
             path: `/user/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
@@ -294,6 +322,13 @@ export class UserApi extends runtime.BaseAPI {
      * Update user
      */
     async updateUserRaw(requestParameters: UpdateUserRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UserDTO>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling updateUser().'
+            );
+        }
+
         if (requestParameters['userDTO'] == null) {
             throw new runtime.RequiredError(
                 'userDTO',
@@ -306,6 +341,10 @@ export class UserApi extends runtime.BaseAPI {
         const headerParameters: runtime.HTTPHeaders = {};
 
         headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
 
         const response = await this.request({
             path: `/user/update`,

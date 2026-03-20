@@ -17,7 +17,11 @@ models/CoverArtImage.ts
 models/CoverArtInfo.ts
 models/CoverArtThumbnails.ts
 models/CreateRatingDTO.ts
+models/CreateUserRequest.ts
 models/GetRequest.ts
+models/GroupAlbumKey.ts
+models/GroupAverageResponse.ts
+models/GroupAveragesRequest.ts
 models/GroupDTO.ts
 models/GroupMemberDTO.ts
 models/Label.ts

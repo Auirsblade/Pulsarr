@@ -23,7 +23,7 @@
     "clsx": "^2.1.1",
     "lucide-vue-next": "^0.509.0",
     "pinia": "^3.0.1",
-    "reka-ui": "^2.8.0",
+    "reka-ui": "^2.9.2",
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.0.6",
     "tailwindcss-animate": "^1.0.7",

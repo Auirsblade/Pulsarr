@@ -16,77 +16,69 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface UserDTO
+ * @interface CreateUserRequest
  */
-export interface UserDTO {
-    /**
-     * 
-     * @type {number}
-     * @memberof UserDTO
-     */
-    pulsarr_user_id: number;
+export interface CreateUserRequest {
     /**
      * 
      * @type {string}
-     * @memberof UserDTO
+     * @memberof CreateUserRequest
      */
     name: string;
     /**
      * 
      * @type {string}
-     * @memberof UserDTO
+     * @memberof CreateUserRequest
      */
     email: string;
     /**
      * 
      * @type {string}
-     * @memberof UserDTO
+     * @memberof CreateUserRequest
      */
-    join_date?: string | null;
+    password: string;
 }
 
 /**
- * Check if a given object implements the UserDTO interface.
+ * Check if a given object implements the CreateUserRequest interface.
  */
-export function instanceOfUserDTO(value: object): value is UserDTO {
-    if (!('pulsarr_user_id' in value) || value['pulsarr_user_id'] === undefined) return false;
+export function instanceOfCreateUserRequest(value: object): value is CreateUserRequest {
     if (!('name' in value) || value['name'] === undefined) return false;
     if (!('email' in value) || value['email'] === undefined) return false;
+    if (!('password' in value) || value['password'] === undefined) return false;
     return true;
 }
 
-export function UserDTOFromJSON(json: any): UserDTO {
-    return UserDTOFromJSONTyped(json, false);
+export function CreateUserRequestFromJSON(json: any): CreateUserRequest {
+    return CreateUserRequestFromJSONTyped(json, false);
 }
 
-export function UserDTOFromJSONTyped(json: any, ignoreDiscriminator: boolean): UserDTO {
+export function CreateUserRequestFromJSONTyped(json: any, ignoreDiscriminator: boolean): CreateUserRequest {
     if (json == null) {
         return json;
     }
     return {
         
-        'pulsarr_user_id': json['pulsarr_user_id'],
         'name': json['name'],
         'email': json['email'],
-        'join_date': json['join_date'] == null ? undefined : json['join_date'],
+        'password': json['password'],
     };
 }
 
-export function UserDTOToJSON(json: any): UserDTO {
-    return UserDTOToJSONTyped(json, false);
+export function CreateUserRequestToJSON(json: any): CreateUserRequest {
+    return CreateUserRequestToJSONTyped(json, false);
 }
 
-export function UserDTOToJSONTyped(value?: UserDTO | null, ignoreDiscriminator: boolean = false): any {
+export function CreateUserRequestToJSONTyped(value?: CreateUserRequest | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }
 
     return {
         
-        'pulsarr_user_id': value['pulsarr_user_id'],
         'name': value['name'],
         'email': value['email'],
-        'join_date': value['join_date'],
+        'password': value['password'],
     };
 }
 

@@ -58,6 +58,10 @@
     // Rating detail modal
     const selectedRating = ref<Rating | null>(null);
     const showRatingModal = ref(false);
+    const ratingModalInitialTab = ref<string | undefined>(undefined);
+
+    // Group averages cache
+    const groupAverages = ref<Record<string, { average: string; count: number }>>({});
 
     // Edit rating state
     const editingRating = ref<Rating | null>(null);
@@ -84,8 +88,46 @@
     const transferTargetName = ref('');
 
     const openRatingModal = (rating: Rating) => {
+        ratingModalInitialTab.value = undefined;
         selectedRating.value = rating;
         showRatingModal.value = true;
+    };
+
+    const openRatingModalGroupTab = (rating: Rating) => {
+        ratingModalInitialTab.value = 'group-ratings';
+        selectedRating.value = rating;
+        showRatingModal.value = true;
+    };
+
+    const ratingMax = computed(() => group.value?.rating_system?.rating_max?.toString());
+
+    const fetchGroupAverages = (ratingsToFetch: Rating[]) => {
+        const uniqueKeys = new Map<string, { group_id: number; musicbrainz_id: string }>();
+        for (const r of ratingsToFetch) {
+            const key = `${r.pulsarr_group_id}:${r.musicbrainz_id}`;
+            if (!uniqueKeys.has(key) && !groupAverages.value[key]) {
+                uniqueKeys.set(key, { group_id: r.pulsarr_group_id, musicbrainz_id: r.musicbrainz_id });
+            }
+        }
+        const items = Array.from(uniqueKeys.values());
+        if (items.length === 0) return;
+
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = (data) => {
+            const results = data as { pulsarr_group_id: number; musicbrainz_id: string; average_score: string; rating_count: number }[];
+            for (const r of results) {
+                const key = `${r.pulsarr_group_id}:${r.musicbrainz_id}`;
+                const num = parseFloat(r.average_score);
+                groupAverages.value[key] = {
+                    average: isNaN(num) ? r.average_score : parseFloat(num.toFixed(2)).toString(),
+                    count: r.rating_count,
+                };
+            }
+        };
+        drh.onErrorCallback = (err) => {
+            console.error('Failed to fetch group averages:', err);
+        };
+        drh.post('/rating/group-averages', { items });
     };
 
     const groupId = computed(() => Number(route.params.groupId));
@@ -144,6 +186,7 @@
         ratings.value = [];
         hasMoreRatings.value = true;
         loadingMoreRatings.value = false;
+        groupAverages.value = {};
         if (ratingsObserver) ratingsObserver.disconnect();
 
         const drh = new DataRequestHandler();
@@ -175,6 +218,7 @@
                     fetchCoverArt(rating.musicbrainz_id);
                 }
             });
+            fetchGroupAverages(ratings.value);
         };
         drh.onErrorCallback = (err) => {
             if (gen !== fetchGeneration) return;
@@ -200,6 +244,7 @@
                     fetchCoverArt(rating.musicbrainz_id);
                 }
             });
+            fetchGroupAverages(newRatings);
             loadingMoreRatings.value = false;
         };
         drh.onErrorCallback = (err) => {
@@ -297,6 +342,7 @@
 
     const onRatingCreated = () => {
         rateThisRating.value = null;
+        groupAverages.value = {};
         fetchRatings(fetchGeneration);
     };
 
@@ -316,6 +362,7 @@
     const onRatingUpdated = () => {
         editingRating.value = null;
         rateThisRating.value = null;
+        groupAverages.value = {};
         fetchRatings(fetchGeneration);
     };
 
@@ -722,7 +769,11 @@
                     :cover-art-url="coverArtCache[rating.musicbrainz_id]"
                     :user-name="getUserName(rating.pulsarr_user_id, rating.user_name)"
                     :outdated="isRatingOutdated(rating)"
+                    :group-average="groupAverages[`${rating.pulsarr_group_id}:${rating.musicbrainz_id}`]?.average"
+                    :group-rating-count="groupAverages[`${rating.pulsarr_group_id}:${rating.musicbrainz_id}`]?.count"
+                    :rating-max="ratingMax"
                     @click="openRatingModal(rating)"
+                    @group-average-click="openRatingModalGroupTab(rating)"
                 />
 
                 <div ref="ratingSentinel" v-if="hasMoreRatings && ratings.length > 0" />
@@ -736,6 +787,10 @@
                     :rating-system="group?.rating_system"
                     :outdated="selectedRating ? isRatingOutdated(selectedRating) : false"
                     :group="group"
+                    :group-average="selectedRating ? groupAverages[`${selectedRating.pulsarr_group_id}:${selectedRating.musicbrainz_id}`]?.average : undefined"
+                    :group-rating-count="selectedRating ? groupAverages[`${selectedRating.pulsarr_group_id}:${selectedRating.musicbrainz_id}`]?.count : undefined"
+                    :rating-max="ratingMax"
+                    :initial-tab="ratingModalInitialTab"
                     @update:open="showRatingModal = $event"
                     @edit="onEditRating"
                     @rateThis="onRateThisAlbum"
