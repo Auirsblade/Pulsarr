@@ -155,8 +155,8 @@
                 }
             }
         } else {
-            // Outdated: leave form empty for fresh re-rating with new system
-            comments.value = '';
+            // Outdated: leave rating empty for fresh re-rating with new system, but keep comments
+            comments.value = rating.comments;
             ratingValue.value = '';
         }
     };
