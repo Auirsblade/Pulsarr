@@ -145,7 +145,7 @@
                 </DialogDescription>
             </DialogHeader>
 
-            <div class="space-y-4">
+            <div class="space-y-4 flex flex-col flex-1 min-h-0">
                 <div class="relative">
                     <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input

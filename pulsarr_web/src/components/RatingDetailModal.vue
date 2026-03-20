@@ -54,7 +54,9 @@
     const fetchRatingDetails = (ratingId: number) => {
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
-            ratingDetails.value = data as RatingDetail[];
+            const details = data as RatingDetail[];
+            details.sort((a, b) => a.rating_system_parameter_id - b.rating_system_parameter_id);
+            ratingDetails.value = details;
             detailsLoaded.value = true;
         };
         drh.onErrorCallback = (err) => {
@@ -138,7 +140,7 @@
                         <MessageSquare class="w-4 h-4" />
                         Review
                     </h4>
-                    <p class="text-sm text-muted-foreground whitespace-pre-wrap">{{ rating.comments }}</p>
+                    <p class="text-sm text-muted-foreground whitespace-pre-wrap break-words">{{ rating.comments }}</p>
                 </div>
 
                 <!-- Meta -->

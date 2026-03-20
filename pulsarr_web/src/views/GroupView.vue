@@ -486,11 +486,11 @@
                                 <div class="flex items-center gap-2 min-w-0">
                                     <span class="w-2 h-2 rounded-full bg-primary flex-shrink-0"></span>
                                     <span class="truncate font-medium">{{ member.user?.name }}</span>
-                                    <span v-if="member.group_role === 'Owner'" class="text-xs text-muted-foreground flex-shrink-0">
-                                        <Crown class="w-3 h-3 inline" /> Owner
+                                    <span v-if="member.group_role === 'Owner'" class="inline-flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                                        <Crown class="w-3 h-3" /> Owner
                                     </span>
-                                    <span v-else-if="member.group_role === 'Admin'" class="text-xs text-muted-foreground flex-shrink-0">
-                                        <Shield class="w-3 h-3 inline" /> Admin
+                                    <span v-else-if="member.group_role === 'Admin'" class="inline-flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                                        <Shield class="w-3 h-3" /> Admin
                                     </span>
                                     <span v-else-if="member.group_role === 'ViewOnly'" class="text-xs text-muted-foreground flex-shrink-0">
                                         View Only
