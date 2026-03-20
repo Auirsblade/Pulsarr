@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import type { Rating, RatingDetail, RatingSystemDTO, GroupDTO } from "@/apiClient";
+    import type { Rating, RatingDetailResponse, RatingSystemDTO, GroupDTO } from "@/apiClient";
     import { Dialog, DialogScrollContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
     import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
     import { Button } from "@/components/ui/button";
@@ -61,7 +61,7 @@
         }
     };
 
-    const ratingDetails = ref<RatingDetail[]>([]);
+    const ratingDetails = ref<RatingDetailResponse[]>([]);
     const detailsLoaded = ref(false);
 
     const hasParameters = () => {
@@ -75,7 +75,7 @@
     const fetchRatingDetails = (ratingId: number) => {
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
-            const details = data as RatingDetail[];
+            const details = data as RatingDetailResponse[];
             details.sort((a, b) => a.rating_system_parameter_id - b.rating_system_parameter_id);
             ratingDetails.value = details;
             detailsLoaded.value = true;

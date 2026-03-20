@@ -6,7 +6,7 @@
     import { ref, computed, watch } from "vue";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import { toast } from 'vue-sonner';
-    import type { GroupDTO, Rating, RatingDetail } from "@/apiClient";
+    import type { GroupDTO, Rating, RatingDetail, RatingDetailResponse } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
     import { Music, X, Disc, User, Clock, Info } from "lucide-vue-next";
@@ -49,7 +49,7 @@
     // Edit mode state
     const editingRatingId = ref<number | null>(null);
     const editingRating = ref<Rating | null>(null);
-    const editingRatingDetails = ref<RatingDetail[]>([]);
+    const editingRatingDetails = ref<RatingDetailResponse[]>([]);
 
     const isEditMode = computed(() => editingRatingId.value !== null);
     const isOutdatedEdit = computed(() => {
@@ -140,7 +140,7 @@
         }
     };
 
-    const prefillFromExisting = (rating: Rating, details: RatingDetail[]) => {
+    const prefillFromExisting = (rating: Rating, details: RatingDetailResponse[]) => {
         // Only pre-fill if same rating system (not outdated)
         if (rating.rating_system_id === props.group.rating_system_id) {
             ratingValue.value = rating.rating_value;
@@ -163,10 +163,10 @@
         }
     };
 
-    const fetchRatingDetails = (ratingId: number, callback: (details: RatingDetail[]) => void) => {
+    const fetchRatingDetails = (ratingId: number, callback: (details: RatingDetailResponse[]) => void) => {
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
-            callback(data as RatingDetail[]);
+            callback(data as RatingDetailResponse[]);
         };
         drh.onErrorCallback = () => {
             callback([]);
