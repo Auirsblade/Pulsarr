@@ -26,6 +26,8 @@
         group: GroupDTO;
         editRating?: Rating | null;
         editCoverArtUrl?: string;
+        rateThisRating?: Rating | null;
+        rateThisCoverArtUrl?: string;
     }>();
 
     const emit = defineEmits<{
@@ -237,6 +239,8 @@
     watch(() => props.showDialog, (isOpen) => {
         if (isOpen && props.editRating) {
             setupEditFromProp(props.editRating);
+        } else if (isOpen && props.rateThisRating) {
+            setupRateThisFromProp(props.rateThisRating);
         }
     });
 
@@ -258,6 +262,25 @@
         });
     };
 
+
+    const setupRateThisFromProp = (rating: Rating) => {
+        selectedMusic.value = {
+            musicbrainz_id: rating.musicbrainz_id,
+            media_title: rating.media_title,
+            artist_name: rating.artist_name,
+            media_type: rating.media_type,
+            release_date: rating.release_date,
+            cover_art_url: props.rateThisCoverArtUrl || undefined,
+        };
+        initializeParameterRatings();
+        fetchExistingRatings(rating.musicbrainz_id);
+    };
+
+    watch(() => props.rateThisRating, (newVal) => {
+        if (newVal && props.showDialog) {
+            setupRateThisFromProp(newVal);
+        }
+    });
 
     const createRatingDetails = (ratingId: number, onComplete: () => void) => {
         const details = parameterRatings.value.filter(p => p.value);

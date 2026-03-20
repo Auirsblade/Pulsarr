@@ -24,6 +24,7 @@
     const emit = defineEmits<{
         'update:open': [value: boolean];
         'edit': [rating: Rating];
+        'rateThis': [rating: Rating];
     }>();
 
     const { user } = storeToRefs(useContextStore());
@@ -33,9 +34,21 @@
         return props.rating.pulsarr_user_id === user.value.pulsarr_user_id;
     });
 
+    const isMember = computed(() => {
+        if (!props.group?.members || !user.value) return false;
+        return props.group.members.some(m => m.user?.pulsarr_user_id === user.value?.pulsarr_user_id);
+    });
+
     const onEdit = () => {
         if (props.rating) {
             emit('edit', props.rating);
+            emit('update:open', false);
+        }
+    };
+
+    const onRateThis = () => {
+        if (props.rating) {
+            emit('rateThis', props.rating);
             emit('update:open', false);
         }
     };
@@ -158,6 +171,17 @@
                 >
                     <Pencil class="w-4 h-4 mr-1" />
                     Edit Rating
+                </Button>
+
+                <!-- Rate This Button (non-owner members) -->
+                <Button
+                    v-if="!isOwner && isMember && group"
+                    variant="default"
+                    class="w-full"
+                    @click="onRateThis"
+                >
+                    <Star class="w-4 h-4 mr-1" />
+                    Rate This
                 </Button>
             </div>
         </DialogScrollContent>

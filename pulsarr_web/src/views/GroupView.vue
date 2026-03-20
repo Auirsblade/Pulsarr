@@ -14,7 +14,7 @@
     import type { GroupDTO, Rating } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
-    import { Copy, Check, LogOut, Plus, Users, Star, Settings, MoreHorizontal, Shield, UserMinus, Crown, RefreshCw } from "lucide-vue-next";
+    import { Copy, Check, LogOut, Plus, Users, Star, Settings, MoreHorizontal, Shield, UserMinus, Crown, RefreshCw, UserPlus } from "lucide-vue-next";
     import AddRatingModal from "@/components/modals/AddRatingModal.vue";
     import ChangeRatingSystemModal from "@/components/modals/ChangeRatingSystemModal.vue";
     import RatingCard from "@/components/RatingCard.vue";
@@ -61,6 +61,9 @@
 
     // Edit rating state
     const editingRating = ref<Rating | null>(null);
+
+    // Rate-this state (pre-select album from another user's review)
+    const rateThisRating = ref<Rating | null>(null);
 
     // Settings state
     const showSettingsDialog = ref(false);
@@ -252,6 +255,24 @@
         }
     };
 
+    const joining = ref(false);
+
+    const joinGroup = () => {
+        joining.value = true;
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = () => {
+            joining.value = false;
+            toast.success('Joined group!');
+            fetchGroup();
+        };
+        drh.onErrorCallback = (err) => {
+            joining.value = false;
+            console.error('Failed to join group:', err);
+            toast.error('Failed to join group');
+        };
+        drh.post(`/group/join/${groupId.value}`, {});
+    };
+
     const leaveGroup = () => {
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = () => {
@@ -275,6 +296,7 @@
     };
 
     const onRatingCreated = () => {
+        rateThisRating.value = null;
         fetchRatings(fetchGeneration);
     };
 
@@ -284,8 +306,16 @@
         showAddRatingModal.value = true;
     };
 
+    const onRateThisAlbum = (rating: Rating) => {
+        editingRating.value = null;
+        rateThisRating.value = rating;
+        showRatingModal.value = false;
+        showAddRatingModal.value = true;
+    };
+
     const onRatingUpdated = () => {
         editingRating.value = null;
+        rateThisRating.value = null;
         fetchRatings(fetchGeneration);
     };
 
@@ -427,6 +457,10 @@
                     <Button v-if="isMember && !isOwner" variant="outline" @click="leaveGroup">
                         <LogOut class="w-4 h-4 mr-1" />
                         Leave
+                    </Button>
+                    <Button v-if="user && !isMember" :disabled="joining" @click="joinGroup">
+                        <UserPlus class="w-4 h-4 mr-1" />
+                        {{ joining ? 'Joining...' : 'Join Group' }}
                     </Button>
                 </div>
             </div>
@@ -659,12 +693,14 @@
                         :group="group"
                         :edit-rating="editingRating"
                         :edit-cover-art-url="editingRating ? coverArtCache[editingRating.musicbrainz_id] : undefined"
-                        @update:showDialog="(v) => { showAddRatingModal = v; if (!v) editingRating = null; }"
+                        :rate-this-rating="rateThisRating"
+                        :rate-this-cover-art-url="rateThisRating ? coverArtCache[rateThisRating.musicbrainz_id] : undefined"
+                        @update:showDialog="(v) => { showAddRatingModal = v; if (!v) { editingRating = null; rateThisRating = null; } }"
                         @created="onRatingCreated"
                         @updated="onRatingUpdated"
                     >
                         <template #openModal>
-                            <Button @click="editingRating = null; showAddRatingModal = true;">
+                            <Button @click="editingRating = null; rateThisRating = null; showAddRatingModal = true;">
                                 <Plus class="w-4 h-4 mr-1" />
                                 Add Rating
                             </Button>
@@ -702,6 +738,7 @@
                     :group="group"
                     @update:open="showRatingModal = $event"
                     @edit="onEditRating"
+                    @rateThis="onRateThisAlbum"
                 />
 
                 <!-- Change Rating System Modal -->
