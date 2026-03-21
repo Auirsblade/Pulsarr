@@ -3,6 +3,7 @@ mod api;
 mod data;
 mod musicbrainz_client;
 mod constants;
+mod email;
 
 use crate::api::{group, rating, rating_system, rating_system_template, user, auth, musicbrainz};
 use crate::musicbrainz_client::MusicBrainzClient;
@@ -17,8 +18,12 @@ use dotenv::dotenv;
 
 pub type PulsarrResult<T> = Result<Json<T>, error::PulsarrError>;
 
-struct PostgresState {
-    pool: PgPool
+pub struct PostgresState {
+    pub pool: PgPool
+}
+
+pub struct EmailState {
+    pub sender: email::EmailSender,
 }
 
 #[rocket::main]
@@ -31,7 +36,12 @@ async fn main() {
     sqlx::migrate!("db/migrations").run(&postgres_pool).await.unwrap();
     eprintln!("migrations complete");
 
-    let launch_result = create_server().manage(PostgresState { pool: postgres_pool }).launch().await;
+    let email_sender = email::EmailSender::from_env();
+
+    let launch_result = create_server()
+        .manage(PostgresState { pool: postgres_pool })
+        .manage(EmailState { sender: email_sender })
+        .launch().await;
 
     match launch_result {
         Ok(_) => eprintln!("Rocket shut down gracefully."),
