@@ -152,6 +152,8 @@
 
     const isAdminOrOwner = computed(() => isOwner.value || isAdmin.value);
 
+    const isCrate = computed(() => group.value?.privacy_type === 'Personal');
+
     const canActOn = (memberRole: string): boolean => {
         return (ROLE_LEVELS[currentUserRole.value] ?? 0) > (ROLE_LEVELS[memberRole] ?? 0);
     };
@@ -493,19 +495,20 @@
                         {{ group.name }}
                     </h1>
                     <div class="flex items-center gap-2 mt-1">
-                        <span class="px-2 py-0.5 bg-secondary rounded text-xs">{{ group.privacy_type }}</span>
-                        <span class="text-sm text-muted-foreground">{{ group.members?.length ?? 0 }} members</span>
+                        <span v-if="isCrate" class="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">My Crate</span>
+                        <span v-else class="px-2 py-0.5 bg-secondary rounded text-xs">{{ group.privacy_type }}</span>
+                        <span v-if="!isCrate" class="text-sm text-muted-foreground">{{ group.members?.length ?? 0 }} members</span>
                     </div>
                 </div>
                 <div class="flex gap-2">
                     <Button v-if="isAdminOrOwner" variant="outline" size="icon" aria-label="Group settings" @click="openSettings">
                         <Settings class="w-4 h-4" />
                     </Button>
-                    <Button v-if="isMember && !isOwner" variant="outline" @click="leaveGroup">
+                    <Button v-if="isMember && !isOwner && !isCrate" variant="outline" @click="leaveGroup">
                         <LogOut class="w-4 h-4 mr-1" />
                         Leave
                     </Button>
-                    <Button v-if="user && !isMember" :disabled="joining" @click="joinGroup">
+                    <Button v-if="user && !isMember && !isCrate" :disabled="joining" @click="joinGroup">
                         <UserPlus class="w-4 h-4 mr-1" />
                         {{ joining ? 'Joining...' : 'Join Group' }}
                     </Button>
@@ -513,7 +516,7 @@
             </div>
 
             <!-- Share Link -->
-            <div class="flex items-center gap-2">
+            <div v-if="!isCrate" class="flex items-center gap-2">
                 <span class="text-sm text-muted-foreground">Share link:</span>
                 <code class="flex-1 px-2 py-1 bg-muted rounded text-sm truncate">{{ shareLink }}</code>
                 <Button variant="outline" size="icon" :aria-label="copied ? 'Link copied' : 'Copy share link'" @click="copyShareLink">
@@ -550,7 +553,7 @@
                 </Card>
 
                 <!-- Members Card -->
-                <Card>
+                <Card v-if="!isCrate">
                     <CardHeader class="pb-2">
                         <CardTitle class="text-sm font-medium text-muted-foreground flex items-center gap-2">
                             <Users class="w-4 h-4" />
@@ -566,7 +569,7 @@
                             >
                                 <div class="flex items-center gap-2 min-w-0">
                                     <span class="w-2 h-2 rounded-full bg-primary flex-shrink-0"></span>
-                                    <span class="truncate font-medium">{{ member.user?.name }}</span>
+                                    <RouterLink :to="`/user/${member.user?.pulsarr_user_id}`" class="truncate font-medium hover:underline">{{ member.user?.name }}</RouterLink>
                                     <span v-if="member.group_role === 'Owner'" class="inline-flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
                                         <Crown class="w-3 h-3" /> Owner
                                     </span>
@@ -621,15 +624,15 @@
             <Dialog :open="showSettingsDialog" @update:open="showSettingsDialog = $event">
                 <DialogScrollContent class="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Group Settings</DialogTitle>
-                        <DialogDescription>Update your group's name and privacy settings.</DialogDescription>
+                        <DialogTitle>{{ isCrate ? 'Crate Settings' : 'Group Settings' }}</DialogTitle>
+                        <DialogDescription>{{ isCrate ? 'Update your Crate name and rating system.' : 'Update your group\'s name and privacy settings.' }}</DialogDescription>
                     </DialogHeader>
                     <div class="space-y-4 py-2">
                         <div class="space-y-2">
-                            <Label for="group-name">Group Name</Label>
+                            <Label for="group-name">{{ isCrate ? 'Crate Name' : 'Group Name' }}</Label>
                             <Input id="group-name" v-model="editName" />
                         </div>
-                        <div class="space-y-2">
+                        <div v-if="!isCrate" class="space-y-2">
                             <Label for="privacy-type">Privacy Type</Label>
                             <Select v-model="editPrivacyType">
                                 <SelectTrigger>
@@ -664,7 +667,7 @@
 
                         <div class="flex justify-between items-center pt-2">
                             <Button
-                                v-if="isOwner"
+                                v-if="isOwner && !isCrate"
                                 variant="destructive"
                                 size="sm"
                                 @click="showSettingsDialog = false; deleteConfirmText = ''; showDeleteConfirm = true;"

@@ -4,7 +4,8 @@
     import { useFeedStore } from "@/stores/feed";
     import { useContextStore } from "@/stores/context";
     import { storeToRefs } from "pinia";
-    import { Activity, Home, Users, X, BarChart3 } from "lucide-vue-next";
+    import { computed } from "vue";
+    import { Activity, Home, Users, X, BarChart3, Archive } from "lucide-vue-next";
     import { Button } from "@/components/ui/button";
 
     defineProps<{
@@ -20,7 +21,11 @@
     const feedStore = useFeedStore();
     const contextStore = useContextStore();
     const { myGroups } = storeToRefs(feedStore);
-    const { isLoggedIn } = storeToRefs(contextStore);
+    const { isLoggedIn, crate } = storeToRefs(contextStore);
+
+    const filteredGroups = computed(() =>
+        myGroups.value.filter((g: any) => g.privacy_type !== 'Personal')
+    );
 
     onMounted(() => {
         if (isLoggedIn.value) {
@@ -78,6 +83,17 @@
 
         <hr class="border-sidebar-border mx-3" />
 
+        <div v-if="crate" class="p-3 pb-0">
+            <RouterLink
+                :to="`/group/${crate.pulsarr_group_id}`"
+                class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                :class="route.path === `/group/${crate.pulsarr_group_id}` ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'"
+            >
+                <Archive class="w-4 h-4" />
+                {{ crate.name }}
+            </RouterLink>
+        </div>
+
         <div class="p-3">
             <h3 class="flex items-center gap-2 px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 <Users class="w-3 h-3" />
@@ -86,13 +102,13 @@
             <div v-if="!isLoggedIn" class="px-3 py-2 text-sm text-muted-foreground">
                 Sign in to see your groups
             </div>
-            <div v-else-if="myGroups.length === 0" class="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+            <div v-else-if="filteredGroups.length === 0" class="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
                 <Users class="w-4 h-4" />
                 No groups yet — join or create one
             </div>
             <nav class="flex flex-col gap-0.5 mt-1">
                 <RouterLink
-                    v-for="group in myGroups"
+                    v-for="group in filteredGroups"
                     :key="group.pulsarr_group_id"
                     :to="`/group/${group.pulsarr_group_id}`"
                     class="px-3 py-1.5 rounded-md text-sm transition-colors"
@@ -152,6 +168,18 @@
 
                     <hr class="border-sidebar-border mx-3" />
 
+                    <div v-if="crate" class="p-3 pb-0">
+                        <RouterLink
+                            :to="`/group/${crate.pulsarr_group_id}`"
+                            class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                            :class="route.path === `/group/${crate.pulsarr_group_id}` ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'"
+                            @click="$emit('update:open', false)"
+                        >
+                            <Archive class="w-4 h-4" />
+                            {{ crate.name }}
+                        </RouterLink>
+                    </div>
+
                     <div class="p-3">
                         <h3 class="flex items-center gap-2 px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             <Users class="w-3 h-3" />
@@ -160,13 +188,13 @@
                         <div v-if="!isLoggedIn" class="px-3 py-2 text-sm text-muted-foreground">
                             Sign in to see your groups
                         </div>
-                        <div v-else-if="myGroups.length === 0" class="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+                        <div v-else-if="filteredGroups.length === 0" class="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
                             <Users class="w-4 h-4" />
                             No groups yet — join or create one
                         </div>
                         <nav class="flex flex-col gap-0.5 mt-1">
                             <RouterLink
-                                v-for="group in myGroups"
+                                v-for="group in filteredGroups"
                                 :key="group.pulsarr_group_id"
                                 :to="`/group/${group.pulsarr_group_id}`"
                                 class="px-3 py-1.5 rounded-md text-sm transition-colors"

@@ -218,7 +218,7 @@
                         </div>
 
                         <div class="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                            <span>by {{ userName }}</span>
+                            <span>by <RouterLink :to="`/user/${rating.pulsarr_user_id}`" class="hover:underline">{{ userName }}</RouterLink></span>
                             <span>{{ formatDate(rating.rating_date) }}</span>
                         </div>
 

@@ -88,7 +88,7 @@
                 </p>
 
                 <div class="mt-auto pt-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>by {{ userName }}</span>
+                    <span>by <RouterLink :to="`/user/${rating.pulsarr_user_id}`" class="hover:underline" @click.stop>{{ userName }}</RouterLink></span>
                     <span>{{ formatDate(rating.rating_date) }}</span>
                 </div>
             </div>

@@ -43,6 +43,18 @@ export interface UserDTO {
      * @memberof UserDTO
      */
     join_date?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserDTO
+     */
+    profile_visibility?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserDTO
+     */
+    crate_visibility?: string | null;
 }
 
 /**
@@ -69,6 +81,8 @@ export function UserDTOFromJSONTyped(json: any, ignoreDiscriminator: boolean): U
         'name': json['name'],
         'email': json['email'],
         'join_date': json['join_date'] == null ? undefined : json['join_date'],
+        'profile_visibility': json['profile_visibility'] == null ? undefined : json['profile_visibility'],
+        'crate_visibility': json['crate_visibility'] == null ? undefined : json['crate_visibility'],
     };
 }
 
@@ -87,6 +101,8 @@ export function UserDTOToJSONTyped(value?: UserDTO | null, ignoreDiscriminator: 
         'name': value['name'],
         'email': value['email'],
         'join_date': value['join_date'],
+        'profile_visibility': value['profile_visibility'],
+        'crate_visibility': value['crate_visibility'],
     };
 }
 

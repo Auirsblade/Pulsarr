@@ -81,6 +81,10 @@ export interface LeaveGroupRequest {
     pulsarrApiKey: string;
 }
 
+export interface MyCrateRequest {
+    pulsarrApiKey: string;
+}
+
 export interface MyGroupsRequest {
     pulsarrApiKey: string;
 }
@@ -669,6 +673,43 @@ export class GroupApi extends runtime.BaseAPI {
      */
     async leaveGroup(requestParameters: LeaveGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<boolean> {
         const response = await this.leaveGroupRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Get the current user\'s personal Crate
+     */
+    async myCrateRaw(requestParameters: MyCrateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GroupDTO>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling myCrate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/group/myCrate`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GroupDTOFromJSON(jsonValue));
+    }
+
+    /**
+     * Get the current user\'s personal Crate
+     */
+    async myCrate(requestParameters: MyCrateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GroupDTO> {
+        const response = await this.myCrateRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
