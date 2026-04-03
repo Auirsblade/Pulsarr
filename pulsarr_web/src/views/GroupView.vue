@@ -482,9 +482,18 @@
     <div class="p-4 max-w-4xl mx-auto">
         <LoadingSpinner v-if="loading" text="Loading group..." />
 
-        <div v-else-if="error" class="flex justify-center py-8">
-            <span class="text-destructive">{{ error }}</span>
-        </div>
+        <Card v-else-if="error">
+            <CardContent class="py-12">
+                <EmptyState
+                    :icon="Users"
+                    title="Group not available"
+                    description="This group may be private or no longer exists."
+                />
+                <div class="flex justify-center mt-4">
+                    <Button variant="outline" @click="$router.push('/groups')">Browse Groups</Button>
+                </div>
+            </CardContent>
+        </Card>
 
         <div v-else-if="group" class="space-y-6">
             <!-- Page Header -->

@@ -90,7 +90,10 @@
                 :class="route.path === `/group/${crate.pulsarr_group_id}` ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'"
             >
                 <Archive class="w-4 h-4" />
-                {{ crate.name }}
+                <div class="flex flex-col">
+                    <span>{{ crate.name }}</span>
+                    <span class="text-xs font-normal text-muted-foreground">Personal collection</span>
+                </div>
             </RouterLink>
         </div>
 
@@ -176,7 +179,10 @@
                             @click="$emit('update:open', false)"
                         >
                             <Archive class="w-4 h-4" />
-                            {{ crate.name }}
+                            <div class="flex flex-col">
+                                <span>{{ crate.name }}</span>
+                                <span class="text-xs font-normal text-muted-foreground">Personal collection</span>
+                            </div>
                         </RouterLink>
                     </div>
 

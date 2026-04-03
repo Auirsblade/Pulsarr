@@ -58,7 +58,7 @@
                         <p class="text-sm text-muted-foreground truncate">{{ rating.artist_name }}</p>
                     </div>
                     <div class="flex items-center gap-1.5 flex-shrink-0">
-                        <RouterLink v-if="groupName" :to="`/group/${rating.pulsarr_group_id}`" class="px-1.5 py-0.5 bg-secondary rounded text-xs text-muted-foreground max-w-[100px] truncate hover:bg-secondary/80 transition-colors" @click.stop>{{ groupName }}</RouterLink>
+                        <RouterLink v-if="groupName" :to="`/group/${rating.pulsarr_group_id}`" class="px-1.5 py-0.5 bg-secondary rounded text-xs text-muted-foreground max-w-[160px] truncate hover:bg-secondary/80 transition-colors" :title="groupName" @click.stop>{{ groupName }}</RouterLink>
                         <span v-if="outdated" class="flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 rounded text-xs font-medium">
                             <AlertTriangle class="w-3 h-3" />
                             Outdated
@@ -77,7 +77,7 @@
                         <!-- User score badge (when no group average, keep original behavior) -->
                         <div v-else class="flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground rounded font-bold text-sm">
                             <Star class="w-3 h-3" />
-                            {{ formatRatingValue(rating.rating_value) }}
+                            {{ formatRatingValue(rating.rating_value) }}<span v-if="ratingMax" class="font-normal text-primary-foreground/70">/{{ formatRatingValue(ratingMax) }}</span>
                         </div>
                     </div>
                 </div>

@@ -31,6 +31,8 @@
     const loadingMore = ref(false);
     const hasMore = ref(true);
     const coverArtCache = ref<Record<string, string>>({});
+    const groupNames = ref<Map<number, string>>(new Map());
+    const groupRatingMax = ref<Map<number, string>>(new Map());
     const selectedRating = ref<Rating | null>(null);
     const showRatingModal = ref(false);
     const sentinel = ref<HTMLElement | null>(null);
@@ -65,7 +67,10 @@
             }
             hasMore.value = newRatings.length >= 20;
             if (append) loadingMore.value = false;
-            newRatings.forEach(r => fetchCoverArt(r.musicbrainz_id));
+            newRatings.forEach(r => {
+                fetchCoverArt(r.musicbrainz_id);
+                fetchGroupName(r.pulsarr_group_id);
+            });
         };
         drh.onErrorCallback = () => {
             if (append) loadingMore.value = false;
@@ -74,6 +79,19 @@
             take_size: 20,
             offset: append ? ratings.value.length : 0,
         });
+    };
+
+    const fetchGroupName = (groupId: number) => {
+        if (groupNames.value.has(groupId)) return;
+        groupNames.value.set(groupId, '');
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = (data: any) => {
+            groupNames.value.set(groupId, data.name);
+            if (data.rating_system?.rating_max) {
+                groupRatingMax.value.set(groupId, data.rating_system.rating_max.toString());
+            }
+        };
+        drh.get(`/group/preview/${groupId}`);
     };
 
     const fetchCoverArt = (musicbrainzId: string) => {
@@ -87,7 +105,7 @@
                 coverArtCache.value[musicbrainzId] = data.front;
             }
         };
-        drh.get(`/musicbrainz/release-group/${musicbrainzId}/cover-art`);
+        drh.get(`/musicbrainz/release-group/${musicbrainzId}/cover-art-info`);
     };
 
     const onRatingClick = (rating: Rating) => {
@@ -172,6 +190,8 @@
                         :key="rating.rating_id"
                         :rating="rating"
                         :user-name="rating.user_name ?? profile.user.name"
+                        :group-name="groupNames.get(rating.pulsarr_group_id)"
+                        :rating-max="groupRatingMax.get(rating.pulsarr_group_id)"
                         :cover-art-url="coverArtCache[rating.musicbrainz_id]"
                         @click="onRatingClick(rating)"
                     />
