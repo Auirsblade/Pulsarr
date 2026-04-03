@@ -77,13 +77,13 @@ export interface GroupDTO {
      */
     creation_date?: string | null;
     /**
-     *
+     * 
      * @type {Array<GroupMemberDTO>}
      * @memberof GroupDTO
      */
     members?: Array<GroupMemberDTO> | null;
     /**
-     *
+     * 
      * @type {number}
      * @memberof GroupDTO
      */

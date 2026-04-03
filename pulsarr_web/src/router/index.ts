@@ -32,6 +32,11 @@ const router = createRouter({
       component: () => import('../views/JoinGroupView.vue'),
     },
     {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('../views/ResetPasswordView.vue'),
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
@@ -41,6 +46,12 @@ const router = createRouter({
       path: '/history',
       name: 'rating-history',
       component: () => import('../views/RatingHistoryView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/user/:userId',
+      name: 'user-profile',
+      component: () => import('../views/UserProfileView.vue'),
       meta: { requiresAuth: true },
     },
   ],

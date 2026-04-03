@@ -7,11 +7,24 @@
     import AppSidebar from "@/components/AppSidebar.vue";
     import { Toaster } from 'vue-sonner';
     import 'vue-sonner/style.css';
-    import { computed, onMounted, ref } from "vue";
+    import { computed, onMounted, ref, watch } from "vue";
     import { useContextStore } from "@/stores/context.ts";
+    import { storeToRefs } from "pinia";
     import { Menu } from "lucide-vue-next";
+    import AddGroupModal from "@/components/modals/AddGroupModal.vue";
 
     const appContext = useContextStore();
+    const { needsCrateSetup } = storeToRefs(appContext);
+    const showCrateSetup = ref(false);
+
+    watch(needsCrateSetup, (needs) => {
+        if (needs) showCrateSetup.value = true;
+    });
+
+    const onCrateCreated = async () => {
+        showCrateSetup.value = false;
+        await appContext.loadCrate();
+    };
 
     const appTag = computed(() => {
         const tag = import.meta.env.VITE_APP_TAG;
@@ -51,5 +64,11 @@
             </main>
         </div>
         <Toaster :theme="mode === 'dark' ? 'dark' : 'light'" position="bottom-right" rich-colors />
+        <AddGroupModal
+            :show-dialog="showCrateSetup"
+            mode="crate"
+            @update:show-dialog="showCrateSetup = $event"
+            @crate-created="onCrateCreated"
+        />
     </div>
 </template>

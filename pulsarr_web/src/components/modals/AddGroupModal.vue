@@ -19,11 +19,11 @@
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
     import AddRatingSystemModal, { type CustomSystemData } from "@/components/modals/AddRatingSystemModal.vue";
-    import { computed, nextTick, onMounted, ref } from "vue";
+    import { computed, nextTick, onMounted, ref, watch } from "vue";
     import { onClickOutside } from "@vueuse/core";
     import { Search, ChevronDown, Check, X } from "lucide-vue-next";
-
-    const { privacyTypes } = storeToRefs(useContextStore());
+    const contextStore = useContextStore();
+    const { privacyTypes, user } = storeToRefs(contextStore);
     const templates = ref<TemplateDTO[]>();
     const showAddRatingSystemModal = ref(false);
     const customSystem = ref<CustomSystemData | null>(null);
@@ -80,15 +80,23 @@
         rsSearchQuery.value = '';
     });
 
-    defineProps({
+    const props = defineProps({
         showDialog: {
             type: Boolean,
             required: true,
+        },
+        mode: {
+            type: String as () => 'group' | 'crate',
+            default: 'group',
         }
     });
 
+    const isCrateMode = computed(() => props.mode === 'crate');
+    const crateVisibility = ref('private');
+
     const emit = defineEmits<{
-        'update:showDialog': [value: boolean]
+        'update:showDialog': [value: boolean],
+        'crateCreated': [data: any],
     }>()
 
     onMounted(() => {
@@ -110,17 +118,17 @@
         emit('update:showDialog', false)
     }
 
-    const schema = yup.object({
+    const schema = computed(() => yup.object({
         name: yup.string().required().min(3).max(50),
-        privacy_type: yup.string().required(),
-    });
+        privacy_type: isCrateMode.value ? yup.string() : yup.string().required(),
+    }));
 
     const { handleSubmit, resetForm, defineField, errors } = useForm({
         validationSchema: schema,
         initialValues: {
-            name: '',
+            name: isCrateMode.value ? `${user.value?.name ?? ''}'s Crate` : '',
             rating_system_id: 0,
-            privacy_type: privacyTypes.value?.[0] ?? ''
+            privacy_type: isCrateMode.value ? 'Personal' : (privacyTypes.value?.[0] ?? ''),
         }
     })
 
@@ -138,28 +146,46 @@
         }
         ratingSystemError.value = '';
 
+        const effectivePrivacyType = isCrateMode.value ? 'Personal' : values.privacy_type;
+
         const drh = new DataRequestHandler()
-        drh.onSuccessCallback = (data) => {
-            console.log('Group created:', data)
-            toast.success('Group created')
+        drh.onSuccessCallback = async (data) => {
+            if (isCrateMode.value) {
+                // Save crate visibility to user settings
+                const settingsDrh = new DataRequestHandler();
+                settingsDrh.onSuccessCallback = (userData) => {
+                    contextStore.user = userData as any;
+                };
+                await settingsDrh.post('/user/update', {
+                    pulsarr_user_id: user.value?.pulsarr_user_id,
+                    name: user.value?.name,
+                    email: user.value?.email,
+                    crate_visibility: crateVisibility.value,
+                    profile_visibility: user.value?.profile_visibility ?? 'public',
+                });
+
+                toast.success('Crate created')
+                emit('crateCreated', data)
+            } else {
+                toast.success('Group created')
+            }
             closeDialog()
             resetForm()
             customSystem.value = null;
         }
         drh.onErrorCallback = (error) => {
-            console.error('Failed to create group:', error)
-            toast.error('Failed to create group')
+            console.error(`Failed to create ${isCrateMode.value ? 'crate' : 'group'}:`, error)
+            toast.error(`Failed to create ${isCrateMode.value ? 'crate' : 'group'}`)
         }
 
         let groupPayload;
 
         if (customSystem.value) {
-            // Inline creation — backend creates the rating system from the DTO
             groupPayload = {
                 pulsarr_group_id: 0,
                 name: values.name,
                 rating_system_id: 0,
-                privacy_type: values.privacy_type,
+                privacy_type: effectivePrivacyType,
                 rating_system: {
                     rating_system_id: 0,
                     name: customSystem.value.name,
@@ -175,12 +201,11 @@
                 },
             }
         } else {
-            // Clone from template
             groupPayload = {
                 pulsarr_group_id: 0,
                 name: values.name,
                 rating_system_id: 0,
-                privacy_type: values.privacy_type,
+                privacy_type: effectivePrivacyType,
                 rating_system: {
                     rating_system_id: 0,
                     name: '',
@@ -197,15 +222,15 @@
 </script>
 
 <template>
-    <Dialog :open="showDialog" @update:open="(value) => emit('update:showDialog', value)">
-        <DialogTrigger asChild>
+    <Dialog :open="showDialog" @update:open="(value) => { if (!isCrateMode) emit('update:showDialog', value) }">
+        <DialogTrigger v-if="!isCrateMode" asChild>
             <slot name="openModal"></slot>
         </DialogTrigger>
-        <DialogContent class="max-h-[85vh] flex flex-col">
+        <DialogContent class="max-h-[85vh] flex flex-col" :class="{ '[&>button]:hidden': isCrateMode }" @pointerDownOutside="(e) => { if (isCrateMode) e.preventDefault() }" @escapeKeyDown="(e) => { if (isCrateMode) e.preventDefault() }">
             <DialogHeader>
-                <DialogTitle>Create New Group</DialogTitle>
+                <DialogTitle>{{ isCrateMode ? 'Set Up My Crate' : 'Create New Group' }}</DialogTitle>
                 <DialogDescription>
-                    Create a new group with a rating system
+                    {{ isCrateMode ? 'Your personal album rating space' : 'Create a new group with a rating system' }}
                 </DialogDescription>
             </DialogHeader>
             <form @submit.prevent="onSubmit" class="flex flex-col flex-1 min-h-0">
@@ -218,7 +243,20 @@
                     </span>
                 </div>
 
-                <div class="space-y-2">
+                <div v-if="isCrateMode" class="space-y-2">
+                    <Label>Crate Visibility</Label>
+                    <Select v-model="crateVisibility">
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select visibility"/>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="private">Private — only you can see your Crate ratings</SelectItem>
+                            <SelectItem value="public">Public — your Crate ratings appear on your profile</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div v-else class="space-y-2">
                     <Label for="privacy_type">Privacy</Label>
                     <Select v-model="privacyType">
                         <SelectTrigger :class="{ 'border-red-500': errors.privacy_type }" v-bind="privacyTypeProps" :aria-invalid="!!errors.privacy_type" :aria-describedby="errors.privacy_type ? 'privacy-type-error' : undefined">
@@ -334,7 +372,7 @@
                 </div>
               </div>
                 <DialogFooter class="pt-4">
-                    <Button type="submit">Create Group</Button>
+                    <Button type="submit">{{ isCrateMode ? 'Create My Crate' : 'Create Group' }}</Button>
                 </DialogFooter>
             </form>
         </DialogContent>

@@ -12,7 +12,9 @@ pub struct PulsarrUser {
     pub name: String,
     pub email: String,
     pub password: String,
-    pub join_date: NaiveDateTime
+    pub join_date: NaiveDateTime,
+    pub profile_visibility: String,
+    pub crate_visibility: String,
 }
 
 impl Model for PulsarrUser {
@@ -31,13 +33,15 @@ impl Model for PulsarrUser {
     fn update<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(self) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {
         sqlx::query_as(
             "UPDATE pulsarr_user \
-             SET name = $2, email = $3 \
+             SET name = $2, email = $3, profile_visibility = $4, crate_visibility = $5 \
             WHERE pulsarr_user_id = $1 \
             RETURNING *"
         )
             .bind(self.pulsarr_user_id)
             .bind(self.name)
             .bind(self.email)
+            .bind(self.profile_visibility)
+            .bind(self.crate_visibility)
     }
 
     fn delete<PulsarrUser: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32) -> QueryAs<'static, Postgres, PulsarrUser, PgArguments> {

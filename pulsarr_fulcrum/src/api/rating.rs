@@ -30,11 +30,30 @@ pub struct PaginatedGroupRatingsRequest {
     pub current_only: Option<bool>,
 }
 
+#[derive(Deserialize, Serialize, JsonSchema)]
+pub struct GroupAlbumKey {
+    pub group_id: i32,
+    pub musicbrainz_id: String,
+}
+
+#[derive(Deserialize, Serialize, JsonSchema)]
+pub struct GroupAveragesRequest {
+    pub items: Vec<GroupAlbumKey>,
+}
+
+#[derive(Serialize, Deserialize, FromRow, JsonSchema)]
+pub struct GroupAverageResponse {
+    pub pulsarr_group_id: i32,
+    pub musicbrainz_id: String,
+    pub average_score: Decimal,
+    pub rating_count: i64,
+}
+
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![ settings:
         add_rating, update_rating, delete_rating, get_rating, get_all_ratings, get_ratings_by_group,
-        get_ratings_by_user, get_user_rating_stats, get_existing_rating,
+        get_ratings_by_user, get_user_rating_stats, get_existing_rating, get_group_averages, get_ratings_by_album,
         add_rating_detail, update_rating_detail, delete_rating_detail, get_rating_detail, get_all_rating_details,
         get_rating_details_by_rating, delete_rating_details_by_rating ]
 }
@@ -379,6 +398,66 @@ async fn get_user_rating_stats(
             count: a.count,
         }).collect(),
     }))
+}
+
+/// # Get group averages for a batch of (group_id, musicbrainz_id) pairs
+#[openapi(tag = "Rating")]
+#[post("/group-averages", format = "application/json", data = "<request>")]
+async fn get_group_averages(
+    state: &State<PostgresState>,
+    request: Json<GroupAveragesRequest>,
+    _api_user: ApiKey,
+) -> PulsarrResult<Vec<GroupAverageResponse>> {
+    let req = request.into_inner();
+    if req.items.is_empty() {
+        return Ok(Json(Vec::new()));
+    }
+
+    let group_ids: Vec<i32> = req.items.iter().map(|i| i.group_id).collect();
+    let musicbrainz_ids: Vec<String> = req.items.iter().map(|i| i.musicbrainz_id.clone()).collect();
+
+    match query_as::<_, GroupAverageResponse>(
+        "SELECT r.pulsarr_group_id, r.musicbrainz_id, \
+         AVG(r.rating_value)::numeric(8,3) AS average_score, \
+         COUNT(*)::bigint AS rating_count \
+         FROM rating r \
+         INNER JOIN unnest($1::int[], $2::text[]) AS keys(gid, mbid) \
+         ON r.pulsarr_group_id = keys.gid AND r.musicbrainz_id = keys.mbid \
+         GROUP BY r.pulsarr_group_id, r.musicbrainz_id"
+    )
+        .bind(&group_ids)
+        .bind(&musicbrainz_ids)
+        .fetch_all(&state.pool)
+        .await
+    {
+        Ok(averages) => Ok(Json(averages)),
+        Err(e) => Err(PulsarrError::internal_error("Failed to fetch group averages", e))
+    }
+}
+
+/// # Get all ratings for an album in a group
+#[openapi(tag = "Rating")]
+#[get("/by-album/<group_id>/<musicbrainz_id>")]
+async fn get_ratings_by_album(
+    state: &State<PostgresState>,
+    group_id: i32,
+    musicbrainz_id: &str,
+    _api_user: ApiKey,
+) -> PulsarrResult<Vec<Rating>> {
+    match query_as::<_, Rating>(
+        "SELECT r.*, u.name AS user_name FROM rating r \
+         LEFT JOIN pulsarr_user u ON u.pulsarr_user_id = r.pulsarr_user_id \
+         WHERE r.pulsarr_group_id = $1 AND r.musicbrainz_id = $2 \
+         ORDER BY r.rating_date DESC"
+    )
+        .bind(group_id)
+        .bind(musicbrainz_id)
+        .fetch_all(&state.pool)
+        .await
+    {
+        Ok(ratings) => Ok(Json(ratings)),
+        Err(e) => Err(PulsarrError::internal_error("Failed to fetch ratings by album", e))
+    }
 }
 
 /// # Get existing ratings for a specific media item in a group (for re-rating reference)

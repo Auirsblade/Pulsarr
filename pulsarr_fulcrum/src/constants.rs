@@ -8,6 +8,7 @@ pub const PUBLIC_PRIVACY_TYPE: &str = "Public";
 pub const PRIVATE_PRIVACY_TYPE: &str = "Private";
 pub const PERSONAL_PRIVACY_TYPE: &str = "Personal";
 pub const PRIVACY_TYPE: [&str; 3] = [PUBLIC_PRIVACY_TYPE, PRIVATE_PRIVACY_TYPE, PERSONAL_PRIVACY_TYPE];
+pub const SELECTABLE_PRIVACY_TYPE: [&str; 2] = [PUBLIC_PRIVACY_TYPE, PRIVATE_PRIVACY_TYPE];
 
 // Rating Types
 pub const ABSOLUTE_RATING_TYPE: &str = "Absolute";

@@ -1,6 +1,7 @@
 apis/AuthApi.ts
 apis/GroupApi.ts
 apis/MusicBrainzApi.ts
+apis/ProfileApi.ts
 apis/RatingApi.ts
 apis/RatingSystemApi.ts
 apis/RatingSystemTemplateApi.ts
@@ -17,7 +18,13 @@ models/CoverArtImage.ts
 models/CoverArtInfo.ts
 models/CoverArtThumbnails.ts
 models/CreateRatingDTO.ts
+models/CreateUserRequest.ts
+models/ForgotPasswordRequest.ts
+models/GenericResponse.ts
 models/GetRequest.ts
+models/GroupAlbumKey.ts
+models/GroupAverageResponse.ts
+models/GroupAveragesRequest.ts
 models/GroupDTO.ts
 models/GroupMemberDTO.ts
 models/Label.ts
@@ -41,11 +48,15 @@ models/Release.ts
 models/ReleaseGroup.ts
 models/ReleaseGroupSearchResponse.ts
 models/ReleaseSearchResponse.ts
+models/ResetPasswordRequest.ts
 models/SignInRequest.ts
 models/SignInResponse.ts
 models/Track.ts
 models/UserDTO.ts
+models/UserProfileResponse.ts
 models/UserRatingStats.ts
+models/ValidateTokenRequest.ts
+models/ValidateTokenResponse.ts
 models/Work.ts
 models/index.ts
 runtime.ts

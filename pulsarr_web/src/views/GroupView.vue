@@ -14,7 +14,7 @@
     import type { GroupDTO, Rating } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
-    import { Copy, Check, LogOut, Plus, Users, Star, Settings, MoreHorizontal, Shield, UserMinus, Crown, RefreshCw } from "lucide-vue-next";
+    import { Copy, Check, LogOut, Plus, Users, Star, Settings, MoreHorizontal, Shield, UserMinus, Crown, RefreshCw, UserPlus } from "lucide-vue-next";
     import AddRatingModal from "@/components/modals/AddRatingModal.vue";
     import ChangeRatingSystemModal from "@/components/modals/ChangeRatingSystemModal.vue";
     import RatingCard from "@/components/RatingCard.vue";
@@ -58,9 +58,16 @@
     // Rating detail modal
     const selectedRating = ref<Rating | null>(null);
     const showRatingModal = ref(false);
+    const ratingModalInitialTab = ref<string | undefined>(undefined);
+
+    // Group averages cache
+    const groupAverages = ref<Record<string, { average: string; count: number }>>({});
 
     // Edit rating state
     const editingRating = ref<Rating | null>(null);
+
+    // Rate-this state (pre-select album from another user's review)
+    const rateThisRating = ref<Rating | null>(null);
 
     // Settings state
     const showSettingsDialog = ref(false);
@@ -81,8 +88,46 @@
     const transferTargetName = ref('');
 
     const openRatingModal = (rating: Rating) => {
+        ratingModalInitialTab.value = undefined;
         selectedRating.value = rating;
         showRatingModal.value = true;
+    };
+
+    const openRatingModalGroupTab = (rating: Rating) => {
+        ratingModalInitialTab.value = 'group-ratings';
+        selectedRating.value = rating;
+        showRatingModal.value = true;
+    };
+
+    const ratingMax = computed(() => group.value?.rating_system?.rating_max?.toString());
+
+    const fetchGroupAverages = (ratingsToFetch: Rating[]) => {
+        const uniqueKeys = new Map<string, { group_id: number; musicbrainz_id: string }>();
+        for (const r of ratingsToFetch) {
+            const key = `${r.pulsarr_group_id}:${r.musicbrainz_id}`;
+            if (!uniqueKeys.has(key) && !groupAverages.value[key]) {
+                uniqueKeys.set(key, { group_id: r.pulsarr_group_id, musicbrainz_id: r.musicbrainz_id });
+            }
+        }
+        const items = Array.from(uniqueKeys.values());
+        if (items.length === 0) return;
+
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = (data) => {
+            const results = data as { pulsarr_group_id: number; musicbrainz_id: string; average_score: string; rating_count: number }[];
+            for (const r of results) {
+                const key = `${r.pulsarr_group_id}:${r.musicbrainz_id}`;
+                const num = parseFloat(r.average_score);
+                groupAverages.value[key] = {
+                    average: isNaN(num) ? r.average_score : parseFloat(num.toFixed(2)).toString(),
+                    count: r.rating_count,
+                };
+            }
+        };
+        drh.onErrorCallback = (err) => {
+            console.error('Failed to fetch group averages:', err);
+        };
+        drh.post('/rating/group-averages', { items });
     };
 
     const groupId = computed(() => Number(route.params.groupId));
@@ -106,6 +151,8 @@
     const isAdmin = computed(() => currentUserRole.value === 'Admin');
 
     const isAdminOrOwner = computed(() => isOwner.value || isAdmin.value);
+
+    const isCrate = computed(() => group.value?.privacy_type === 'Personal');
 
     const canActOn = (memberRole: string): boolean => {
         return (ROLE_LEVELS[currentUserRole.value] ?? 0) > (ROLE_LEVELS[memberRole] ?? 0);
@@ -141,6 +188,7 @@
         ratings.value = [];
         hasMoreRatings.value = true;
         loadingMoreRatings.value = false;
+        groupAverages.value = {};
         if (ratingsObserver) ratingsObserver.disconnect();
 
         const drh = new DataRequestHandler();
@@ -172,6 +220,7 @@
                     fetchCoverArt(rating.musicbrainz_id);
                 }
             });
+            fetchGroupAverages(ratings.value);
         };
         drh.onErrorCallback = (err) => {
             if (gen !== fetchGeneration) return;
@@ -197,6 +246,7 @@
                     fetchCoverArt(rating.musicbrainz_id);
                 }
             });
+            fetchGroupAverages(newRatings);
             loadingMoreRatings.value = false;
         };
         drh.onErrorCallback = (err) => {
@@ -252,6 +302,24 @@
         }
     };
 
+    const joining = ref(false);
+
+    const joinGroup = () => {
+        joining.value = true;
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = () => {
+            joining.value = false;
+            toast.success('Joined group!');
+            fetchGroup();
+        };
+        drh.onErrorCallback = (err) => {
+            joining.value = false;
+            console.error('Failed to join group:', err);
+            toast.error('Failed to join group');
+        };
+        drh.post(`/group/join/${groupId.value}`, {});
+    };
+
     const leaveGroup = () => {
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = () => {
@@ -275,6 +343,8 @@
     };
 
     const onRatingCreated = () => {
+        rateThisRating.value = null;
+        groupAverages.value = {};
         fetchRatings(fetchGeneration);
     };
 
@@ -284,8 +354,17 @@
         showAddRatingModal.value = true;
     };
 
+    const onRateThisAlbum = (rating: Rating) => {
+        editingRating.value = null;
+        rateThisRating.value = rating;
+        showRatingModal.value = false;
+        showAddRatingModal.value = true;
+    };
+
     const onRatingUpdated = () => {
         editingRating.value = null;
+        rateThisRating.value = null;
+        groupAverages.value = {};
         fetchRatings(fetchGeneration);
     };
 
@@ -403,9 +482,18 @@
     <div class="p-4 max-w-4xl mx-auto">
         <LoadingSpinner v-if="loading" text="Loading group..." />
 
-        <div v-else-if="error" class="flex justify-center py-8">
-            <span class="text-destructive">{{ error }}</span>
-        </div>
+        <Card v-else-if="error">
+            <CardContent class="py-12">
+                <EmptyState
+                    :icon="Users"
+                    title="Group not available"
+                    description="This group may be private or no longer exists."
+                />
+                <div class="flex justify-center mt-4">
+                    <Button variant="outline" @click="$router.push('/groups')">Browse Groups</Button>
+                </div>
+            </CardContent>
+        </Card>
 
         <div v-else-if="group" class="space-y-6">
             <!-- Page Header -->
@@ -416,23 +504,28 @@
                         {{ group.name }}
                     </h1>
                     <div class="flex items-center gap-2 mt-1">
-                        <span class="px-2 py-0.5 bg-secondary rounded text-xs">{{ group.privacy_type }}</span>
-                        <span class="text-sm text-muted-foreground">{{ group.members?.length ?? 0 }} members</span>
+                        <span v-if="isCrate" class="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">My Crate</span>
+                        <span v-else class="px-2 py-0.5 bg-secondary rounded text-xs">{{ group.privacy_type }}</span>
+                        <span v-if="!isCrate" class="text-sm text-muted-foreground">{{ group.members?.length ?? 0 }} members</span>
                     </div>
                 </div>
                 <div class="flex gap-2">
                     <Button v-if="isAdminOrOwner" variant="outline" size="icon" aria-label="Group settings" @click="openSettings">
                         <Settings class="w-4 h-4" />
                     </Button>
-                    <Button v-if="isMember && !isOwner" variant="outline" @click="leaveGroup">
+                    <Button v-if="isMember && !isOwner && !isCrate" variant="outline" @click="leaveGroup">
                         <LogOut class="w-4 h-4 mr-1" />
                         Leave
+                    </Button>
+                    <Button v-if="user && !isMember && !isCrate" :disabled="joining" @click="joinGroup">
+                        <UserPlus class="w-4 h-4 mr-1" />
+                        {{ joining ? 'Joining...' : 'Join Group' }}
                     </Button>
                 </div>
             </div>
 
             <!-- Share Link -->
-            <div class="flex items-center gap-2">
+            <div v-if="!isCrate" class="flex items-center gap-2">
                 <span class="text-sm text-muted-foreground">Share link:</span>
                 <code class="flex-1 px-2 py-1 bg-muted rounded text-sm truncate">{{ shareLink }}</code>
                 <Button variant="outline" size="icon" :aria-label="copied ? 'Link copied' : 'Copy share link'" @click="copyShareLink">
@@ -469,7 +562,7 @@
                 </Card>
 
                 <!-- Members Card -->
-                <Card>
+                <Card v-if="!isCrate">
                     <CardHeader class="pb-2">
                         <CardTitle class="text-sm font-medium text-muted-foreground flex items-center gap-2">
                             <Users class="w-4 h-4" />
@@ -485,12 +578,12 @@
                             >
                                 <div class="flex items-center gap-2 min-w-0">
                                     <span class="w-2 h-2 rounded-full bg-primary flex-shrink-0"></span>
-                                    <span class="truncate font-medium">{{ member.user?.name }}</span>
-                                    <span v-if="member.group_role === 'Owner'" class="text-xs text-muted-foreground flex-shrink-0">
-                                        <Crown class="w-3 h-3 inline" /> Owner
+                                    <RouterLink :to="`/user/${member.user?.pulsarr_user_id}`" class="truncate font-medium hover:underline">{{ member.user?.name }}</RouterLink>
+                                    <span v-if="member.group_role === 'Owner'" class="inline-flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                                        <Crown class="w-3 h-3" /> Owner
                                     </span>
-                                    <span v-else-if="member.group_role === 'Admin'" class="text-xs text-muted-foreground flex-shrink-0">
-                                        <Shield class="w-3 h-3 inline" /> Admin
+                                    <span v-else-if="member.group_role === 'Admin'" class="inline-flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                                        <Shield class="w-3 h-3" /> Admin
                                     </span>
                                     <span v-else-if="member.group_role === 'ViewOnly'" class="text-xs text-muted-foreground flex-shrink-0">
                                         View Only
@@ -540,15 +633,15 @@
             <Dialog :open="showSettingsDialog" @update:open="showSettingsDialog = $event">
                 <DialogScrollContent class="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Group Settings</DialogTitle>
-                        <DialogDescription>Update your group's name and privacy settings.</DialogDescription>
+                        <DialogTitle>{{ isCrate ? 'Crate Settings' : 'Group Settings' }}</DialogTitle>
+                        <DialogDescription>{{ isCrate ? 'Update your Crate name and rating system.' : 'Update your group\'s name and privacy settings.' }}</DialogDescription>
                     </DialogHeader>
                     <div class="space-y-4 py-2">
                         <div class="space-y-2">
-                            <Label for="group-name">Group Name</Label>
+                            <Label for="group-name">{{ isCrate ? 'Crate Name' : 'Group Name' }}</Label>
                             <Input id="group-name" v-model="editName" />
                         </div>
-                        <div class="space-y-2">
+                        <div v-if="!isCrate" class="space-y-2">
                             <Label for="privacy-type">Privacy Type</Label>
                             <Select v-model="editPrivacyType">
                                 <SelectTrigger>
@@ -583,7 +676,7 @@
 
                         <div class="flex justify-between items-center pt-2">
                             <Button
-                                v-if="isOwner"
+                                v-if="isOwner && !isCrate"
                                 variant="destructive"
                                 size="sm"
                                 @click="showSettingsDialog = false; deleteConfirmText = ''; showDeleteConfirm = true;"
@@ -659,12 +752,14 @@
                         :group="group"
                         :edit-rating="editingRating"
                         :edit-cover-art-url="editingRating ? coverArtCache[editingRating.musicbrainz_id] : undefined"
-                        @update:showDialog="(v) => { showAddRatingModal = v; if (!v) editingRating = null; }"
+                        :rate-this-rating="rateThisRating"
+                        :rate-this-cover-art-url="rateThisRating ? coverArtCache[rateThisRating.musicbrainz_id] : undefined"
+                        @update:showDialog="(v) => { showAddRatingModal = v; if (!v) { editingRating = null; rateThisRating = null; } }"
                         @created="onRatingCreated"
                         @updated="onRatingUpdated"
                     >
                         <template #openModal>
-                            <Button @click="editingRating = null; showAddRatingModal = true;">
+                            <Button @click="editingRating = null; rateThisRating = null; showAddRatingModal = true;">
                                 <Plus class="w-4 h-4 mr-1" />
                                 Add Rating
                             </Button>
@@ -686,7 +781,11 @@
                     :cover-art-url="coverArtCache[rating.musicbrainz_id]"
                     :user-name="getUserName(rating.pulsarr_user_id, rating.user_name)"
                     :outdated="isRatingOutdated(rating)"
+                    :group-average="groupAverages[`${rating.pulsarr_group_id}:${rating.musicbrainz_id}`]?.average"
+                    :group-rating-count="groupAverages[`${rating.pulsarr_group_id}:${rating.musicbrainz_id}`]?.count"
+                    :rating-max="ratingMax"
                     @click="openRatingModal(rating)"
+                    @group-average-click="openRatingModalGroupTab(rating)"
                 />
 
                 <div ref="ratingSentinel" v-if="hasMoreRatings && ratings.length > 0" />
@@ -700,8 +799,13 @@
                     :rating-system="group?.rating_system"
                     :outdated="selectedRating ? isRatingOutdated(selectedRating) : false"
                     :group="group"
+                    :group-average="selectedRating ? groupAverages[`${selectedRating.pulsarr_group_id}:${selectedRating.musicbrainz_id}`]?.average : undefined"
+                    :group-rating-count="selectedRating ? groupAverages[`${selectedRating.pulsarr_group_id}:${selectedRating.musicbrainz_id}`]?.count : undefined"
+                    :rating-max="ratingMax"
+                    :initial-tab="ratingModalInitialTab"
                     @update:open="showRatingModal = $event"
                     @edit="onEditRating"
+                    @rateThis="onRateThisAlbum"
                 />
 
                 <!-- Change Rating System Modal -->

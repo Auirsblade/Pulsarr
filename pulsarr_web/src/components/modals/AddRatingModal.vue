@@ -6,7 +6,7 @@
     import { ref, computed, watch } from "vue";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler.ts";
     import { toast } from 'vue-sonner';
-    import type { GroupDTO, Rating, RatingDetail } from "@/apiClient";
+    import type { GroupDTO, Rating, RatingDetail, RatingDetailResponse } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
     import { Music, X, Disc, User, Clock, Info } from "lucide-vue-next";
@@ -26,6 +26,8 @@
         group: GroupDTO;
         editRating?: Rating | null;
         editCoverArtUrl?: string;
+        rateThisRating?: Rating | null;
+        rateThisCoverArtUrl?: string;
     }>();
 
     const emit = defineEmits<{
@@ -47,7 +49,7 @@
     // Edit mode state
     const editingRatingId = ref<number | null>(null);
     const editingRating = ref<Rating | null>(null);
-    const editingRatingDetails = ref<RatingDetail[]>([]);
+    const editingRatingDetails = ref<RatingDetailResponse[]>([]);
 
     const isEditMode = computed(() => editingRatingId.value !== null);
     const isOutdatedEdit = computed(() => {
@@ -138,7 +140,7 @@
         }
     };
 
-    const prefillFromExisting = (rating: Rating, details: RatingDetail[]) => {
+    const prefillFromExisting = (rating: Rating, details: RatingDetailResponse[]) => {
         // Only pre-fill if same rating system (not outdated)
         if (rating.rating_system_id === props.group.rating_system_id) {
             ratingValue.value = rating.rating_value;
@@ -155,16 +157,16 @@
                 }
             }
         } else {
-            // Outdated: leave form empty for fresh re-rating with new system
-            comments.value = '';
+            // Outdated: leave rating empty for fresh re-rating with new system, but keep comments
+            comments.value = rating.comments;
             ratingValue.value = '';
         }
     };
 
-    const fetchRatingDetails = (ratingId: number, callback: (details: RatingDetail[]) => void) => {
+    const fetchRatingDetails = (ratingId: number, callback: (details: RatingDetailResponse[]) => void) => {
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
-            callback(data as RatingDetail[]);
+            callback(data as RatingDetailResponse[]);
         };
         drh.onErrorCallback = () => {
             callback([]);
@@ -237,6 +239,8 @@
     watch(() => props.showDialog, (isOpen) => {
         if (isOpen && props.editRating) {
             setupEditFromProp(props.editRating);
+        } else if (isOpen && props.rateThisRating) {
+            setupRateThisFromProp(props.rateThisRating);
         }
     });
 
@@ -258,6 +262,25 @@
         });
     };
 
+
+    const setupRateThisFromProp = (rating: Rating) => {
+        selectedMusic.value = {
+            musicbrainz_id: rating.musicbrainz_id,
+            media_title: rating.media_title,
+            artist_name: rating.artist_name,
+            media_type: rating.media_type,
+            release_date: rating.release_date,
+            cover_art_url: props.rateThisCoverArtUrl || undefined,
+        };
+        initializeParameterRatings();
+        fetchExistingRatings(rating.musicbrainz_id);
+    };
+
+    watch(() => props.rateThisRating, (newVal) => {
+        if (newVal && props.showDialog) {
+            setupRateThisFromProp(newVal);
+        }
+    });
 
     const createRatingDetails = (ratingId: number, onComplete: () => void) => {
         const details = parameterRatings.value.filter(p => p.value);
@@ -300,6 +323,26 @@
         drh.delete(`/rating/rating_detail/by_rating/${ratingId}`);
     };
 
+    const clampValue = (target: { value: string }, max: string) => {
+        const val = parseFloat(target.value);
+        const maxVal = parseFloat(max);
+        if (isNaN(val) || val < 0) {
+            target.value = '0';
+        } else if (val > maxVal) {
+            target.value = max;
+        }
+    };
+
+    const clampOverallRating = () => {
+        const val = parseFloat(ratingValue.value);
+        const maxVal = parseFloat(ratingMax.value);
+        if (isNaN(val) || val < 0) {
+            ratingValue.value = '0';
+        } else if (val > maxVal) {
+            ratingValue.value = ratingMax.value;
+        }
+    };
+
     const submit = () => {
         if (!selectedMusic.value || !user.value) return;
 
@@ -309,6 +352,18 @@
                 error.value = 'All parameter ratings are required';
                 return;
             }
+        }
+
+        // Validate each parameter value is in range
+        const invalidParam = parameterRatings.value.find(p => {
+            if (!p.value) return false;
+            const val = parseFloat(p.value);
+            const max = parseFloat(p.max);
+            return isNaN(val) || val < 0 || val > max;
+        });
+        if (invalidParam) {
+            error.value = `${invalidParam.name} must be between 0 and ${invalidParam.max}`;
+            return;
         }
 
         // Determine the final rating value
@@ -539,6 +594,7 @@
                                 step="0.1"
                                 class="w-24"
                                 placeholder="--"
+                                @blur="clampValue(param, param.max)"
                             />
                         </div>
                     </div>
@@ -558,6 +614,7 @@
                         :max="ratingMax"
                         step="0.1"
                         placeholder="Enter rating..."
+                        @blur="clampOverallRating"
                     />
 
                     <!-- Auto-calculated display for Average/Cumulative -->
@@ -582,10 +639,11 @@
                     />
                 </div>
 
-                <!-- Error -->
-                <div v-if="error" class="text-sm text-destructive" role="alert">
-                    {{ error }}
-                </div>
+            </div>
+
+            <!-- Error (outside scroll container so it's always visible) -->
+            <div v-if="error" class="text-sm text-destructive" role="alert">
+                {{ error }}
             </div>
 
             <DialogFooter class="pt-4">

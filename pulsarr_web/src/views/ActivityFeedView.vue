@@ -185,6 +185,7 @@
                 :cover-art-url="coverArtCache[rating.musicbrainz_id]"
                 :user-name="feedStore.getUserName(rating.pulsarr_user_id, rating.user_name)"
                 :group-name="feedStore.getGroupName(rating.pulsarr_group_id)"
+                :rating-max="feedStore.getGroupForRating(rating.pulsarr_group_id)?.rating_system?.rating_max?.toString()"
                 :outdated="isRatingOutdated(rating)"
                 @click="openRatingModal(rating)"
             />

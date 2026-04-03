@@ -12,7 +12,8 @@
     import { useContextStore } from "@/stores/context";
     import { storeToRefs } from "pinia";
     import { DataRequestHandler } from "@/helpers/DataRequestHandler";
-    import { User, Shield, Trash2 } from "lucide-vue-next";
+    import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+    import { User, Shield, Trash2, Eye } from "lucide-vue-next";
     import { toast } from "vue-sonner";
     import { formatDate } from "@/helpers/ratingFormatters";
 
@@ -35,6 +36,11 @@
     const deleteConfirmName = ref('');
     const deletingAccount = ref(false);
     const canDelete = computed(() => deleteConfirmName.value === user.value?.name);
+
+    // Privacy settings state
+    const profileVisibility = ref(user.value?.profile_visibility ?? 'public');
+    const crateVisibility = ref(user.value?.crate_visibility ?? 'private');
+    const savingPrivacy = ref(false);
 
     const saveProfile = () => {
         if (!user.value) return;
@@ -59,6 +65,8 @@
             pulsarr_user_id: user.value.pulsarr_user_id,
             name: editName.value,
             email: editEmail.value,
+            profile_visibility: profileVisibility.value,
+            crate_visibility: crateVisibility.value,
         });
     };
 
@@ -153,6 +161,46 @@
                 </div>
                 <Button @click="saveProfile" :disabled="savingProfile">
                     {{ savingProfile ? 'Saving...' : 'Save Changes' }}
+                </Button>
+            </CardContent>
+        </Card>
+
+        <!-- Privacy Settings -->
+        <Card>
+            <CardHeader>
+                <CardTitle class="flex items-center gap-2">
+                    <Eye class="w-5 h-5" />
+                    Privacy
+                </CardTitle>
+                <CardDescription>Control who can see your profile and Crate ratings</CardDescription>
+            </CardHeader>
+            <CardContent class="space-y-4">
+                <div class="space-y-2">
+                    <Label>Profile Visibility</Label>
+                    <Select v-model="profileVisibility">
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="public">Public — others can see your ratings</SelectItem>
+                            <SelectItem value="private">Private — only your username is visible</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div class="space-y-2">
+                    <Label>Crate Visibility</Label>
+                    <Select v-model="crateVisibility">
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="public">Public — Crate ratings appear on your profile</SelectItem>
+                            <SelectItem value="private">Private — only you can see your Crate ratings</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button @click="saveProfile" :disabled="savingProfile">
+                    {{ savingProfile ? 'Saving...' : 'Save Privacy Settings' }}
                 </Button>
             </CardContent>
         </Card>

@@ -24,10 +24,10 @@ export const useFeedStore = defineStore('feed', () => {
         return 'Unknown User';
     };
 
-    const getGroupName = (groupId: number): string => {
+    const getGroupName = (groupId: number): string | undefined => {
         return groupDetails.value.get(groupId)?.name
             ?? myGroups.value.find(g => g.pulsarr_group_id === groupId)?.name
-            ?? 'Unknown Group';
+            ?? undefined;
     };
 
     const getGroupForRating = (groupId: number): GroupDTO | undefined => {

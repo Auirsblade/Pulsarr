@@ -86,13 +86,13 @@ export interface Rating {
      */
     rating_date: string;
     /**
-     *
+     * 
      * @type {string}
      * @memberof Rating
      */
     release_date: string;
     /**
-     *
+     * 
      * @type {string}
      * @memberof Rating
      */

@@ -6,7 +6,7 @@ use crate::api::dtos::{
 };
 use crate::api::guards::api_key::ApiKey;
 use crate::api::guards::authorization;
-use crate::constants::{ADMIN_ROLE, MEMBERSHIP_TYPE, MEMBER_ROLE, OWNER_ROLE, PRIVATE_PRIVACY_TYPE, PRIVACY_TYPE};
+use crate::constants::{ADMIN_ROLE, MEMBERSHIP_TYPE, MEMBER_ROLE, OWNER_ROLE, PERSONAL_PRIVACY_TYPE, PRIVATE_PRIVACY_TYPE, SELECTABLE_PRIVACY_TYPE};
 use crate::data::data_wrangler;
 use crate::data::models::pulsarr_group;
 use crate::data::models::pulsarr_group::{PulsarrGroup, PulsarrGroupWithCount};
@@ -30,7 +30,7 @@ pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, O
     openapi_get_routes_spec![settings: update_group, delete_group, get_pulsarr_group,
         get_all_groups, get_privacy_types, create_group, get_membership_types, join_group, leave_group,
         search_groups, my_groups, get_public_groups_endpoint, get_group_preview_endpoint,
-        kick_member, change_role, transfer_ownership, change_rating_system]
+        kick_member, change_role, transfer_ownership, change_rating_system, my_crate]
 }
 
 /// # Get the group privacy types
@@ -39,7 +39,7 @@ pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, O
 async fn get_privacy_types() -> PulsarrResult<Vec<String>> {
     let mut privacy_types = vec![];
 
-    for typ in PRIVACY_TYPE {
+    for typ in SELECTABLE_PRIVACY_TYPE {
         privacy_types.push(typ.to_owned());
     }
 
@@ -72,6 +72,12 @@ async fn delete_group(
 ) -> PulsarrResult<bool> {
     let ApiKey(user_id) = api_user;
     authorization::require_role(&state.pool, id, user_id, OWNER_ROLE).await?;
+
+    let group = data_wrangler::get_by_id::<PulsarrGroup>(id, &state.pool).await?;
+    if group.privacy_type == PERSONAL_PRIVACY_TYPE {
+        return Err(PulsarrError::forbidden("Cannot delete your Crate"));
+    }
+
     match data_wrangler::delete::<PulsarrGroup>(id, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e),
@@ -92,8 +98,8 @@ async fn get_pulsarr_group(
         Err(e) => return Err(e),
     };
 
-    // If group is private, verify membership
-    if pg.privacy_type == PRIVATE_PRIVACY_TYPE {
+    // If group is private or personal, verify membership
+    if pg.privacy_type == PRIVATE_PRIVACY_TYPE || pg.privacy_type == PERSONAL_PRIVACY_TYPE {
         if authorization::get_membership(&state.pool, id, user_id).await.is_none() {
             return Err(PulsarrError::forbidden("This group is private"));
         }
@@ -307,7 +313,12 @@ async fn join_group(
     api_user: ApiKey,
 ) -> PulsarrResult<bool> {
     let ApiKey(user_id) = api_user;
-    // Setting to Member by default?
+
+    let group = data_wrangler::get_by_id::<PulsarrGroup>(group_id, &state.pool).await?;
+    if group.privacy_type == PERSONAL_PRIVACY_TYPE {
+        return Err(PulsarrError::forbidden("Cannot join a personal Crate"));
+    }
+
     join(state, group_id, user_id, MEMBER_ROLE.to_string()).await
 }
 
@@ -320,6 +331,12 @@ async fn leave_group(
     api_user: ApiKey,
 ) -> PulsarrResult<bool> {
     let ApiKey(user_id) = api_user;
+
+    // Prevent leaving personal Crate
+    let group = data_wrangler::get_by_id::<PulsarrGroup>(group_id, &state.pool).await?;
+    if group.privacy_type == PERSONAL_PRIVACY_TYPE {
+        return Err(PulsarrError::forbidden("Cannot leave your Crate"));
+    }
 
     // Prevent Owner from leaving
     if let Some(membership) = authorization::get_membership(&state.pool, group_id, user_id).await {
@@ -609,4 +626,29 @@ async fn change_rating_system(
     };
 
     Ok(Json(group_dto::to_dto(&saved_group, Some(&created_rs), Some(params))))
+}
+
+/// # Get the current user's personal Crate
+#[openapi(tag = "Group")]
+#[get("/myCrate")]
+async fn my_crate(
+    state: &State<PostgresState>,
+    api_user: ApiKey,
+) -> PulsarrResult<GroupDTO> {
+    let ApiKey(user_id) = api_user;
+    match pulsarr_group::get_personal_group_by_user::<PulsarrGroup>(user_id)
+        .fetch_optional(&state.pool)
+        .await
+    {
+        Ok(Some(pg)) => {
+            let rs = data_wrangler::get_by_id::<RatingSystem>(pg.rating_system_id, &state.pool).await?;
+            let parameters = rating_system_parameter::get_by_rating_system_id(rs.rating_system_id)
+                .fetch_all(&state.pool)
+                .await
+                .map_err(PulsarrError::validation_error)?;
+            Ok(Json(group_dto::to_dto(&pg, Some(&rs), Some(parameters))))
+        }
+        Ok(None) => Err(PulsarrError::missing_data("Crate".to_string())),
+        Err(e) => Err(PulsarrError::validation_error(e)),
+    }
 }

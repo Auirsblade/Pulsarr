@@ -12,10 +12,16 @@ export const useContextStore = defineStore('context', () => {
     const showSignInDialog = ref(false);
     const isLoggedIn = computed(() => !!apiKey.value && !!user.value);
 
-    const setSession = (signin: SignInResponse) => {
+    // Crate state
+    const crate = ref<any>(null);
+    const crateLoaded = ref(false);
+    const needsCrateSetup = computed(() => isLoggedIn.value && crateLoaded.value && !crate.value);
+
+    const setSession = async (signin: SignInResponse) => {
         user.value = signin.user;
         apiKey.value = signin.pulsarr_api_key;
         setApiKey();
+        await loadCrate();
     }
 
     const getSession = async () => {
@@ -34,6 +40,7 @@ export const useContextStore = defineStore('context', () => {
                 CookieManager.removeApiKey();
             };
             await drh.get("/user/currentUser");
+            await loadCrate();
         }
     }
 
@@ -48,8 +55,22 @@ export const useContextStore = defineStore('context', () => {
     const clearSession = () => {
         user.value = undefined;
         apiKey.value = undefined;
+        crate.value = null;
+        crateLoaded.value = false;
         showSignInDialog.value = false;
         CookieManager.removeApiKey();
+    }
+
+    const loadCrate = async () => {
+        const drh = new DataRequestHandler();
+        drh.onSuccessCallback = (data) => {
+            crate.value = data;
+        };
+        drh.onErrorCallback = () => {
+            crate.value = null;
+        };
+        await drh.get("/group/myCrate");
+        crateLoaded.value = true;
     }
 
     const loadPrivacyTypes = () => {
@@ -85,10 +106,14 @@ export const useContextStore = defineStore('context', () => {
         ratingTypes,
         showSignInDialog,
         isLoggedIn,
+        crate,
+        crateLoaded,
+        needsCrateSetup,
         setSession,
         getSession,
         clearSession,
         loadPrivacyTypes,
-        loadRatingTypes
+        loadRatingTypes,
+        loadCrate,
     }
 })

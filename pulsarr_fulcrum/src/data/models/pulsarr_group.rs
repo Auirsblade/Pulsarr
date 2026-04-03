@@ -225,3 +225,10 @@ pub fn get_group_preview_with_count<T: for<'r> sqlx::FromRow<'r, PgRow>>(id: i32
          WHERE g.pulsarr_group_id = $1"
     ).bind(id)
 }
+
+pub fn get_personal_group_by_user<T: for<'r> sqlx::FromRow<'r, PgRow>>(user_id: i32) -> QueryAs<'static, Postgres, T, PgArguments> {
+    query_as(
+        "SELECT * FROM pulsarr_group \
+         WHERE created_by_user_id = $1 AND privacy_type = 'Personal'"
+    ).bind(user_id)
+}
