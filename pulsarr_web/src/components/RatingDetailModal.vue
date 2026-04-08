@@ -161,18 +161,18 @@
 <template>
     <Dialog :open="open" @update:open="$emit('update:open', $event)">
         <DialogScrollContent v-if="rating">
-            <DialogHeader class="text-left">
-                <DialogTitle class="flex items-center gap-2">
-                    {{ rating.media_title }}
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-primary text-primary-foreground rounded font-bold text-sm">
+            <DialogHeader class="text-left min-w-0">
+                <DialogTitle class="flex items-center gap-2 min-w-0">
+                    <span class="truncate min-w-0" :title="rating.media_title">{{ rating.media_title }}</span>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-primary text-primary-foreground rounded font-bold text-sm flex-shrink-0">
                         <Star class="w-3 h-3" />
                         {{ formatRatingValue(rating.rating_value) }}
                     </span>
                 </DialogTitle>
-                <DialogDescription>
-                    {{ rating.artist_name }}
-                    <span v-if="rating.release_date"> · {{ formatDate(rating.release_date) }}</span>
-                    <RouterLink v-if="groupName && rating" :to="`/group/${rating.pulsarr_group_id}`" class="ml-1 px-1.5 py-0.5 bg-secondary rounded text-xs hover:bg-secondary/80 transition-colors">{{ groupName }}</RouterLink>
+                <DialogDescription class="flex items-center gap-1 min-w-0">
+                    <span class="truncate min-w-0" :title="rating.artist_name">{{ rating.artist_name }}</span>
+                    <span v-if="rating.release_date" class="flex-shrink-0">· {{ formatDate(rating.release_date) }}</span>
+                    <RouterLink v-if="groupName && rating" :to="`/group/${rating.pulsarr_group_id}`" class="px-1.5 py-0.5 bg-secondary rounded text-xs hover:bg-secondary/80 transition-colors flex-shrink-0 max-w-[40%] truncate" :title="groupName">{{ groupName }}</RouterLink>
                 </DialogDescription>
             </DialogHeader>
 
@@ -222,7 +222,7 @@
                                 <MessageSquare class="w-4 h-4" />
                                 Review
                             </h4>
-                            <p class="text-sm text-muted-foreground whitespace-pre-wrap break-words">{{ rating.comments }}</p>
+                            <p class="text-sm text-muted-foreground whitespace-pre-wrap wrap-anywhere">{{ rating.comments }}</p>
                         </div>
 
                         <ReviewReactionsBar :rating-id="rating.rating_id" />
@@ -317,7 +317,7 @@
                         <MessageSquare class="w-4 h-4" />
                         Review
                     </h4>
-                    <p class="text-sm text-muted-foreground whitespace-pre-wrap break-words">{{ rating.comments }}</p>
+                    <p class="text-sm text-muted-foreground whitespace-pre-wrap wrap-anywhere">{{ rating.comments }}</p>
                 </div>
 
                 <ReviewReactionsBar :rating-id="rating.rating_id" />

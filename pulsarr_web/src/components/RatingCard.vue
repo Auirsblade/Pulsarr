@@ -54,8 +54,8 @@
             <div class="flex-1 min-w-0 flex flex-col">
                 <div class="flex justify-between items-start gap-2">
                     <div class="min-w-0">
-                        <h3 class="font-semibold truncate">{{ rating.media_title }}</h3>
-                        <p class="text-sm text-muted-foreground truncate">{{ rating.artist_name }}</p>
+                        <h3 class="font-semibold truncate" :title="rating.media_title">{{ rating.media_title }}</h3>
+                        <p class="text-sm text-muted-foreground truncate" :title="rating.artist_name">{{ rating.artist_name }}</p>
                     </div>
                     <div class="flex items-center gap-1.5 flex-shrink-0">
                         <RouterLink v-if="groupName" :to="`/group/${rating.pulsarr_group_id}`" class="px-1.5 py-0.5 bg-secondary rounded text-xs text-muted-foreground max-w-[160px] truncate hover:bg-secondary/80 transition-colors" :title="groupName" @click.stop>{{ groupName }}</RouterLink>
