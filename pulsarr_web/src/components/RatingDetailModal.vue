@@ -165,7 +165,7 @@
                 <DialogDescription class="flex items-center gap-1 min-w-0">
                     <span class="truncate min-w-0" :title="rating.artist_name">{{ rating.artist_name }}</span>
                     <span v-if="rating.release_date" class="flex-shrink-0">· {{ formatDate(rating.release_date) }}</span>
-                    <RouterLink v-if="groupName && rating" :to="`/group/${rating.pulsarr_group_id}`" class="px-1.5 py-0.5 bg-secondary rounded text-xs hover:bg-secondary/80 transition-colors flex-shrink-0">{{ groupName }}</RouterLink>
+                    <RouterLink v-if="groupName && rating" :to="`/group/${rating.pulsarr_group_id}`" class="px-1.5 py-0.5 bg-secondary rounded text-xs hover:bg-secondary/80 transition-colors flex-shrink-0 max-w-[40%] truncate" :title="groupName">{{ groupName }}</RouterLink>
                 </DialogDescription>
             </DialogHeader>
 
