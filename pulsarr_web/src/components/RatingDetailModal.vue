@@ -140,6 +140,13 @@
         albumRatings.value = [];
         albumRatingsLoaded.value = false;
         albumRatingsLoading.value = false;
+        // If the modal is already open on the group-ratings tab (e.g. the user
+        // clicked a different album's group-average badge, or the tab value
+        // persisted from a prior open), the activeTab watcher below won't fire
+        // because the tab value isn't changing — so trigger the fetch here.
+        if (props.open && activeTab.value === 'group-ratings') {
+            fetchAlbumRatings();
+        }
     });
 
     // Lazy-load album ratings when switching to group-ratings tab
