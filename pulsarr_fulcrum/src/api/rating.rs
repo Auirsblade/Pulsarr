@@ -8,7 +8,7 @@ use rocket_okapi::settings::OpenApiSettings;
 use sqlx::{query_as, FromRow};
 use sqlx::types::Decimal;
 use crate::{PostgresState, PulsarrResult};
-use crate::data::models::{rating::Rating, rating_detail::RatingDetail};
+use crate::data::models::{rating::Rating, rating_detail::RatingDetail, rating_reaction::RatingReaction};
 use crate::api::dtos::rating_dto::{CreateRatingDTO, create_rating_to_model};
 use crate::api::guards::api_key::ApiKey;
 use crate::error::PulsarrError;
@@ -49,13 +49,37 @@ pub struct GroupAverageResponse {
     pub rating_count: i64,
 }
 
+/// Allowed emojis for review reactions. Restricted to a small preset so the
+/// UI stays predictable and users can't stuff arbitrary text into the field.
+pub const ALLOWED_REACTION_EMOJIS: &[&str] = &["👍", "❤️", "😂", "😮", "😢", "🔥"];
+
+#[derive(Deserialize, Serialize, JsonSchema)]
+pub struct ToggleReactionRequest {
+    pub rating_id: i32,
+    pub emoji: String,
+}
+
+#[derive(Serialize, Deserialize, FromRow, JsonSchema)]
+pub struct ReactionCount {
+    pub emoji: String,
+    pub count: i64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct RatingReactionSummary {
+    pub rating_id: i32,
+    pub counts: Vec<ReactionCount>,
+    pub user_reactions: Vec<String>,
+}
+
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![ settings:
         add_rating, update_rating, delete_rating, get_rating, get_all_ratings, get_ratings_by_group,
         get_ratings_by_user, get_user_rating_stats, get_existing_rating, get_group_averages, get_ratings_by_album,
         add_rating_detail, update_rating_detail, delete_rating_detail, get_rating_detail, get_all_rating_details,
-        get_rating_details_by_rating, delete_rating_details_by_rating ]
+        get_rating_details_by_rating, delete_rating_details_by_rating,
+        toggle_rating_reaction, get_rating_reactions ]
 }
 
 
@@ -485,4 +509,98 @@ async fn get_existing_rating(
         Ok(ratings) => Ok(Json(ratings)),
         Err(e) => Err(PulsarrError::internal_error("Failed to fetch existing rating", e))
     }
+}
+
+async fn load_reaction_summary(
+    pool: &sqlx::PgPool,
+    rating_id: i32,
+    user_id: i32,
+) -> Result<RatingReactionSummary, PulsarrError> {
+    let counts = query_as::<_, ReactionCount>(
+        "SELECT emoji, COUNT(*)::bigint AS count \
+         FROM rating_reaction \
+         WHERE rating_id = $1 \
+         GROUP BY emoji \
+         ORDER BY count DESC, emoji ASC"
+    )
+        .bind(rating_id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| PulsarrError::internal_error("Failed to fetch reaction counts", e))?;
+
+    let user_reactions: Vec<String> = sqlx::query_scalar::<_, String>(
+        "SELECT emoji FROM rating_reaction WHERE rating_id = $1 AND pulsarr_user_id = $2"
+    )
+        .bind(rating_id)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| PulsarrError::internal_error("Failed to fetch user reactions", e))?;
+
+    Ok(RatingReactionSummary {
+        rating_id,
+        counts,
+        user_reactions,
+    })
+}
+
+/// # Toggle a reaction emoji on a rating (review)
+///
+/// Adds the reaction if the authenticated user hasn't reacted with this emoji yet,
+/// or removes it if they have. Returns the updated reaction summary for the rating.
+#[openapi(tag = "Rating")]
+#[post("/reaction/toggle", format = "application/json", data = "<request>")]
+async fn toggle_rating_reaction(
+    state: &State<PostgresState>,
+    request: Json<ToggleReactionRequest>,
+    api_user: ApiKey,
+) -> PulsarrResult<RatingReactionSummary> {
+    let ApiKey(user_id) = api_user;
+    let req = request.into_inner();
+
+    if !ALLOWED_REACTION_EMOJIS.contains(&req.emoji.as_str()) {
+        return Err(PulsarrError::validation_error("Unsupported reaction emoji"));
+    }
+
+    // Ensure the rating exists before touching the reactions table.
+    data_wrangler::get_by_id::<Rating>(req.rating_id, &state.pool).await?;
+
+    // Try to remove an existing reaction first. If nothing was removed, insert one.
+    let removed = sqlx::query(
+        "DELETE FROM rating_reaction \
+         WHERE rating_id = $1 AND pulsarr_user_id = $2 AND emoji = $3"
+    )
+        .bind(req.rating_id)
+        .bind(user_id)
+        .bind(&req.emoji)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| PulsarrError::internal_error("Failed to toggle reaction", e))?;
+
+    if removed.rows_affected() == 0 {
+        let reaction = RatingReaction {
+            rating_reaction_id: 0,
+            rating_id: req.rating_id,
+            pulsarr_user_id: user_id,
+            emoji: req.emoji.clone(),
+            created_at: chrono::Utc::now().naive_utc(),
+        };
+        data_wrangler::add(reaction, &state.pool).await?;
+    }
+
+    let summary = load_reaction_summary(&state.pool, req.rating_id, user_id).await?;
+    Ok(Json(summary))
+}
+
+/// # Get all reactions for a rating (aggregated counts + current user's reactions)
+#[openapi(tag = "Rating")]
+#[get("/reaction/by_rating/<rating_id>")]
+async fn get_rating_reactions(
+    state: &State<PostgresState>,
+    rating_id: i32,
+    api_user: ApiKey,
+) -> PulsarrResult<RatingReactionSummary> {
+    let ApiKey(user_id) = api_user;
+    let summary = load_reaction_summary(&state.pool, rating_id, user_id).await?;
+    Ok(Json(summary))
 }
