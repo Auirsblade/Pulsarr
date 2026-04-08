@@ -215,7 +215,7 @@
                                 <MessageSquare class="w-4 h-4" />
                                 Review
                             </h4>
-                            <p class="text-sm text-muted-foreground whitespace-pre-wrap break-words">{{ rating.comments }}</p>
+                            <p class="text-sm text-muted-foreground whitespace-pre-wrap wrap-anywhere">{{ rating.comments }}</p>
                         </div>
 
                         <ReviewReactionsBar :rating-id="rating.rating_id" />
@@ -310,7 +310,7 @@
                         <MessageSquare class="w-4 h-4" />
                         Review
                     </h4>
-                    <p class="text-sm text-muted-foreground whitespace-pre-wrap break-words">{{ rating.comments }}</p>
+                    <p class="text-sm text-muted-foreground whitespace-pre-wrap wrap-anywhere">{{ rating.comments }}</p>
                 </div>
 
                 <ReviewReactionsBar :rating-id="rating.rating_id" />
