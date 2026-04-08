@@ -11,6 +11,7 @@
     import { RouterLink } from "vue-router";
     import { ref, computed, watch, defineAsyncComponent } from "vue";
     import LoadingSpinner from "@/components/LoadingSpinner.vue";
+    import ReviewReactionsBar from "@/components/ReviewReactionsBar.vue";
 
     const NestedRatingDetailModal = defineAsyncComponent(() => import("@/components/RatingDetailModal.vue"));
 
@@ -217,6 +218,8 @@
                             <p class="text-sm text-muted-foreground whitespace-pre-wrap break-words">{{ rating.comments }}</p>
                         </div>
 
+                        <ReviewReactionsBar :rating-id="rating.rating_id" />
+
                         <div class="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
                             <span>by <RouterLink :to="`/user/${rating.pulsarr_user_id}`" class="hover:underline">{{ userName }}</RouterLink></span>
                             <span>{{ formatDate(rating.rating_date) }}</span>
@@ -309,6 +312,8 @@
                     </h4>
                     <p class="text-sm text-muted-foreground whitespace-pre-wrap break-words">{{ rating.comments }}</p>
                 </div>
+
+                <ReviewReactionsBar :rating-id="rating.rating_id" />
 
                 <div class="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
                     <span>by <RouterLink :to="`/user/${rating.pulsarr_user_id}`" class="hover:underline">{{ userName }}</RouterLink></span>
