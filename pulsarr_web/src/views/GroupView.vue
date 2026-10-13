@@ -5,6 +5,7 @@
     import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
     import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
     import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+    import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
     import { Input } from "@/components/ui/input";
     import { Label } from "@/components/ui/label";
     import { onMounted, onUnmounted, ref, computed, watch } from "vue";
@@ -14,13 +15,14 @@
     import type { GroupDTO, Rating } from "@/apiClient";
     import { useContextStore } from "@/stores/context.ts";
     import { storeToRefs } from "pinia";
-    import { Copy, Check, LogOut, Plus, Users, Star, Settings, MoreHorizontal, Shield, UserMinus, Crown, RefreshCw, UserPlus } from "lucide-vue-next";
+    import { Copy, Check, LogOut, Plus, Users, Star, Settings, MoreHorizontal, Shield, UserMinus, Crown, RefreshCw, UserPlus, Disc } from "lucide-vue-next";
     import AddRatingModal from "@/components/modals/AddRatingModal.vue";
     import ChangeRatingSystemModal from "@/components/modals/ChangeRatingSystemModal.vue";
     import RatingCard from "@/components/RatingCard.vue";
     import RatingDetailModal from "@/components/RatingDetailModal.vue";
     import EmptyState from "@/components/EmptyState.vue";
     import LoadingSpinner from "@/components/LoadingSpinner.vue";
+    import GroupAlbumRankings from "@/components/GroupAlbumRankings.vue";
     import { useCoverArt } from "@/composables/useCoverArt";
 
     const ROLE_LEVELS: Record<string, number> = {
@@ -58,6 +60,12 @@
     // Group averages cache
     const groupAverages = ref<Record<string, { average: string; count: number }>>({});
 
+    // Ratings / Albums tabs
+    const ratingsTab = ref('ratings');
+    const albumsTabVisited = ref(false);
+    const albumsStale = ref(false);
+    const albumRankings = ref<InstanceType<typeof GroupAlbumRankings> | null>(null);
+
     // Edit rating state
     const editingRating = ref<Rating | null>(null);
 
@@ -94,12 +102,38 @@
         showRatingModal.value = true;
     };
 
+    // The modal only shows its Group Ratings tab once the album's group average is loaded.
+    const onOpenAlbum = async (rating: Rating) => {
+        await fetchGroupAverages([rating]);
+        openRatingModalGroupTab(rating);
+    };
+
+    const markAlbumsStale = () => {
+        if (ratingsTab.value === 'albums' && albumRankings.value) {
+            albumRankings.value.refresh();
+        } else {
+            albumsStale.value = true;
+        }
+    };
+
+    watch(ratingsTab, (tab) => {
+        if (tab !== 'albums') return;
+        if (!albumsTabVisited.value) {
+            // First visit mounts the component, which fetches on mount.
+            albumsTabVisited.value = true;
+            albumsStale.value = false;
+        } else if (albumsStale.value) {
+            albumsStale.value = false;
+            albumRankings.value?.refresh();
+        }
+    });
+
     const ratingMax = computed(() => group.value?.rating_system?.rating_max?.toString());
 
     const albumIds = (list: Rating[]): string[] =>
         list.filter(r => r.media_type === 'album' && r.musicbrainz_id).map(r => r.musicbrainz_id);
 
-    const fetchGroupAverages = (ratingsToFetch: Rating[]) => {
+    const fetchGroupAverages = async (ratingsToFetch: Rating[]): Promise<void> => {
         const uniqueKeys = new Map<string, { group_id: number; musicbrainz_id: string }>();
         for (const r of ratingsToFetch) {
             const key = `${r.pulsarr_group_id}:${r.musicbrainz_id}`;
@@ -125,7 +159,7 @@
         drh.onErrorCallback = (err) => {
             console.error('Failed to fetch group averages:', err);
         };
-        drh.post('/rating/group-averages', { items });
+        await drh.post('/rating/group-averages', { items });
     };
 
     const groupId = computed(() => Number(route.params.groupId));
@@ -320,6 +354,7 @@
         rateThisRating.value = null;
         groupAverages.value = {};
         fetchRatings(fetchGeneration);
+        markAlbumsStale();
     };
 
     const onEditRating = (rating: Rating) => {
@@ -340,6 +375,7 @@
         rateThisRating.value = null;
         groupAverages.value = {};
         fetchRatings(fetchGeneration);
+        markAlbumsStale();
     };
 
     // --- Admin Actions ---
@@ -715,55 +751,75 @@
 
             <!-- Ratings Section -->
             <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-lg font-semibold flex items-center gap-2">
-                        <Star class="w-5 h-5" />
-                        Ratings ({{ ratings.length }})
-                    </h2>
-                    <AddRatingModal
-                        v-if="isMember && group.rating_system"
-                        :show-dialog="showAddRatingModal"
-                        :group="group"
-                        :edit-rating="editingRating"
-                        :edit-cover-art-url="editingRating ? coverArtCache[editingRating.musicbrainz_id] : undefined"
-                        :rate-this-rating="rateThisRating"
-                        :rate-this-cover-art-url="rateThisRating ? coverArtCache[rateThisRating.musicbrainz_id] : undefined"
-                        @update:showDialog="(v) => { showAddRatingModal = v; if (!v) { editingRating = null; rateThisRating = null; } }"
-                        @created="onRatingCreated"
-                        @updated="onRatingUpdated"
-                    >
-                        <template #openModal>
-                            <Button @click="editingRating = null; rateThisRating = null; showAddRatingModal = true;">
-                                <Plus class="w-4 h-4 mr-1" />
-                                Add Rating
-                            </Button>
-                        </template>
-                    </AddRatingModal>
-                </div>
+                <Tabs v-model="ratingsTab" :unmount-on-hide="false">
+                    <div class="flex items-center justify-between gap-2">
+                        <TabsList>
+                            <TabsTrigger value="ratings">
+                                <Star class="w-4 h-4 mr-1" />
+                                Ratings ({{ ratings.length }})
+                            </TabsTrigger>
+                            <TabsTrigger value="albums">
+                                <Disc class="w-4 h-4 mr-1" />
+                                Albums
+                            </TabsTrigger>
+                        </TabsList>
+                        <AddRatingModal
+                            v-if="isMember && group.rating_system"
+                            :show-dialog="showAddRatingModal"
+                            :group="group"
+                            :edit-rating="editingRating"
+                            :edit-cover-art-url="editingRating ? coverArtCache[editingRating.musicbrainz_id] : undefined"
+                            :rate-this-rating="rateThisRating"
+                            :rate-this-cover-art-url="rateThisRating ? coverArtCache[rateThisRating.musicbrainz_id] : undefined"
+                            @update:showDialog="(v) => { showAddRatingModal = v; if (!v) { editingRating = null; rateThisRating = null; } }"
+                            @created="onRatingCreated"
+                            @updated="onRatingUpdated"
+                        >
+                            <template #openModal>
+                                <Button @click="editingRating = null; rateThisRating = null; showAddRatingModal = true;">
+                                    <Plus class="w-4 h-4 mr-1" />
+                                    Add Rating
+                                </Button>
+                            </template>
+                        </AddRatingModal>
+                    </div>
 
-                <EmptyState
-                    v-if="ratings.length === 0"
-                    :icon="Star"
-                    title="No ratings yet"
-                    description="Be the first to rate an album in this group"
-                />
+                    <TabsContent value="ratings" class="space-y-3">
+                        <EmptyState
+                            v-if="ratings.length === 0"
+                            :icon="Star"
+                            title="No ratings yet"
+                            description="Be the first to rate an album in this group"
+                        />
 
-                <RatingCard
-                    v-for="rating in ratings"
-                    :key="rating.rating_id"
-                    :rating="rating"
-                    :cover-art-url="coverArtCache[rating.musicbrainz_id]"
-                    :user-name="getUserName(rating.pulsarr_user_id, rating.user_name)"
-                    :outdated="isRatingOutdated(rating)"
-                    :group-average="groupAverages[`${rating.pulsarr_group_id}:${rating.musicbrainz_id}`]?.average"
-                    :group-rating-count="groupAverages[`${rating.pulsarr_group_id}:${rating.musicbrainz_id}`]?.count"
-                    :rating-max="ratingMax"
-                    @click="openRatingModal(rating)"
-                    @group-average-click="openRatingModalGroupTab(rating)"
-                />
+                        <RatingCard
+                            v-for="rating in ratings"
+                            :key="rating.rating_id"
+                            :rating="rating"
+                            :cover-art-url="coverArtCache[rating.musicbrainz_id]"
+                            :user-name="getUserName(rating.pulsarr_user_id, rating.user_name)"
+                            :outdated="isRatingOutdated(rating)"
+                            :group-average="groupAverages[`${rating.pulsarr_group_id}:${rating.musicbrainz_id}`]?.average"
+                            :group-rating-count="groupAverages[`${rating.pulsarr_group_id}:${rating.musicbrainz_id}`]?.count"
+                            :rating-max="ratingMax"
+                            @click="openRatingModal(rating)"
+                            @group-average-click="openRatingModalGroupTab(rating)"
+                        />
 
-                <div ref="ratingSentinel" v-if="hasMoreRatings && ratings.length > 0" />
-                <LoadingSpinner v-if="loadingMoreRatings" text="Loading more ratings..." />
+                        <div ref="ratingSentinel" v-if="hasMoreRatings && ratings.length > 0" />
+                        <LoadingSpinner v-if="loadingMoreRatings" text="Loading more ratings..." />
+                    </TabsContent>
+
+                    <TabsContent value="albums">
+                        <GroupAlbumRankings
+                            v-if="albumsTabVisited"
+                            ref="albumRankings"
+                            :group-id="groupId"
+                            :rating-max="ratingMax"
+                            @open-album="onOpenAlbum"
+                        />
+                    </TabsContent>
+                </Tabs>
 
                 <RatingDetailModal
                     :rating="selectedRating"
