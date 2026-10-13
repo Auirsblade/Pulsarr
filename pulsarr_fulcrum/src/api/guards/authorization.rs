@@ -1,5 +1,5 @@
 use sqlx::PgPool;
-use crate::constants::{OWNER_ROLE, ADMIN_ROLE, MEMBER_ROLE, VIEW_ONLY_ROLE};
+use crate::constants::{OWNER_ROLE, ADMIN_ROLE, MEMBER_ROLE, VIEW_ONLY_ROLE, PUBLIC_PRIVACY_TYPE};
 use crate::data::models::user_group::{self, UserGroup};
 use crate::error::PulsarrError;
 
@@ -19,6 +19,30 @@ pub async fn get_membership(pool: &PgPool, group_id: i32, user_id: i32) -> Optio
         .await
         .ok()
         .flatten()
+}
+
+/// Returns the subset of `group_ids` whose contents `user_id` may read: Public
+/// groups, plus any group the user is a member of. Same rule as `GET /group/<id>`
+/// (Private and Personal groups require membership), checked in one query.
+pub async fn visible_group_ids(
+    pool: &PgPool,
+    group_ids: &[i32],
+    user_id: i32,
+) -> Result<Vec<i32>, PulsarrError> {
+    sqlx::query_scalar::<_, i32>(
+        "SELECT g.pulsarr_group_id FROM pulsarr_group g \
+         WHERE g.pulsarr_group_id = ANY($1) \
+           AND (g.privacy_type = $2 OR EXISTS ( \
+               SELECT 1 FROM user_group ug \
+               WHERE ug.pulsarr_group_id = g.pulsarr_group_id AND ug.pulsarr_user_id = $3 \
+           ))"
+    )
+        .bind(group_ids)
+        .bind(PUBLIC_PRIVACY_TYPE)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| PulsarrError::internal_error("Failed to check group visibility", e))
 }
 
 pub async fn require_role(

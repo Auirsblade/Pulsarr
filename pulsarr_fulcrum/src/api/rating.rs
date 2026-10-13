@@ -185,11 +185,17 @@ async fn get_all_ratings(state: &State<PostgresState>, _api_user: ApiKey) -> Pul
 }
 
 /// # Get ratings by group IDs
+///
+/// Groups the caller can't see (Private/Personal groups they aren't a member of)
+/// are silently dropped rather than failing the request, so a stale group list
+/// (e.g. a group that went private mid-scroll) doesn't break the whole feed.
 #[openapi(tag = "Rating")]
 #[post("/byGroups", format = "application/json", data = "<request>")]
-async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<PaginatedGroupRatingsRequest>, _api_user: ApiKey) -> PulsarrResult<Vec<Rating>> {
+async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<PaginatedGroupRatingsRequest>, api_user: ApiKey) -> PulsarrResult<Vec<Rating>> {
+    let ApiKey(user_id) = api_user;
     let req = request.into_inner();
-    if req.group_ids.is_empty() {
+    let group_ids = authorization::visible_group_ids(&state.pool, &req.group_ids, user_id).await?;
+    if group_ids.is_empty() {
         return Ok(Json(Vec::new()));
     }
 
@@ -203,7 +209,7 @@ async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<Pagina
              WHERE r.pulsarr_group_id = ANY($1) AND r.rating_system_id = g.rating_system_id \
              ORDER BY r.rating_date DESC LIMIT $2 OFFSET $3"
         )
-            .bind(&req.group_ids)
+            .bind(&group_ids)
             .bind(limit)
             .bind(req.offset.unwrap_or(0))
             .fetch_all(&state.pool)
@@ -214,7 +220,7 @@ async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<Pagina
              LEFT JOIN pulsarr_user u ON u.pulsarr_user_id = r.pulsarr_user_id \
              WHERE r.pulsarr_group_id = ANY($1) ORDER BY r.rating_date DESC LIMIT $2 OFFSET $3"
         )
-            .bind(&req.group_ids)
+            .bind(&group_ids)
             .bind(limit)
             .bind(req.offset.unwrap_or(0))
             .fetch_all(&state.pool)
@@ -440,20 +446,30 @@ async fn get_user_rating_stats(
 }
 
 /// # Get group averages for a batch of (group_id, musicbrainz_id) pairs
+///
+/// Pairs whose group the caller can't see are silently dropped, same as `byGroups`.
 #[openapi(tag = "Rating")]
 #[post("/group-averages", format = "application/json", data = "<request>")]
 async fn get_group_averages(
     state: &State<PostgresState>,
     request: Json<GroupAveragesRequest>,
-    _api_user: ApiKey,
+    api_user: ApiKey,
 ) -> PulsarrResult<Vec<GroupAverageResponse>> {
+    let ApiKey(user_id) = api_user;
     let req = request.into_inner();
     if req.items.is_empty() {
         return Ok(Json(Vec::new()));
     }
 
-    let group_ids: Vec<i32> = req.items.iter().map(|i| i.group_id).collect();
-    let musicbrainz_ids: Vec<String> = req.items.iter().map(|i| i.musicbrainz_id.clone()).collect();
+    let requested: Vec<i32> = req.items.iter().map(|i| i.group_id).collect();
+    let visible = authorization::visible_group_ids(&state.pool, &requested, user_id).await?;
+    let (group_ids, musicbrainz_ids): (Vec<i32>, Vec<String>) = req.items.into_iter()
+        .filter(|i| visible.contains(&i.group_id))
+        .map(|i| (i.group_id, i.musicbrainz_id))
+        .unzip();
+    if group_ids.is_empty() {
+        return Ok(Json(Vec::new()));
+    }
 
     match query_as::<_, GroupAverageResponse>(
         "SELECT r.pulsarr_group_id, r.musicbrainz_id, \
@@ -481,8 +497,13 @@ async fn get_ratings_by_album(
     state: &State<PostgresState>,
     group_id: i32,
     musicbrainz_id: &str,
-    _api_user: ApiKey,
+    api_user: ApiKey,
 ) -> PulsarrResult<Vec<Rating>> {
+    let ApiKey(user_id) = api_user;
+    if authorization::visible_group_ids(&state.pool, &[group_id], user_id).await?.is_empty() {
+        return Err(PulsarrError::forbidden("This group is private"));
+    }
+
     match query_as::<_, Rating>(
         "SELECT r.*, u.name AS user_name FROM rating r \
          LEFT JOIN pulsarr_user u ON u.pulsarr_user_id = r.pulsarr_user_id \
