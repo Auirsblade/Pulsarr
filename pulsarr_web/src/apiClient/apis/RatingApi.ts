@@ -16,17 +16,22 @@
 import * as runtime from '../runtime';
 import type {
   CreateRatingDTO,
+  GroupAlbumResponse,
   GroupAverageResponse,
   GroupAveragesRequest,
   PaginatedGroupRatingsRequest,
   Rating,
   RatingDetail,
   RatingDetailResponse,
+  RatingReactionSummary,
+  ToggleReactionRequest,
   UserRatingStats,
 } from '../models/index';
 import {
     CreateRatingDTOFromJSON,
     CreateRatingDTOToJSON,
+    GroupAlbumResponseFromJSON,
+    GroupAlbumResponseToJSON,
     GroupAverageResponseFromJSON,
     GroupAverageResponseToJSON,
     GroupAveragesRequestFromJSON,
@@ -39,6 +44,10 @@ import {
     RatingDetailToJSON,
     RatingDetailResponseFromJSON,
     RatingDetailResponseToJSON,
+    RatingReactionSummaryFromJSON,
+    RatingReactionSummaryToJSON,
+    ToggleReactionRequestFromJSON,
+    ToggleReactionRequestToJSON,
     UserRatingStatsFromJSON,
     UserRatingStatsToJSON,
 } from '../models/index';
@@ -82,6 +91,11 @@ export interface GetExistingRatingRequest {
     pulsarrApiKey: string;
 }
 
+export interface GetGroupAlbumsRequest {
+    groupId: number;
+    pulsarrApiKey: string;
+}
+
 export interface GetGroupAveragesRequest {
     pulsarrApiKey: string;
     groupAveragesRequest: GroupAveragesRequest;
@@ -98,6 +112,11 @@ export interface GetRatingDetailRequest {
 }
 
 export interface GetRatingDetailsByRatingRequest {
+    ratingId: number;
+    pulsarrApiKey: string;
+}
+
+export interface GetRatingReactionsRequest {
     ratingId: number;
     pulsarrApiKey: string;
 }
@@ -121,6 +140,11 @@ export interface GetRatingsByUserRequest {
 
 export interface GetUserRatingStatsRequest {
     pulsarrApiKey: string;
+}
+
+export interface ToggleRatingReactionRequest {
+    pulsarrApiKey: string;
+    toggleReactionRequest: ToggleReactionRequest;
 }
 
 export interface UpdateRatingRequest {
@@ -502,6 +526,51 @@ export class RatingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Get every album rated in a group under its current rating system, with average scores
+     */
+    async getGroupAlbumsRaw(requestParameters: GetGroupAlbumsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<GroupAlbumResponse>>> {
+        if (requestParameters['groupId'] == null) {
+            throw new runtime.RequiredError(
+                'groupId',
+                'Required parameter "groupId" was null or undefined when calling getGroupAlbums().'
+            );
+        }
+
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling getGroupAlbums().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/rating/group-albums/{group_id}`.replace(`{${"group_id"}}`, encodeURIComponent(String(requestParameters['groupId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(GroupAlbumResponseFromJSON));
+    }
+
+    /**
+     * Get every album rated in a group under its current rating system, with average scores
+     */
+    async getGroupAlbums(requestParameters: GetGroupAlbumsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<GroupAlbumResponse>> {
+        const response = await this.getGroupAlbumsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Pairs whose group the caller can\'t see are silently dropped, same as `byGroups`.
      * Get group averages for a batch of (group_id, musicbrainz_id) pairs
      */
     async getGroupAveragesRaw(requestParameters: GetGroupAveragesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<GroupAverageResponse>>> {
@@ -541,6 +610,7 @@ export class RatingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Pairs whose group the caller can\'t see are silently dropped, same as `byGroups`.
      * Get group averages for a batch of (group_id, musicbrainz_id) pairs
      */
     async getGroupAverages(requestParameters: GetGroupAveragesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<GroupAverageResponse>> {
@@ -681,6 +751,50 @@ export class RatingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Get all reactions for a rating (aggregated counts + current user\'s reactions)
+     */
+    async getRatingReactionsRaw(requestParameters: GetRatingReactionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingReactionSummary>> {
+        if (requestParameters['ratingId'] == null) {
+            throw new runtime.RequiredError(
+                'ratingId',
+                'Required parameter "ratingId" was null or undefined when calling getRatingReactions().'
+            );
+        }
+
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling getRatingReactions().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/rating/reaction/by_rating/{rating_id}`.replace(`{${"rating_id"}}`, encodeURIComponent(String(requestParameters['ratingId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RatingReactionSummaryFromJSON(jsonValue));
+    }
+
+    /**
+     * Get all reactions for a rating (aggregated counts + current user\'s reactions)
+     */
+    async getRatingReactions(requestParameters: GetRatingReactionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingReactionSummary> {
+        const response = await this.getRatingReactionsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Get all ratings for an album in a group
      */
     async getRatingsByAlbumRaw(requestParameters: GetRatingsByAlbumRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Rating>>> {
@@ -732,6 +846,7 @@ export class RatingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Groups the caller can\'t see (Private/Personal groups they aren\'t a member of) are silently dropped rather than failing the request, so a stale group list (e.g. a group that went private mid-scroll) doesn\'t break the whole feed.
      * Get ratings by group IDs
      */
     async getRatingsByGroupRaw(requestParameters: GetRatingsByGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Rating>>> {
@@ -771,6 +886,7 @@ export class RatingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Groups the caller can\'t see (Private/Personal groups they aren\'t a member of) are silently dropped rather than failing the request, so a stale group list (e.g. a group that went private mid-scroll) doesn\'t break the whole feed.
      * Get ratings by group IDs
      */
     async getRatingsByGroup(requestParameters: GetRatingsByGroupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Rating>> {
@@ -857,6 +973,55 @@ export class RatingApi extends runtime.BaseAPI {
      */
     async getUserRatingStats(requestParameters: GetUserRatingStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UserRatingStats> {
         const response = await this.getUserRatingStatsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Adds the reaction if the authenticated user hasn\'t reacted with this emoji yet, or removes it if they have. Returns the updated reaction summary for the rating.
+     * Toggle a reaction emoji on a rating (review)
+     */
+    async toggleRatingReactionRaw(requestParameters: ToggleRatingReactionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RatingReactionSummary>> {
+        if (requestParameters['pulsarrApiKey'] == null) {
+            throw new runtime.RequiredError(
+                'pulsarrApiKey',
+                'Required parameter "pulsarrApiKey" was null or undefined when calling toggleRatingReaction().'
+            );
+        }
+
+        if (requestParameters['toggleReactionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'toggleReactionRequest',
+                'Required parameter "toggleReactionRequest" was null or undefined when calling toggleRatingReaction().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['pulsarrApiKey'] != null) {
+            headerParameters['pulsarr-api-key'] = String(requestParameters['pulsarrApiKey']);
+        }
+
+        const response = await this.request({
+            path: `/rating/reaction/toggle`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ToggleReactionRequestToJSON(requestParameters['toggleReactionRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RatingReactionSummaryFromJSON(jsonValue));
+    }
+
+    /**
+     * Adds the reaction if the authenticated user hasn\'t reacted with this emoji yet, or removes it if they have. Returns the updated reaction summary for the rating.
+     * Toggle a reaction emoji on a rating (review)
+     */
+    async toggleRatingReaction(requestParameters: ToggleRatingReactionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RatingReactionSummary> {
+        const response = await this.toggleRatingReactionRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
