@@ -755,12 +755,16 @@
                     <div class="flex items-center justify-between gap-2">
                         <TabsList>
                             <TabsTrigger value="ratings">
-                                <Star class="w-4 h-4 mr-1" />
-                                Ratings ({{ ratings.length }})
+                                <span class="inline-flex items-center">
+                                    <Star class="w-4 h-4 mr-1 flex-shrink-0" />
+                                    Ratings ({{ ratings.length }})
+                                </span>
                             </TabsTrigger>
                             <TabsTrigger value="albums">
-                                <Disc class="w-4 h-4 mr-1" />
-                                Albums
+                                <span class="inline-flex items-center">
+                                    <Disc class="w-4 h-4 mr-1 flex-shrink-0" />
+                                    Albums
+                                </span>
                             </TabsTrigger>
                         </TabsList>
                         <AddRatingModal
