@@ -21,12 +21,7 @@
     import RatingDetailModal from "@/components/RatingDetailModal.vue";
     import EmptyState from "@/components/EmptyState.vue";
     import LoadingSpinner from "@/components/LoadingSpinner.vue";
-
-    interface CoverArtInfo {
-        front?: string;
-        front_thumbnail_small?: string;
-        front_thumbnail_large?: string;
-    }
+    import { useCoverArt } from "@/composables/useCoverArt";
 
     const ROLE_LEVELS: Record<string, number> = {
         'Owner': 4,
@@ -44,7 +39,7 @@
 
     const group = ref<GroupDTO | null>(null);
     const ratings = ref<Rating[]>([]);
-    const coverArtCache = ref<Record<string, string>>({});
+    const { coverArtCache, fetchCoverArt } = useCoverArt();
     const loading = ref(true);
     const error = ref<string | null>(null);
     const copied = ref(false);
@@ -100,6 +95,9 @@
     };
 
     const ratingMax = computed(() => group.value?.rating_system?.rating_max?.toString());
+
+    const albumIds = (list: Rating[]): string[] =>
+        list.filter(r => r.media_type === 'album' && r.musicbrainz_id).map(r => r.musicbrainz_id);
 
     const fetchGroupAverages = (ratingsToFetch: Rating[]) => {
         const uniqueKeys = new Map<string, { group_id: number; musicbrainz_id: string }>();
@@ -215,11 +213,7 @@
             if (ratings.value.length < PAGE_SIZE) {
                 hasMoreRatings.value = false;
             }
-            ratings.value.forEach(rating => {
-                if (rating.media_type === 'album' && rating.musicbrainz_id) {
-                    fetchCoverArt(rating.musicbrainz_id);
-                }
-            });
+            fetchCoverArt(albumIds(ratings.value));
             fetchGroupAverages(ratings.value);
         };
         drh.onErrorCallback = (err) => {
@@ -241,11 +235,7 @@
             if (newRatings.length < PAGE_SIZE) {
                 hasMoreRatings.value = false;
             }
-            newRatings.forEach(rating => {
-                if (rating.media_type === 'album' && rating.musicbrainz_id) {
-                    fetchCoverArt(rating.musicbrainz_id);
-                }
-            });
+            fetchCoverArt(albumIds(newRatings));
             fetchGroupAverages(newRatings);
             loadingMoreRatings.value = false;
         };
@@ -270,22 +260,6 @@
             { rootMargin: '200px' }
         );
         ratingsObserver.observe(el);
-    };
-
-    const fetchCoverArt = (releaseId: string) => {
-        if (coverArtCache.value[releaseId]) return;
-
-        const drh = new DataRequestHandler();
-        drh.onSuccessCallback = (data) => {
-            const coverArt = data as CoverArtInfo;
-            if (coverArt.front_thumbnail_small || coverArt.front) {
-                coverArtCache.value[releaseId] = coverArt.front_thumbnail_small || coverArt.front || '';
-            }
-        };
-        drh.onErrorCallback = () => {
-            // Cover art not available, ignore
-        };
-        drh.get(`/musicbrainz/release-group/${releaseId}/cover-art-info`);
     };
 
     const copyShareLink = async () => {
