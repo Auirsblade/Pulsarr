@@ -22,8 +22,8 @@ const fetchOne = (releaseGroupId: string) => {
         if (url) coverArtCache.value[releaseGroupId] = url;
     };
     drh.onErrorCallback = (_data, response) => {
-        // No cover art for this release group: remember that. Network failure: allow a retry later.
-        if (!response) requested.delete(releaseGroupId);
+        // Only a definite 404 (no art) stays remembered; network failures and 5xx are retried next request.
+        if (response?.status !== 404) requested.delete(releaseGroupId);
     };
     drh.get(`/musicbrainz/release-group/${releaseGroupId}/cover-art-info`);
 };
