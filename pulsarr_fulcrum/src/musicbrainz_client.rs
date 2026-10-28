@@ -281,8 +281,37 @@ pub struct UrlSearchResponse {
     pub urls: Vec<Url>,
 }
 
+/// The Cover Art Archive returns some numeric fields as JSON strings for older images
+/// (e.g. `"id":"14926982777"`), so accept either form when deserializing.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum NumberOrString {
+    Number(u64),
+    String(String),
+}
+
+impl NumberOrString {
+    fn into_u64<E: serde::de::Error>(self) -> Result<u64, E> {
+        match self {
+            NumberOrString::Number(n) => Ok(n),
+            NumberOrString::String(s) => s.parse().map_err(E::custom),
+        }
+    }
+}
+
+fn u64_from_number_or_string<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<u64, D::Error> {
+    NumberOrString::deserialize(deserializer)?.into_u64()
+}
+
+fn option_u64_from_number_or_string<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Option<u64>, D::Error> {
+    Option::<NumberOrString>::deserialize(deserializer)?
+        .map(NumberOrString::into_u64)
+        .transpose()
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct CoverArtImage {
+    #[serde(deserialize_with = "u64_from_number_or_string")]
     pub id: u64,
     pub image: String,
     pub thumbnails: Option<CoverArtThumbnails>,
@@ -291,6 +320,8 @@ pub struct CoverArtImage {
     pub types: Vec<String>,
     pub comment: Option<String>,
     pub approved: Option<bool>,
+    // `default` keeps a missing `edit` as None, which `deserialize_with` would otherwise reject
+    #[serde(default, deserialize_with = "option_u64_from_number_or_string")]
     pub edit: Option<u64>,
 }
 
@@ -1095,5 +1126,52 @@ impl MusicBrainzClient {
 impl Default for MusicBrainzClient {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn image_json(id: &str, edit: Option<&str>) -> String {
+        let edit = edit.map(|e| format!(r#","edit":{}"#, e)).unwrap_or_default();
+        format!(
+            r#"{{"id":{},"image":"https://coverartarchive.org/x.jpg","front":true,"back":false,"types":["Front"]{}}}"#,
+            id, edit
+        )
+    }
+
+    #[test]
+    fn cover_art_image_accepts_numeric_id() {
+        let img: CoverArtImage = serde_json::from_str(&image_json("34281078448", Some("95024500"))).unwrap();
+        assert_eq!(img.id, 34281078448);
+        assert_eq!(img.edit, Some(95024500));
+    }
+
+    #[test]
+    fn cover_art_image_accepts_string_id_and_edit() {
+        let img: CoverArtImage = serde_json::from_str(&image_json(r#""14926982777""#, Some(r#""41266940""#))).unwrap();
+        assert_eq!(img.id, 14926982777);
+        assert_eq!(img.edit, Some(41266940));
+    }
+
+    #[test]
+    fn cover_art_image_allows_missing_or_null_edit() {
+        let missing: CoverArtImage = serde_json::from_str(&image_json("1", None)).unwrap();
+        assert_eq!(missing.edit, None);
+        let null: CoverArtImage = serde_json::from_str(&image_json("1", Some("null"))).unwrap();
+        assert_eq!(null.edit, None);
+    }
+
+    #[test]
+    fn cover_art_image_rejects_non_numeric_string_id() {
+        assert!(serde_json::from_str::<CoverArtImage>(&image_json(r#""abc""#, None)).is_err());
+    }
+
+    #[test]
+    fn cover_art_image_serializes_id_as_number() {
+        let img: CoverArtImage = serde_json::from_str(&image_json(r#""14926982777""#, None)).unwrap();
+        let value = serde_json::to_value(&img).unwrap();
+        assert_eq!(value["id"], serde_json::json!(14926982777u64));
     }
 }
