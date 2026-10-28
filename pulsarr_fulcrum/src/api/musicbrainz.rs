@@ -8,6 +8,24 @@ pub struct MusicBrainzState {
     pub client: MusicBrainzClient,
 }
 
+/// Map a Cover Art Archive error to an API error. The archive answers 404 when a release group
+/// has no art and 400 for a malformed MBID; both mean "no cover art". Anything else is an
+/// upstream failure (502) that callers may retry.
+fn cover_art_error(e: reqwest::Error) -> PulsarrError {
+    match e.status() {
+        Some(reqwest::StatusCode::NOT_FOUND) | Some(reqwest::StatusCode::BAD_REQUEST) => PulsarrError {
+            err: "No cover art found".to_string(),
+            msg: None,
+            http_status_code: 404,
+        },
+        _ => PulsarrError {
+            err: "Cover Art Archive API Error".to_string(),
+            msg: Some(e.to_string()),
+            http_status_code: 502,
+        },
+    }
+}
+
 /// Search for artists on MusicBrainz
 #[openapi(tag = "MusicBrainz")]
 #[get("/search/artist?<query>&<limit>&<offset>")]
@@ -159,11 +177,7 @@ async fn get_release_group_cover_art(
 ) -> Result<Json<CoverArtArchive>, PulsarrError> {
     match state.client.get_release_group_cover_art(&mbid).await {
         Ok(cover_art) => Ok(Json(cover_art)),
-        Err(e) => Err(PulsarrError {
-            err: "Cover Art Archive API Error".to_string(),
-            msg: Some(e.to_string()),
-            http_status_code: 500,
-        }),
+        Err(e) => Err(cover_art_error(e)),
     }
 }
 
@@ -224,11 +238,7 @@ async fn get_release_group_cover_art_info(
 ) -> Result<Json<CoverArtInfo>, PulsarrError> {
     match state.client.get_release_group_cover_art_info(&mbid).await {
         Ok(info) => Ok(Json(info)),
-        Err(e) => Err(PulsarrError {
-            err: "Cover Art Archive API Error".to_string(),
-            msg: Some(e.to_string()),
-            http_status_code: 500,
-        }),
+        Err(e) => Err(cover_art_error(e)),
     }
 }
 

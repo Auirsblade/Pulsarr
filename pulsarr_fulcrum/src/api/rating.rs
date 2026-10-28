@@ -1,4 +1,7 @@
+use chrono::NaiveDateTime;
+use crate::constants::{PERSONAL_PRIVACY_TYPE, PRIVATE_PRIVACY_TYPE};
 use crate::data::data_wrangler;
+use crate::data::models::pulsarr_group::PulsarrGroup;
 use rocket::serde::{Deserialize, Serialize};
 use rocket::{delete, get, post, State};
 use rocket::serde::json::Json;
@@ -8,9 +11,10 @@ use rocket_okapi::settings::OpenApiSettings;
 use sqlx::{query_as, FromRow};
 use sqlx::types::Decimal;
 use crate::{PostgresState, PulsarrResult};
-use crate::data::models::{rating::Rating, rating_detail::RatingDetail};
+use crate::data::models::{rating::Rating, rating_detail::RatingDetail, rating_reaction::RatingReaction};
 use crate::api::dtos::rating_dto::{CreateRatingDTO, create_rating_to_model};
 use crate::api::guards::api_key::ApiKey;
+use crate::api::guards::authorization;
 use crate::error::PulsarrError;
 
 #[derive(Serialize, Deserialize, FromRow, JsonSchema)]
@@ -49,13 +53,48 @@ pub struct GroupAverageResponse {
     pub rating_count: i64,
 }
 
+#[derive(Serialize, Deserialize, FromRow, JsonSchema)]
+pub struct GroupAlbumResponse {
+    pub musicbrainz_id: String,
+    pub media_title: Option<String>,
+    pub artist_name: Option<String>,
+    pub release_date: Option<NaiveDateTime>,
+    pub average_score: Decimal,
+    pub rating_count: i64,
+}
+
+/// Allowed emojis for review reactions. Restricted to a small preset so the
+/// UI stays predictable and users can't stuff arbitrary text into the field.
+pub const ALLOWED_REACTION_EMOJIS: &[&str] = &["👍", "❤️", "😂", "😮", "😢", "🔥"];
+
+#[derive(Deserialize, Serialize, JsonSchema)]
+pub struct ToggleReactionRequest {
+    pub rating_id: i32,
+    pub emoji: String,
+}
+
+#[derive(Serialize, Deserialize, FromRow, JsonSchema)]
+pub struct ReactionCount {
+    pub emoji: String,
+    pub count: i64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct RatingReactionSummary {
+    pub rating_id: i32,
+    pub counts: Vec<ReactionCount>,
+    pub user_reactions: Vec<String>,
+}
+
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![ settings:
-        add_rating, update_rating, delete_rating, get_rating, get_all_ratings, get_ratings_by_group,
+        add_rating, update_rating, delete_rating, get_rating, get_ratings_by_group,
         get_ratings_by_user, get_user_rating_stats, get_existing_rating, get_group_averages, get_ratings_by_album,
-        add_rating_detail, update_rating_detail, delete_rating_detail, get_rating_detail, get_all_rating_details,
-        get_rating_details_by_rating, delete_rating_details_by_rating ]
+        get_group_albums,
+        add_rating_detail, update_rating_detail, delete_rating_detail, get_rating_detail,
+        get_rating_details_by_rating, delete_rating_details_by_rating,
+        toggle_rating_reaction, get_rating_reactions ]
 }
 
 
@@ -68,6 +107,12 @@ async fn add_rating(state: &State<PostgresState>, rating: Json<CreateRatingDTO>,
 
     if dto.pulsarr_user_id != user_id {
         return Err(PulsarrError::forbidden("Cannot create ratings for another user"));
+    }
+
+    // Only members can post into a group, which also keeps Crates owner-only.
+    // Any role counts: ViewOnly isn't enforced for ratings yet.
+    if authorization::get_membership(&state.pool, dto.pulsarr_group_id, user_id).await.is_none() {
+        return Err(PulsarrError::forbidden("You are not a member of this group"));
     }
 
     // Check for existing rating with same user/group/media combo
@@ -102,7 +147,13 @@ async fn update_rating(state: &State<PostgresState>, rating: Json<Rating>, api_u
         return Err(PulsarrError::forbidden("Cannot update another user's rating"));
     }
 
-    match data_wrangler::update(rating.into_inner(), &state.pool).await {
+    // Owner and group come from the stored rating, not the payload, so a rating
+    // can't be moved into another group or handed to another user.
+    let mut updated = rating.into_inner();
+    updated.pulsarr_user_id = original.pulsarr_user_id;
+    updated.pulsarr_group_id = original.pulsarr_group_id;
+
+    match data_wrangler::update(updated, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
     }
@@ -128,29 +179,28 @@ async fn delete_rating(state: &State<PostgresState>, id: i32, api_user: ApiKey) 
 /// # Get a rating by id
 #[openapi(tag = "Rating")]
 #[get("/<id>")]
-async fn get_rating(state: &State<PostgresState>, id: i32, _api_user: ApiKey) -> PulsarrResult<Rating> {
+async fn get_rating(state: &State<PostgresState>, id: i32, api_user: ApiKey) -> PulsarrResult<Rating> {
+    let ApiKey(user_id) = api_user;
+    authorization::require_rating_visible(&state.pool, id, user_id).await?;
+
     match data_wrangler::get_by_id::<Rating>(id, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
     }
 }
 
-/// # Get all ratings
-#[openapi(tag = "Rating")]
-#[get("/")]
-async fn get_all_ratings(state: &State<PostgresState>, _api_user: ApiKey) -> PulsarrResult<Vec<Rating>> {
-    match data_wrangler::get_all::<Rating>(&state.pool, None, None).await {
-        Ok(r) => Ok(Json(r)),
-        Err(e) => Err(e)
-    }
-}
-
 /// # Get ratings by group IDs
+///
+/// Groups the caller can't see (Private/Personal groups they aren't a member of)
+/// are silently dropped rather than failing the request, so a stale group list
+/// (e.g. a group that went private mid-scroll) doesn't break the whole feed.
 #[openapi(tag = "Rating")]
 #[post("/byGroups", format = "application/json", data = "<request>")]
-async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<PaginatedGroupRatingsRequest>, _api_user: ApiKey) -> PulsarrResult<Vec<Rating>> {
+async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<PaginatedGroupRatingsRequest>, api_user: ApiKey) -> PulsarrResult<Vec<Rating>> {
+    let ApiKey(user_id) = api_user;
     let req = request.into_inner();
-    if req.group_ids.is_empty() {
+    let group_ids = authorization::visible_group_ids(&state.pool, &req.group_ids, user_id).await?;
+    if group_ids.is_empty() {
         return Ok(Json(Vec::new()));
     }
 
@@ -164,7 +214,7 @@ async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<Pagina
              WHERE r.pulsarr_group_id = ANY($1) AND r.rating_system_id = g.rating_system_id \
              ORDER BY r.rating_date DESC LIMIT $2 OFFSET $3"
         )
-            .bind(&req.group_ids)
+            .bind(&group_ids)
             .bind(limit)
             .bind(req.offset.unwrap_or(0))
             .fetch_all(&state.pool)
@@ -175,7 +225,7 @@ async fn get_ratings_by_group(state: &State<PostgresState>, request: Json<Pagina
              LEFT JOIN pulsarr_user u ON u.pulsarr_user_id = r.pulsarr_user_id \
              WHERE r.pulsarr_group_id = ANY($1) ORDER BY r.rating_date DESC LIMIT $2 OFFSET $3"
         )
-            .bind(&req.group_ids)
+            .bind(&group_ids)
             .bind(limit)
             .bind(req.offset.unwrap_or(0))
             .fetch_all(&state.pool)
@@ -211,12 +261,16 @@ async fn add_rating_detail(state: &State<PostgresState>, rating_detail: Json<Rat
 #[post("/rating_detail/update", format = "application/json", data = "<rating_detail>")]
 async fn update_rating_detail(state: &State<PostgresState>, rating_detail: Json<RatingDetail>, api_user: ApiKey) -> PulsarrResult<RatingDetail>{
     let ApiKey(user_id) = api_user;
-    let detail = rating_detail.into_inner();
+    let mut detail = rating_detail.into_inner();
 
-    let parent = data_wrangler::get_by_id::<Rating>(detail.rating_id, &state.pool).await?;
+    // Check the stored detail's rating, not the payload's, and keep it attached
+    // there, so another user's detail can't be pulled onto the caller's rating.
+    let original = data_wrangler::get_by_id::<RatingDetail>(detail.rating_detail_id, &state.pool).await?;
+    let parent = data_wrangler::get_by_id::<Rating>(original.rating_id, &state.pool).await?;
     if parent.pulsarr_user_id != user_id {
         return Err(PulsarrError::forbidden("Cannot update details on another user's rating"));
     }
+    detail.rating_id = original.rating_id;
 
     match data_wrangler::update(detail, &state.pool).await {
         Ok(r) => Ok(Json(r)),
@@ -245,27 +299,21 @@ async fn delete_rating_detail(state: &State<PostgresState>, id: i32, api_user: A
 /// # Get a rating detail by id
 #[openapi(tag = "Rating")]
 #[get("/rating_detail/<id>")]
-async fn get_rating_detail(state: &State<PostgresState>, id: i32, _api_user: ApiKey) -> PulsarrResult<RatingDetail> {
-    match data_wrangler::get_by_id::<RatingDetail>(id, &state.pool).await {
-        Ok(r) => Ok(Json(r)),
-        Err(e) => Err(e)
-    }
-}
+async fn get_rating_detail(state: &State<PostgresState>, id: i32, api_user: ApiKey) -> PulsarrResult<RatingDetail> {
+    let ApiKey(user_id) = api_user;
 
-/// # Get all rating details
-#[openapi(tag = "Rating")]
-#[get("/rating_detail")]
-async fn get_all_rating_details(state: &State<PostgresState>, _api_user: ApiKey) -> PulsarrResult<Vec<RatingDetail>> {
-    match data_wrangler::get_all::<RatingDetail>(&state.pool, None, None).await {
-        Ok(r) => Ok(Json(r)),
-        Err(e) => Err(e)
-    }
+    let detail = data_wrangler::get_by_id::<RatingDetail>(id, &state.pool).await?;
+    authorization::require_rating_visible(&state.pool, detail.rating_id, user_id).await?;
+    Ok(Json(detail))
 }
 
 /// # Get rating details by rating ID
 #[openapi(tag = "Rating")]
 #[get("/rating_detail/by_rating/<rating_id>")]
-async fn get_rating_details_by_rating(state: &State<PostgresState>, rating_id: i32, _api_user: ApiKey) -> PulsarrResult<Vec<RatingDetailResponse>> {
+async fn get_rating_details_by_rating(state: &State<PostgresState>, rating_id: i32, api_user: ApiKey) -> PulsarrResult<Vec<RatingDetailResponse>> {
+    let ApiKey(user_id) = api_user;
+    authorization::require_rating_visible(&state.pool, rating_id, user_id).await?;
+
     match query_as::<_, RatingDetailResponse>(
         "SELECT rd.rating_detail_id, rd.rating_id, rd.rating_system_parameter_id, rd.rating_value, \
          rsp.name AS parameter_name \
@@ -401,20 +449,30 @@ async fn get_user_rating_stats(
 }
 
 /// # Get group averages for a batch of (group_id, musicbrainz_id) pairs
+///
+/// Pairs whose group the caller can't see are silently dropped, same as `byGroups`.
 #[openapi(tag = "Rating")]
 #[post("/group-averages", format = "application/json", data = "<request>")]
 async fn get_group_averages(
     state: &State<PostgresState>,
     request: Json<GroupAveragesRequest>,
-    _api_user: ApiKey,
+    api_user: ApiKey,
 ) -> PulsarrResult<Vec<GroupAverageResponse>> {
+    let ApiKey(user_id) = api_user;
     let req = request.into_inner();
     if req.items.is_empty() {
         return Ok(Json(Vec::new()));
     }
 
-    let group_ids: Vec<i32> = req.items.iter().map(|i| i.group_id).collect();
-    let musicbrainz_ids: Vec<String> = req.items.iter().map(|i| i.musicbrainz_id.clone()).collect();
+    let requested: Vec<i32> = req.items.iter().map(|i| i.group_id).collect();
+    let visible = authorization::visible_group_ids(&state.pool, &requested, user_id).await?;
+    let (group_ids, musicbrainz_ids): (Vec<i32>, Vec<String>) = req.items.into_iter()
+        .filter(|i| visible.contains(&i.group_id))
+        .map(|i| (i.group_id, i.musicbrainz_id))
+        .unzip();
+    if group_ids.is_empty() {
+        return Ok(Json(Vec::new()));
+    }
 
     match query_as::<_, GroupAverageResponse>(
         "SELECT r.pulsarr_group_id, r.musicbrainz_id, \
@@ -442,8 +500,13 @@ async fn get_ratings_by_album(
     state: &State<PostgresState>,
     group_id: i32,
     musicbrainz_id: &str,
-    _api_user: ApiKey,
+    api_user: ApiKey,
 ) -> PulsarrResult<Vec<Rating>> {
+    let ApiKey(user_id) = api_user;
+    if authorization::visible_group_ids(&state.pool, &[group_id], user_id).await?.is_empty() {
+        return Err(PulsarrError::forbidden("This group is private"));
+    }
+
     match query_as::<_, Rating>(
         "SELECT r.*, u.name AS user_name FROM rating r \
          LEFT JOIN pulsarr_user u ON u.pulsarr_user_id = r.pulsarr_user_id \
@@ -457,6 +520,46 @@ async fn get_ratings_by_album(
     {
         Ok(ratings) => Ok(Json(ratings)),
         Err(e) => Err(PulsarrError::internal_error("Failed to fetch ratings by album", e))
+    }
+}
+
+/// # Get every album rated in a group under its current rating system, with average scores
+#[openapi(tag = "Rating")]
+#[get("/group-albums/<group_id>")]
+async fn get_group_albums(
+    state: &State<PostgresState>,
+    group_id: i32,
+    api_user: ApiKey,
+) -> PulsarrResult<Vec<GroupAlbumResponse>> {
+    let ApiKey(user_id) = api_user;
+    let group = data_wrangler::get_by_id::<PulsarrGroup>(group_id, &state.pool).await?;
+
+    if group.privacy_type == PRIVATE_PRIVACY_TYPE || group.privacy_type == PERSONAL_PRIVACY_TYPE {
+        if authorization::get_membership(&state.pool, group_id, user_id).await.is_none() {
+            return Err(PulsarrError::forbidden("This group is private"));
+        }
+    }
+
+    // MIN(release_date): ratings without a MusicBrainz date were saved with their creation
+    // time instead, which is always later than the real release, so the earliest copy wins.
+    match query_as::<_, GroupAlbumResponse>(
+        "SELECT r.musicbrainz_id, \
+         MAX(r.media_title) AS media_title, \
+         MAX(r.artist_name) AS artist_name, \
+         MIN(r.release_date) AS release_date, \
+         AVG(r.rating_value)::numeric(8,3) AS average_score, \
+         COUNT(*)::bigint AS rating_count \
+         FROM rating r \
+         WHERE r.pulsarr_group_id = $1 AND r.rating_system_id = $2 AND r.musicbrainz_id IS NOT NULL \
+         GROUP BY r.musicbrainz_id"
+    )
+        .bind(group_id)
+        .bind(group.rating_system_id)
+        .fetch_all(&state.pool)
+        .await
+    {
+        Ok(albums) => Ok(Json(albums)),
+        Err(e) => Err(PulsarrError::internal_error("Failed to fetch group albums", e))
     }
 }
 
@@ -485,4 +588,100 @@ async fn get_existing_rating(
         Ok(ratings) => Ok(Json(ratings)),
         Err(e) => Err(PulsarrError::internal_error("Failed to fetch existing rating", e))
     }
+}
+
+async fn load_reaction_summary(
+    pool: &sqlx::PgPool,
+    rating_id: i32,
+    user_id: i32,
+) -> Result<RatingReactionSummary, PulsarrError> {
+    let counts = query_as::<_, ReactionCount>(
+        "SELECT emoji, COUNT(*)::bigint AS count \
+         FROM rating_reaction \
+         WHERE rating_id = $1 \
+         GROUP BY emoji \
+         ORDER BY count DESC, emoji ASC"
+    )
+        .bind(rating_id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| PulsarrError::internal_error("Failed to fetch reaction counts", e))?;
+
+    let user_reactions: Vec<String> = sqlx::query_scalar::<_, String>(
+        "SELECT emoji FROM rating_reaction WHERE rating_id = $1 AND pulsarr_user_id = $2"
+    )
+        .bind(rating_id)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| PulsarrError::internal_error("Failed to fetch user reactions", e))?;
+
+    Ok(RatingReactionSummary {
+        rating_id,
+        counts,
+        user_reactions,
+    })
+}
+
+/// # Toggle a reaction emoji on a rating (review)
+///
+/// Adds the reaction if the authenticated user hasn't reacted with this emoji yet,
+/// or removes it if they have. Returns the updated reaction summary for the rating.
+#[openapi(tag = "Rating")]
+#[post("/reaction/toggle", format = "application/json", data = "<request>")]
+async fn toggle_rating_reaction(
+    state: &State<PostgresState>,
+    request: Json<ToggleReactionRequest>,
+    api_user: ApiKey,
+) -> PulsarrResult<RatingReactionSummary> {
+    let ApiKey(user_id) = api_user;
+    let req = request.into_inner();
+
+    if !ALLOWED_REACTION_EMOJIS.contains(&req.emoji.as_str()) {
+        return Err(PulsarrError::validation_error("Unsupported reaction emoji"));
+    }
+
+    // Anyone who can see the rating can react to it. Also rejects missing ratings
+    // before touching the reactions table.
+    authorization::require_rating_visible(&state.pool, req.rating_id, user_id).await?;
+
+    // Try to remove an existing reaction first. If nothing was removed, insert one.
+    let removed = sqlx::query(
+        "DELETE FROM rating_reaction \
+         WHERE rating_id = $1 AND pulsarr_user_id = $2 AND emoji = $3"
+    )
+        .bind(req.rating_id)
+        .bind(user_id)
+        .bind(&req.emoji)
+        .execute(&state.pool)
+        .await
+        .map_err(|e| PulsarrError::internal_error("Failed to toggle reaction", e))?;
+
+    if removed.rows_affected() == 0 {
+        let reaction = RatingReaction {
+            rating_reaction_id: 0,
+            rating_id: req.rating_id,
+            pulsarr_user_id: user_id,
+            emoji: req.emoji.clone(),
+            created_at: chrono::Utc::now().naive_utc(),
+        };
+        data_wrangler::add(reaction, &state.pool).await?;
+    }
+
+    let summary = load_reaction_summary(&state.pool, req.rating_id, user_id).await?;
+    Ok(Json(summary))
+}
+
+/// # Get all reactions for a rating (aggregated counts + current user's reactions)
+#[openapi(tag = "Rating")]
+#[get("/reaction/by_rating/<rating_id>")]
+async fn get_rating_reactions(
+    state: &State<PostgresState>,
+    rating_id: i32,
+    api_user: ApiKey,
+) -> PulsarrResult<RatingReactionSummary> {
+    let ApiKey(user_id) = api_user;
+    authorization::require_rating_visible(&state.pool, rating_id, user_id).await?;
+    let summary = load_reaction_summary(&state.pool, rating_id, user_id).await?;
+    Ok(Json(summary))
 }

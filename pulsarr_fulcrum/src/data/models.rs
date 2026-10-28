@@ -10,6 +10,7 @@ pub mod rating_system_template;
 pub mod rating_system_template_parameter;
 pub mod rating;
 pub mod rating_detail;
+pub mod rating_reaction;
 pub mod user_session;
 pub(crate) mod user_group;
 

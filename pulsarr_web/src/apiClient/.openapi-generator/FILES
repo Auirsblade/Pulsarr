@@ -23,6 +23,7 @@ models/ForgotPasswordRequest.ts
 models/GenericResponse.ts
 models/GetRequest.ts
 models/GroupAlbumKey.ts
+models/GroupAlbumResponse.ts
 models/GroupAverageResponse.ts
 models/GroupAveragesRequest.ts
 models/GroupDTO.ts
@@ -35,6 +36,7 @@ models/PaginatedGroupRatingsRequest.ts
 models/Rating.ts
 models/RatingDetail.ts
 models/RatingDetailResponse.ts
+models/RatingReactionSummary.ts
 models/RatingSystem.ts
 models/RatingSystemDTO.ts
 models/RatingSystemParameter.ts
@@ -42,6 +44,7 @@ models/RatingSystemParameterDTO.ts
 models/RatingSystemTemplate.ts
 models/RatingSystemTemplateDTO.ts
 models/RatingSystemTemplateParameterDTO.ts
+models/ReactionCount.ts
 models/Recording.ts
 models/RecordingSearchResponse.ts
 models/Release.ts
@@ -51,6 +54,7 @@ models/ReleaseSearchResponse.ts
 models/ResetPasswordRequest.ts
 models/SignInRequest.ts
 models/SignInResponse.ts
+models/ToggleReactionRequest.ts
 models/Track.ts
 models/UserDTO.ts
 models/UserProfileResponse.ts
