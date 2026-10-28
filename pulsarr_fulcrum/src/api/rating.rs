@@ -89,10 +89,10 @@ pub struct RatingReactionSummary {
 /// Api Logic
 pub fn get_routes_and_docs(settings: &OpenApiSettings) -> (Vec<rocket::Route>, OpenApi) {
     openapi_get_routes_spec![ settings:
-        add_rating, update_rating, delete_rating, get_rating, get_all_ratings, get_ratings_by_group,
+        add_rating, update_rating, delete_rating, get_rating, get_ratings_by_group,
         get_ratings_by_user, get_user_rating_stats, get_existing_rating, get_group_averages, get_ratings_by_album,
         get_group_albums,
-        add_rating_detail, update_rating_detail, delete_rating_detail, get_rating_detail, get_all_rating_details,
+        add_rating_detail, update_rating_detail, delete_rating_detail, get_rating_detail,
         get_rating_details_by_rating, delete_rating_details_by_rating,
         toggle_rating_reaction, get_rating_reactions ]
 }
@@ -107,6 +107,12 @@ async fn add_rating(state: &State<PostgresState>, rating: Json<CreateRatingDTO>,
 
     if dto.pulsarr_user_id != user_id {
         return Err(PulsarrError::forbidden("Cannot create ratings for another user"));
+    }
+
+    // Only members can post into a group, which also keeps Crates owner-only.
+    // Any role counts: ViewOnly isn't enforced for ratings yet.
+    if authorization::get_membership(&state.pool, dto.pulsarr_group_id, user_id).await.is_none() {
+        return Err(PulsarrError::forbidden("You are not a member of this group"));
     }
 
     // Check for existing rating with same user/group/media combo
@@ -141,7 +147,13 @@ async fn update_rating(state: &State<PostgresState>, rating: Json<Rating>, api_u
         return Err(PulsarrError::forbidden("Cannot update another user's rating"));
     }
 
-    match data_wrangler::update(rating.into_inner(), &state.pool).await {
+    // Owner and group come from the stored rating, not the payload, so a rating
+    // can't be moved into another group or handed to another user.
+    let mut updated = rating.into_inner();
+    updated.pulsarr_user_id = original.pulsarr_user_id;
+    updated.pulsarr_group_id = original.pulsarr_group_id;
+
+    match data_wrangler::update(updated, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
     }
@@ -167,18 +179,11 @@ async fn delete_rating(state: &State<PostgresState>, id: i32, api_user: ApiKey) 
 /// # Get a rating by id
 #[openapi(tag = "Rating")]
 #[get("/<id>")]
-async fn get_rating(state: &State<PostgresState>, id: i32, _api_user: ApiKey) -> PulsarrResult<Rating> {
-    match data_wrangler::get_by_id::<Rating>(id, &state.pool).await {
-        Ok(r) => Ok(Json(r)),
-        Err(e) => Err(e)
-    }
-}
+async fn get_rating(state: &State<PostgresState>, id: i32, api_user: ApiKey) -> PulsarrResult<Rating> {
+    let ApiKey(user_id) = api_user;
+    authorization::require_rating_visible(&state.pool, id, user_id).await?;
 
-/// # Get all ratings
-#[openapi(tag = "Rating")]
-#[get("/")]
-async fn get_all_ratings(state: &State<PostgresState>, _api_user: ApiKey) -> PulsarrResult<Vec<Rating>> {
-    match data_wrangler::get_all::<Rating>(&state.pool, None, None).await {
+    match data_wrangler::get_by_id::<Rating>(id, &state.pool).await {
         Ok(r) => Ok(Json(r)),
         Err(e) => Err(e)
     }
@@ -256,12 +261,16 @@ async fn add_rating_detail(state: &State<PostgresState>, rating_detail: Json<Rat
 #[post("/rating_detail/update", format = "application/json", data = "<rating_detail>")]
 async fn update_rating_detail(state: &State<PostgresState>, rating_detail: Json<RatingDetail>, api_user: ApiKey) -> PulsarrResult<RatingDetail>{
     let ApiKey(user_id) = api_user;
-    let detail = rating_detail.into_inner();
+    let mut detail = rating_detail.into_inner();
 
-    let parent = data_wrangler::get_by_id::<Rating>(detail.rating_id, &state.pool).await?;
+    // Check the stored detail's rating, not the payload's, and keep it attached
+    // there, so another user's detail can't be pulled onto the caller's rating.
+    let original = data_wrangler::get_by_id::<RatingDetail>(detail.rating_detail_id, &state.pool).await?;
+    let parent = data_wrangler::get_by_id::<Rating>(original.rating_id, &state.pool).await?;
     if parent.pulsarr_user_id != user_id {
         return Err(PulsarrError::forbidden("Cannot update details on another user's rating"));
     }
+    detail.rating_id = original.rating_id;
 
     match data_wrangler::update(detail, &state.pool).await {
         Ok(r) => Ok(Json(r)),
@@ -290,27 +299,21 @@ async fn delete_rating_detail(state: &State<PostgresState>, id: i32, api_user: A
 /// # Get a rating detail by id
 #[openapi(tag = "Rating")]
 #[get("/rating_detail/<id>")]
-async fn get_rating_detail(state: &State<PostgresState>, id: i32, _api_user: ApiKey) -> PulsarrResult<RatingDetail> {
-    match data_wrangler::get_by_id::<RatingDetail>(id, &state.pool).await {
-        Ok(r) => Ok(Json(r)),
-        Err(e) => Err(e)
-    }
-}
+async fn get_rating_detail(state: &State<PostgresState>, id: i32, api_user: ApiKey) -> PulsarrResult<RatingDetail> {
+    let ApiKey(user_id) = api_user;
 
-/// # Get all rating details
-#[openapi(tag = "Rating")]
-#[get("/rating_detail")]
-async fn get_all_rating_details(state: &State<PostgresState>, _api_user: ApiKey) -> PulsarrResult<Vec<RatingDetail>> {
-    match data_wrangler::get_all::<RatingDetail>(&state.pool, None, None).await {
-        Ok(r) => Ok(Json(r)),
-        Err(e) => Err(e)
-    }
+    let detail = data_wrangler::get_by_id::<RatingDetail>(id, &state.pool).await?;
+    authorization::require_rating_visible(&state.pool, detail.rating_id, user_id).await?;
+    Ok(Json(detail))
 }
 
 /// # Get rating details by rating ID
 #[openapi(tag = "Rating")]
 #[get("/rating_detail/by_rating/<rating_id>")]
-async fn get_rating_details_by_rating(state: &State<PostgresState>, rating_id: i32, _api_user: ApiKey) -> PulsarrResult<Vec<RatingDetailResponse>> {
+async fn get_rating_details_by_rating(state: &State<PostgresState>, rating_id: i32, api_user: ApiKey) -> PulsarrResult<Vec<RatingDetailResponse>> {
+    let ApiKey(user_id) = api_user;
+    authorization::require_rating_visible(&state.pool, rating_id, user_id).await?;
+
     match query_as::<_, RatingDetailResponse>(
         "SELECT rd.rating_detail_id, rd.rating_id, rd.rating_system_parameter_id, rd.rating_value, \
          rsp.name AS parameter_name \
@@ -638,8 +641,9 @@ async fn toggle_rating_reaction(
         return Err(PulsarrError::validation_error("Unsupported reaction emoji"));
     }
 
-    // Ensure the rating exists before touching the reactions table.
-    data_wrangler::get_by_id::<Rating>(req.rating_id, &state.pool).await?;
+    // Anyone who can see the rating can react to it. Also rejects missing ratings
+    // before touching the reactions table.
+    authorization::require_rating_visible(&state.pool, req.rating_id, user_id).await?;
 
     // Try to remove an existing reaction first. If nothing was removed, insert one.
     let removed = sqlx::query(
@@ -677,6 +681,7 @@ async fn get_rating_reactions(
     api_user: ApiKey,
 ) -> PulsarrResult<RatingReactionSummary> {
     let ApiKey(user_id) = api_user;
+    authorization::require_rating_visible(&state.pool, rating_id, user_id).await?;
     let summary = load_reaction_summary(&state.pool, rating_id, user_id).await?;
     Ok(Json(summary))
 }
