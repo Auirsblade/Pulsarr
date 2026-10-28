@@ -89,6 +89,7 @@
         const gen = ++fetchGeneration;
         loading.value = true;
         error.value = null;
+        openError.value = null;
 
         const drh = new DataRequestHandler();
         drh.onSuccessCallback = (data) => {
@@ -192,7 +193,7 @@
                 <span class="text-muted-foreground">
                     {{ sortedAlbums.length }} {{ sortedAlbums.length === 1 ? 'album' : 'albums' }}
                 </span>
-                <span v-if="openError" class="text-destructive">{{ openError }}</span>
+                <span v-if="openError" role="alert" class="text-destructive">{{ openError }}</span>
             </div>
 
             <Card class="!py-0 gap-0 overflow-hidden">
@@ -200,34 +201,34 @@
                     v-for="(album, index) in visibleAlbums"
                     :key="album.musicbrainz_id"
                     type="button"
-                    class="flex w-full items-center gap-3 p-3 text-left border-b last:border-b-0 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none disabled:cursor-wait"
-                    :disabled="openingId !== null"
+                    class="flex w-full items-center gap-3 p-3 text-left border-b last:border-b-0 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    :aria-busy="openingId === album.musicbrainz_id"
                     @click="openAlbum(album)"
                 >
                     <span class="w-8 flex-shrink-0 text-center text-sm font-semibold text-muted-foreground tabular-nums">
                         {{ index + 1 }}
                     </span>
-                    <div class="w-12 h-12 flex-shrink-0 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                    <span class="w-12 h-12 flex-shrink-0 bg-muted rounded-md flex items-center justify-center overflow-hidden">
                         <img
                             v-if="coverArtCache[album.musicbrainz_id]"
                             :src="coverArtCache[album.musicbrainz_id]"
                             class="w-full h-full object-cover"
-                            :alt="'Album cover for ' + (album.media_title ?? 'album')"
+                            alt=""
                         />
                         <Disc v-else class="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="font-semibold truncate" :title="album.media_title ?? undefined">{{ album.media_title }}</p>
-                        <p class="text-sm text-muted-foreground truncate" :title="subtitle(album)">{{ subtitle(album) }}</p>
-                    </div>
-                    <div class="flex-shrink-0 text-right">
-                        <p class="font-bold tabular-nums">
+                    </span>
+                    <span class="block flex-1 min-w-0">
+                        <span class="block font-semibold truncate" :title="album.media_title ?? undefined">{{ album.media_title }}</span>
+                        <span class="block text-sm text-muted-foreground truncate" :title="subtitle(album)">{{ subtitle(album) }}</span>
+                    </span>
+                    <span class="block flex-shrink-0 text-right">
+                        <span class="block font-bold tabular-nums">
                             {{ formatRatingValue(album.average_score) }}<span v-if="ratingMax" class="text-sm font-normal text-muted-foreground">/{{ formatRatingValue(ratingMax) }}</span>
-                        </p>
-                        <p class="text-xs text-muted-foreground">
+                        </span>
+                        <span class="block text-xs text-muted-foreground">
                             {{ album.rating_count }} {{ album.rating_count === 1 ? 'rating' : 'ratings' }}
-                        </p>
-                    </div>
+                        </span>
+                    </span>
                 </button>
             </Card>
 

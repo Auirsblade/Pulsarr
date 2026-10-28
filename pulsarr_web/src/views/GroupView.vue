@@ -210,6 +210,8 @@
     });
 
     watch(groupId, () => {
+        albumsTabVisited.value = ratingsTab.value === 'albums';
+        albumsStale.value = false;
         fetchGroup();
     });
 
